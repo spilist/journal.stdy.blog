@@ -1,0 +1,20 @@
+{
+  // TypeScript로 옮기지 않는다. `.js`와 `.svelte`를 그대로 두고 타입만 본다.
+  // 값이 나오는 곳은 JSDoc이 붙은 경계(parse/assist/layout)이지 확장자가 아니다.
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "types": ["svelte", "vite/client"],
+    "checkJs": true,
+    "allowJs": true,
+    "strict": true,
+    "noEmit": true,
+    "isolatedModules": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true
+  },
+  "include": ["src/**/*.js", "src/**/*.svelte", "scripts/**/*.mjs", "worker/**/*.js", "*.js"],
+  "exclude": ["node_modules", "dist"]
+}

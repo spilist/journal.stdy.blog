@@ -1,0 +1,30 @@
+{
+  "name": "journal-stdy-blog",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host",
+    "build": "vite build && node scripts/gen-sw.mjs",
+    "preview": "vite preview --host",
+    "test": "node --test src/lib/*.test.js",
+    "check": "svelte-check --tsconfig ./jsconfig.json",
+    "lint": "eslint .",
+    "deploy": "npm run build && wrangler deploy",
+    "db:schema": "wrangler d1 execute journal-db --remote --file=worker/schema.sql",
+    "db:schema:local": "wrangler d1 execute journal-db --local --file=worker/schema.sql"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@sveltejs/vite-plugin-svelte": "^5.0.3",
+    "@types/node": "^26.1.1",
+    "eslint": "^10.8.0",
+    "eslint-plugin-svelte": "^3.22.0",
+    "globals": "^17.7.0",
+    "svelte": "^5.19.0",
+    "svelte-check": "^4.7.3",
+    "typescript": "^5.9.3",
+    "vite": "^6.0.11",
+    "wrangler": "^4.0.0"
+  }
+}
