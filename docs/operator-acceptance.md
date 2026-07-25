@@ -1,0 +1,74 @@
+# 배포 전에 사람이 해야 하는 일
+
+코드는 준비됐지만 **Cloudflare 쪽 설정 세 가지는 대시보드에서 사람이 해야 한다.**
+아래를 마치기 전에는 `npm run deploy`가 성공해도 앱이 동작하지 않는다.
+
+## 1. D1 데이터베이스 만들기
+
+```bash
+npx wrangler d1 create journal-db
+```
+
+출력된 `database_id`를 [wrangler.jsonc](../wrangler.jsonc)의
+`PLACEHOLDER-run-wrangler-d1-create` 자리에 넣는다. 그다음 스키마를 올린다:
+
+```bash
+npm run db:schema         # 원격
+npm run db:schema:local   # 로컬 개발용
+```
+
+## 2. Cloudflare Access 애플리케이션 (`D2`·`D9`)
+
+Zero Trust → Access → Applications → **Add an application** → *Self-hosted*
+
+| 항목 | 값 |
+|---|---|
+| Application domain | `journal.stdy.blog` |
+| Session Duration | **1 month** (`D9`) |
+| 정책 | Action `Allow` · Include → **Emails** → `bae.hwidong@gmail.com` |
+| 로그인 방법 | **One-time PIN**이 기본으로 켜져 있다. IdP를 붙일 필요가 없다 |
+
+만들고 나면 **Application Audience (AUD) Tag**가 나온다. 그걸
+[wrangler.jsonc](../wrangler.jsonc)의 `ACCESS_AUD`에, 팀 도메인
+(`<team>.cloudflareaccess.com`)을 `ACCESS_TEAM_DOMAIN`에 넣는다.
+
+> **Access만으로는 부족하다.** Access는 커스텀 도메인 앞만 막으므로 Worker가
+> `Cf-Access-Jwt-Assertion`을 직접 검증한다 ([worker/access.js](../worker/access.js)).
+> `workers_dev: false`와 함께 두 겹이다.
+
+## 3. 배포
+
+```bash
+npm run deploy
+```
+
+`.env`의 `CLOUDFLARE_API_TOKEN`·`CLOUDFLARE_ACCOUNT_ID`를 쓴다
+(`~/stdy.blog/.env`에서 복사했고 `.gitignore`에 있다).
+
+`journal.stdy.blog` DNS 레코드는 `wrangler`가 커스텀 도메인으로 붙인다.
+`stdy.blog` 존이 이미 같은 계정에 있으므로 추가 설정은 없다.
+
+## 4. 첫 사용 — 마지막 복붙
+
+1. 폰에서 `https://journal.stdy.blog`를 열고 **홈 화면에 추가**한다
+   (PWA로 열어야 저장소가 evict되지 않는다 — `D17`)
+2. 「가져오기」에 기존 저널 마크다운을 붙여넣는다
+3. **미리보기에서 "해석하지 못한 줄"이 0인지 확인한다.** 0이 아니면 그 줄이
+   저장되지 않으므로 형식을 고치거나 따로 옮긴다
+4. 저장한 뒤 **「↑ 올리기」를 누른다** — 여기까지 해야 D1에 올라간다
+
+## 수용 확인 (사람이 하는 것)
+
+[구현 계약](./spec-first-slice.md)의 `AC-10`~`AC-12`다.
+
+- **AC-10** 비행기 모드로 폰에서 열고 쓰고 앱을 껐다 켠다 → 남아 있고
+  「↑ 올리기」 옆 숫자가 보인다
+- **AC-11** 폰과 데스크톱에서 같은 블록을 고치고 둘 다 「올리기」 →
+  진 쪽이 `⚠ 충돌 사본`으로 접혀 보인다
+- **AC-12** `references/sample.md`를 가져온 뒤 「전체 내려받기」 →
+  원본과 같다 (**파일 끝 개행 개수만 다르다**)
+
+## 아직 없는 것
+
+**에너지 그래프는 S2다.** S1은 입력·오프라인·동기화·export/import까지다.
+데이터가 없으면 그래프에 볼 게 없으므로 입력을 먼저 세웠다.
