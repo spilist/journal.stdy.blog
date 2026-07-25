@@ -1,0 +1,17 @@
+{
+  // 워커는 브라우저가 아니라 Workers 런타임에서 돈다 — DOM 타입이 아니라
+  // @cloudflare/workers-types 를 본다. 그래서 설정이 루트와 따로 있다.
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ESNext"],
+    "types": ["@cloudflare/workers-types"],
+    "checkJs": true,
+    "allowJs": true,
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true
+  },
+  "include": ["**/*.js", "../src/lib/merge.js"]
+}

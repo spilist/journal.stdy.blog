@@ -10,7 +10,7 @@
 // 밀면 놀란다.
 
 /**
- * @typedef {object} Record
+ * @typedef {object} Rec
  * @property {string} key
  * @property {string} kind 'energy' | 'log' | 'pinned' | 'revision'
  * @property {Record<string, any>} data
@@ -30,7 +30,7 @@ export function recordKey(kind, ...parts) {
 /**
  * 미동기화 배지가 세는 값 (`D17`). push를 안 누르는 게 유일하게 남은 유실 경로다.
  *
- * @param {Record} rec
+ * @param {Rec} rec
  * @returns {boolean}
  */
 export function isDirty(rec) {
@@ -38,7 +38,7 @@ export function isDirty(rec) {
 }
 
 /**
- * @param {Record[]} records
+ * @param {Rec[]} records
  * @returns {number}
  */
 export function countDirty(records) {
@@ -49,8 +49,8 @@ export function countDirty(records) {
  * pull은 자동이므로 **로컬을 파괴하지 않는다.** 더티면 건너뛰고, 다음 push에서
  * 사람이 결과를 본다.
  *
- * @param {Record | undefined} local
- * @param {Record} remote
+ * @param {Rec | undefined} local
+ * @param {Rec} remote
  * @returns {{accept: boolean, reason: 'new' | 'newer' | 'local-dirty' | 'stale'}}
  */
 export function pullDecision(local, remote) {
@@ -64,8 +64,8 @@ export function pullDecision(local, remote) {
  * 서버 쪽 판정. `revision`은 추가 전용이라 먼저 쓴 쪽이 남는다 — 개정 스냅샷은
  * 사용자가 그 순간 작성한 문장이 아니라 자동 밀봉본이므로 사본을 만들지 않는다.
  *
- * @param {Record | undefined} server
- * @param {Record} incoming
+ * @param {Rec | undefined} server
+ * @param {Rec} incoming
  * @returns {{applied: boolean}}
  */
 export function pushVerdict(server, incoming) {
@@ -78,9 +78,9 @@ export function pushVerdict(server, incoming) {
  * push가 거절됐을 때 클라이언트가 할 일 (`D12`): 서버 값을 라이브로 채택하고,
  * **자기 텍스트를 사본으로 남긴다.**
  *
- * @param {Record} local 진 쪽
- * @param {Record} server 이긴 쪽
- * @returns {{live: Record, conflict: {target: string, text: string, at: number} | null}}
+ * @param {Rec} local 진 쪽
+ * @param {Rec} server 이긴 쪽
+ * @returns {{live: Rec, conflict: {target: string, text: string, at: number} | null}}
  */
 export function resolveRejected(local, server) {
   const live = { ...server, syncedAt: server.updatedAt }
@@ -93,7 +93,7 @@ export function resolveRejected(local, server) {
 /**
  * 충돌 사본에 보일 사람이 읽는 형태.
  *
- * @param {Record} rec
+ * @param {Rec} rec
  * @returns {string}
  */
 export function describe(rec) {
@@ -108,10 +108,10 @@ export function describe(rec) {
  * 자동저장이 `updatedAt`을 매번 갱신하면 **가짜 더티가 쌓이고, 내용이 같은데도 LWW에서
  * 이겨 다른 기기의 진짜 편집을 밀어낸다.** 그래서 내용 비교가 먼저다.
  *
- * @param {Record} prev
+ * @param {Rec} prev
  * @param {string} text
  * @param {number} now
- * @returns {Record} 내용이 같으면 `prev` 그대로
+ * @returns {Rec} 내용이 같으면 `prev` 그대로
  */
 export function nextText(prev, text, now) {
   if (prev.data.text === text) return prev
@@ -122,10 +122,10 @@ export function nextText(prev, text, now) {
  * `scoredAt`은 **점수 값이 바뀔 때만** 갱신한다 (`D15`). 사용자가 본문에 직접 썼듯이
  * 기록 시점이 점수 해석에 영향을 주므로, 이유 오타를 고쳤다고 갱신하면 그 값이 사라진다.
  *
- * @param {Record} prev
+ * @param {Rec} prev
  * @param {{score?: number | null, reason?: string}} patch
  * @param {number} now
- * @returns {Record}
+ * @returns {Rec}
  */
 export function nextEnergy(prev, patch, now) {
   const score = patch.score === undefined ? prev.data.score : patch.score

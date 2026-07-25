@@ -8,13 +8,15 @@
     "build": "vite build && node scripts/gen-sw.mjs",
     "preview": "vite preview --host",
     "test": "node --test src/lib/*.test.js",
-    "check": "svelte-check --tsconfig ./jsconfig.json",
+    "check": "svelte-check --tsconfig ./jsconfig.json && npm run check:worker",
     "lint": "eslint .",
     "deploy": "npm run build && wrangler deploy",
     "db:schema": "wrangler d1 execute journal-db --remote --file=worker/schema.sql",
-    "db:schema:local": "wrangler d1 execute journal-db --local --file=worker/schema.sql"
+    "db:schema:local": "wrangler d1 execute journal-db --local --file=worker/schema.sql",
+    "check:worker": "tsc -p worker/jsconfig.json"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260724.1",
     "@eslint/js": "^10.0.1",
     "@sveltejs/vite-plugin-svelte": "^5.0.3",
     "@types/node": "^26.1.1",

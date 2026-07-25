@@ -1,0 +1,29 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "journal-stdy-blog",
+  // account_id는 .env의 CLOUDFLARE_ACCOUNT_ID에서 온다 (untracked).
+  "compatibility_date": "2026-07-26",
+  // 사적인 저널이다. *.workers.dev로 열리면 Access를 우회하는 문이 하나 생긴다.
+  "workers_dev": false,
+  "main": "./worker/index.js",
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "single-page-application",
+    // /api/* 만 Worker가 먼저 받는다. 나머지는 정적 자산이 그대로 나간다.
+    "run_worker_first": ["/api/*"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "journal-db",
+      "database_id": "PLACEHOLDER-run-wrangler-d1-create"
+    }
+  ],
+  "vars": {
+    // Zero Trust 팀 도메인과 Access 애플리케이션의 AUD 태그.
+    "ACCESS_TEAM_DOMAIN": "PLACEHOLDER.cloudflareaccess.com",
+    "ACCESS_AUD": "PLACEHOLDER",
+    "ALLOWED_EMAIL": "bae.hwidong@gmail.com"
+  },
+  "routes": [{ "pattern": "journal.stdy.blog", "custom_domain": true }]
+}

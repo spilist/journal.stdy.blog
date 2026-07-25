@@ -15,8 +15,8 @@ import {
 } from './merge.js'
 
 /**
- * @param {Partial<import('./merge.js').Record>} [over]
- * @returns {import('./merge.js').Record}
+ * @param {Partial<import('./merge.js').Rec>} [over]
+ * @returns {import('./merge.js').Rec}
  */
 const log = (over = {}) => ({
   key: 'log:2026-03-01:오늘',
@@ -88,8 +88,8 @@ test('내용이 같으면 updatedAt이 안 움직인다 — 가짜 더티가 LWW
 })
 
 /**
- * @param {Partial<import('./merge.js').Record>} [over]
- * @returns {import('./merge.js').Record}
+ * @param {Partial<import('./merge.js').Rec>} [over]
+ * @returns {import('./merge.js').Rec}
  */
 const energy = (over = {}) => ({
   key: 'energy:2026-03-01:인지',
