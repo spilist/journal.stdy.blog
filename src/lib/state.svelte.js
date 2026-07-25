@@ -2,7 +2,7 @@
 // 그것들을 IndexedDB와 화면에 잇는다.
 
 import { addDays, kstDate } from './date.js'
-import { DIMS, LOG_KINDS, assemble, assembleDay, blankDay, parse } from './markdown.js'
+import { DIMS, LOG_KINDS, assemble, assembleDay, parse } from './markdown.js'
 import {
   countDirty,
   isDirty,
@@ -446,5 +446,3 @@ export class Journal {
     this.conflicts = this.conflicts.filter((c) => c.id !== id)
   }
 }
-
-export { blankDay }

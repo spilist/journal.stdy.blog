@@ -70,5 +70,6 @@ npm run deploy       # 빌드 + Cloudflare 업로드
 |---|---|
 | [AGENTS.md](./AGENTS.md) | 에이전트 운영 계약. 설계 취향과 불변식 |
 | [docs/spec-first-slice.md](./docs/spec-first-slice.md) | **구현 정본.** 스키마·프로토콜·수용 기준 |
+| [docs/roadmap.md](./docs/roadmap.md) | 우선순위와 순서 |
 | [docs/operator-acceptance.md](./docs/operator-acceptance.md) | 배포 전 사람이 할 일 |
 | [아이데이션 기록](./charness-artifacts/ideation/2026-07-26-concept-ideation.md) | 결정 `D1`~`D20`과 그 근거 |

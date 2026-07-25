@@ -56,25 +56,6 @@ export async function allRecords() {
 }
 
 /**
- * 키 접두사로 긁는다. `'energy:2026-03-01:'` 처럼 쓴다.
- *
- * @param {string} prefix
- * @returns {Promise<Rec[]>}
- */
-export async function recordsByPrefix(prefix) {
-  const range = IDBKeyRange.bound(prefix, prefix + '￿', false, false)
-  return done(/** @type {IDBRequest<Rec[]>} */ ((await store('records', 'readonly')).getAll(range)))
-}
-
-/**
- * @param {string} key
- * @returns {Promise<Rec | undefined>}
- */
-export async function getRecord(key) {
-  return done(/** @type {IDBRequest<Rec | undefined>} */ ((await store('records', 'readonly')).get(key)))
-}
-
-/**
  * @param {Rec[]} records
  */
 export async function putRecords(records) {

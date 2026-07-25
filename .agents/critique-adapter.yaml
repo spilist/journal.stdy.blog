@@ -1,0 +1,20 @@
+version: 1
+repo: journal.stdy.blog
+# 사람이 읽는 산출물은 한국어다 (AGENTS.md `언어`).
+language: ko
+output_dir: charness-artifacts/critique
+# 이 리포는 Claude Code 호스트에서 돈다. 기본 스켈레톤은 Codex 모델을 가리키므로
+# 호스트에 맞는 모델로 바꿔 둔다 — 안 그러면 프레시아이 리뷰어가 부모 턴의
+# reasoning effort를 그대로 물려받는다.
+reviewer_tiers:
+  high-leverage:
+    model: opus
+    reasoning_effort: medium
+    fork_turns: none
+  medium:
+    model: sonnet
+    reasoning_effort: medium
+    fork_turns: none
+# 섹션을 선언하면 critique prepare-packet 계약에 옵트인된다.
+# 비어 있으면 critique는 그대로 돈다.
+packet_sections: []
