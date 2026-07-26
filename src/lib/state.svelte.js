@@ -13,7 +13,7 @@ import {
   recordKey,
   resolveRejected,
 } from './merge.js'
-import { earliestScored, windowStart } from './series.js'
+import { datesInRange, recordBounds, spanDays, windowDates, windowLabel } from './series.js'
 import * as db from './store.js'
 import { pull, push } from './sync.js'
 
@@ -391,33 +391,39 @@ export class Journal {
   }
 
   /**
-   * 내려받기 범위의 시작 날짜. `null`이면 전부다. **그래프 창과 같은 함수에서 나온다** —
-   * 두 곳에서 따로 계산하면 그래프가 보여준 구간과 파일 내용이 조용히 어긋난다.
+   * 그래프 창의 날짜 전부. **그래프와 내려받기가 이 하나를 같이 쓴다** — 각자
+   * 계산하면 보여준 구간과 파일 내용이 조용히 어긋난다 (`S-2`).
    *
-   * @returns {string | null}
+   * @returns {string[]}
    */
-  exportFrom() {
-    if (this.graphDays === null) return null
-    return windowStart(earliestScored(Object.values(this.records)), this.today, this.graphDays)
+  graphDates() {
+    return windowDates(recordBounds(Object.values(this.records)), this.today, this.graphDays)
+  }
+
+  /** 전체 창의 길이(일). 「1개월 더」가 여기서 멈춘다. */
+  graphSpan() {
+    return spanDays(recordBounds(Object.values(this.records)), this.today)
+  }
+
+  /** 창의 이름. 그래프의 머리와 내려받기 버튼이 같은 문장을 쓴다. */
+  graphLabel() {
+    return windowLabel(this.graphDays, this.graphDates().length)
   }
 
   /**
-   * 같은 조립 함수에 범위만 다르게 준 것이다 (`D13`). 고정 블록은 범위와 무관하게
-   * 맨 위에 남는다 — 지금 서 있는 문장이지 그 기간의 기록이 아니다.
+   * 같은 조립 함수에 범위만 다르게 준 것이다 (`D13`). 범위는 **그래프 창 그 자체**다.
+   * 고정 블록은 범위와 무관하게 맨 위에 남는다 — 지금 서 있는 문장이지 그 기간의
+   * 기록이 아니다.
    *
-   * @param {string | null} [from] 이 날짜보다 이른 날은 뺀다. `null`이면 전부.
+   * 「전체」 창은 오늘보다 뒤의 기록까지 덮으므로(`windowEnd`) 전량이 그대로 나온다.
    */
-  exportAll(from = null) {
+  exportAll() {
     this.flush()
-    /** @type {Record<string, true>} */
-    const dates = Object.create(null)
-    for (const rec of Object.values(this.records)) {
-      const m = /^(?:energy|log):(\d{4}-\d{2}-\d{2}):/.exec(rec.key)
-      if (m && (from === null || m[1] >= from)) dates[m[1]] = true
-    }
+    const dates = this.graphDates()
+    const days = datesInRange(Object.values(this.records), dates[0], dates[dates.length - 1])
     return assemble({
       pinned: this.pinned().data.text,
-      days: Object.keys(dates).map((d) => this.dayFor(d)),
+      days: days.map((d) => this.dayFor(d)),
     })
   }
 

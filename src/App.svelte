@@ -56,15 +56,17 @@
   // 내려받기 범위는 **그래프 창**이다 — 같은 일을 하는 UI를 하나 더 만들지 않는다
   // (설계 취향 1항). 그래서 라벨이 범위를 말해야 한다. 버튼만 보고 눌러도 무엇이
   // 나올지 알 수 있어야 아래쪽 그래프 상태에 의존하는 게 함정이 되지 않는다.
-  let rangeLabel = $derived(journal.graphDays === null ? '전체' : `최근 ${journal.graphDays}일`)
+  let rangeLabel = $derived(journal.graphLabel())
 
   function download() {
-    const from = journal.exportFrom()
-    const blob = new Blob([journal.exportAll(from)], { type: 'text/markdown' })
+    const dates = journal.graphDates()
+    const blob = new Blob([journal.exportAll()], { type: 'text/markdown' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = from ? `journal-${from}_${journal.today}.md` : `journal-${journal.today}.md`
+    // 파일명이 범위를 주장한다. 창의 실제 양 끝을 쓴다 — 오늘로 박으면 「전체」가
+    // 오늘 뒤의 기록까지 담을 때 이름이 거짓말이 된다.
+    a.download = `journal-${dates[0]}_${dates[dates.length - 1]}.md`
     // 붙이지 않고 클릭하거나 즉시 revoke 하면 Firefox·iOS Safari에서 조용히 실패한다.
     document.body.appendChild(a)
     a.click()

@@ -7,7 +7,7 @@
   // 기능이 아니라 이미 있는 날짜 이동의 조합이다 (설계 취향 1항).
 
   import { dayLabel } from './date.js'
-  import { earliestScored, lines, plot, spanDays, windowDates } from './series.js'
+  import { dayEnergy, lines, plot } from './series.js'
 
   /** @type {{journal: import('./state.svelte.js').Journal, dims: readonly string[]}} */
   let { journal, dims } = $props()
@@ -26,23 +26,26 @@
   let picked = $state('')
 
   let records = $derived(Object.values(journal.records))
-  let earliest = $derived(earliestScored(records))
-  let dates = $derived(windowDates(earliest, journal.today, days))
+  // 창은 `journal`이 계산한다 — 내려받기와 **같은 배열**이어야 한다 (`S-2`).
+  let dates = $derived(journal.graphDates())
   let series = $derived(lines(records, dims, dates))
   let view = $derived(plot(dates, series, { width, height: HEIGHT, pad: PAD }))
   let empty = $derived(series.every((l) => l.points.length === 0))
-  let atFullSpan = $derived(days === null || days >= spanDays(earliest, journal.today))
+  let atFullSpan = $derived(days === null || days >= journal.graphSpan())
 
   /** 지금 보고 있는 날짜가 창 안에 있으면 세로 자를 세운다. */
   let cursor = $derived(dates.indexOf(journal.date))
+  /** 창이 좁아져 짚은 날이 밖으로 나가면 툴팁도 접는다 — 자가 없는 툴팁은 어디를
+      가리키는지 알 수 없고, 값까지 「없음」으로 뒤집혀 보인다. */
   let pickedIndex = $derived(picked ? dates.indexOf(picked) : -1)
 
-  /** 선택한 날짜의 세 차원. 점수가 없는 차원도 자리를 지킨다 — 안 쓴 것도 신호다. */
-  let pickedRows = $derived(
-    series.map((l) => ({ dim: l.dim, point: l.points.find((p) => p.date === picked) })),
-  )
+  /**
+   * 선택한 날짜의 세 차원. **선이 아니라 레코드에서 읽는다** — 점수 없이 이유만 쓴
+   * 날도 이유가 보여야 한다 (`SC-11`).
+   */
+  let pickedRows = $derived(pickedIndex >= 0 ? dayEnergy(records, dims, picked) : [])
 
-  let rangeLabel = $derived(days === null ? `전체 ${dates.length}일` : `최근 ${days}일`)
+  let rangeLabel = $derived(journal.graphLabel())
 
   /** @param {string} date */
   function select(date) {
@@ -61,12 +64,43 @@
    *
    * @param {PointerEvent} e
    */
-  function onPointer(e) {
+  function dateAt(e) {
     const rect = /** @type {HTMLElement} */ (e.currentTarget).getBoundingClientRect()
     const inner = Math.max(1, rect.width - PAD.left - PAD.right)
     const ratio = (e.clientX - rect.left - PAD.left) / inner
     const last = dates.length - 1
-    select(dates[Math.min(last, Math.max(0, Math.round(ratio * last)))])
+    return dates[Math.min(last, Math.max(0, Math.round(ratio * last)))]
+  }
+
+  /**
+   * 누른 자리와 손을 뗀 자리. **누르는 순간을 탭으로 치면 세로 스크롤을 시작한 것도
+   * 선택이 된다** — 같은 칸에서 두 번 스크롤을 시작하면 두 번째가 이동으로 판정돼
+   * 보고 있던 날짜가 바뀐다. 에너지 스트립이 `P-5`에서 겪은 것과 같은 자리다.
+   *
+   * @type {{id: number, x: number, y: number} | null}
+   */
+  let tap = null
+  /** 손가락이 이만큼 넘게 움직였으면 탭이 아니라 스크롤이다. */
+  const TAP_SLOP = 8
+
+  /** @param {PointerEvent} e */
+  function onDown(e) {
+    if (!e.isPrimary) return
+    tap = { id: e.pointerId, x: e.clientX, y: e.clientY }
+  }
+
+  /** @param {PointerEvent} e */
+  function onUp(e) {
+    if (!tap || tap.id !== e.pointerId) return
+    const moved =
+      Math.abs(e.clientX - tap.x) > TAP_SLOP || Math.abs(e.clientY - tap.y) > TAP_SLOP
+    tap = null
+    if (!moved) select(dateAt(e))
+  }
+
+  /** 스크롤이 제스처를 가져가면 취소가 온다. **취소는 확정이 아니다.** @param {PointerEvent} e */
+  function onCancel(e) {
+    if (tap && tap.id === e.pointerId) tap = null
   }
 
   /**
@@ -78,10 +112,15 @@
     const last = dates.length - 1
     if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
       e.preventDefault()
-      const from = pickedIndex >= 0 ? pickedIndex : last
-      const next = from + (e.key === 'ArrowRight' ? 1 : -1)
+      // 아무것도 안 짚은 상태의 첫 키는 **오늘을 짚는다.** 여기서 바로 ±1을 하면
+      // 첫 ←가 어제로 건너뛰어 좌우가 비대칭이 된다.
+      if (pickedIndex < 0) {
+        picked = dates[last]
+        return
+      }
+      const next = pickedIndex + (e.key === 'ArrowRight' ? 1 : -1)
       picked = dates[Math.min(last, Math.max(0, next))]
-    } else if ((e.key === 'Enter' || e.key === ' ') && picked) {
+    } else if ((e.key === 'Enter' || e.key === ' ') && pickedIndex >= 0) {
       e.preventDefault()
       journal.goTo(picked)
       picked = ''
@@ -99,9 +138,9 @@
       class="ghost"
       disabled={atFullSpan}
       onclick={() => {
-        const next = (days ?? 0) + STEP
+        const next = (days ?? STEP) + STEP
         // 전체를 넘어서면 그냥 전체로 접는다 — 왼쪽에 빈 달을 붙여봐야 읽을 게 없다.
-        journal.graphDays = next >= spanDays(earliest, journal.today) ? null : next
+        journal.graphDays = next >= journal.graphSpan() ? null : next
       }}>1개월 더</button
     >
     <button
@@ -128,7 +167,9 @@
         type="button"
         class="plot"
         aria-label="에너지 점수 {rangeLabel}. 좌우 화살표로 날짜를 짚고 엔터로 그날로 이동합니다."
-        onpointerdown={onPointer}
+        onpointerdown={onDown}
+        onpointerup={onUp}
+        onpointercancel={onCancel}
         onkeydown={onKey}
       >
       <svg {width} height={HEIGHT} role="img" aria-hidden="true">
@@ -139,8 +180,10 @@
           </text>
         {/each}
 
-        {#each view.ticks as t (t.label)}
-          <text class="tick" x={t.x} y={HEIGHT - 6} text-anchor="middle">{t.label}</text>
+        <!-- 인덱스로 키잉한다. 라벨은 창 안에서 유일하도록 만들지만, 키가 라벨이면
+             한 번의 중복이 `each_key_duplicate`로 앱 전체를 죽인다. -->
+        {#each view.ticks as t, i (i)}
+          <text class="tick" x={t.x} y={HEIGHT - 6} text-anchor={t.anchor}>{t.label}</text>
         {/each}
 
         {#if cursor >= 0}
@@ -174,7 +217,7 @@
     {/each}
   </ul>
 
-  {#if picked}
+  {#if pickedIndex >= 0}
     <div class="tip">
       <div class="tip-head">
         <strong>{dayLabel(picked, journal.today)}</strong>
@@ -185,8 +228,8 @@
         <div class="row">
           <span class="swatch s{i}"></span>
           <span class="name">{row.dim}</span>
-          <span class="score" class:unset={!row.point}>{row.point?.score ?? '—'}</span>
-          <span class="reason">{row.point?.reason ?? ''}</span>
+          <span class="score" class:unset={row.score === null}>{row.score ?? '—'}</span>
+          <span class="reason">{row.reason}</span>
         </div>
       {/each}
     </div>
@@ -238,6 +281,9 @@
   .none {
     position: absolute;
     inset: 0;
+    /* 안내 문구가 버튼 전체를 덮는다. 이걸 안 풀면 빈 창에서 탭이 아예 안 먹어,
+       키보드로는 되고 손가락으로는 안 되는 비대칭이 생긴다. */
+    pointer-events: none;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -272,18 +318,21 @@
     stroke-linecap: round;
     stroke-linejoin: round;
   }
-  .dot {
-    stroke: var(--raised);
-    stroke-width: 1;
-  }
-  .s0 {
+  /* 선택자를 요소로 좁힌다. `.dot`과 `.s0`이 명시도가 같으면 뒤에 오는 `.s0`이
+     이겨서 점의 분리용 후광(--raised)이 통째로 사라진다. */
+  polyline.s0 {
     stroke: var(--series-a);
   }
-  .s1 {
+  polyline.s1 {
     stroke: var(--series-b);
   }
-  .s2 {
+  polyline.s2 {
     stroke: var(--series-c);
+  }
+  circle.dot {
+    /* 선이 겹치는 구간에서 점이 선에 묻히지 않게 배경색으로 한 겹 두른다. */
+    stroke: var(--raised);
+    stroke-width: 1;
   }
   circle.s0 {
     fill: var(--series-a);
@@ -294,7 +343,7 @@
   circle.s2 {
     fill: var(--series-c);
   }
-  circle.on {
+  circle.dot.on {
     stroke: var(--fg);
     stroke-width: 1.5;
   }
