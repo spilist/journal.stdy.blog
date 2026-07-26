@@ -5,6 +5,7 @@
 
   import Conflicts from './Conflicts.svelte'
   import { autogrow } from './autogrow.js'
+  import { kstDate, kstTime } from './date.js'
 
   /** @type {{journal: import('./state.svelte.js').Journal, kind: string}} */
   let { journal, kind } = $props()
@@ -14,7 +15,17 @@
 </script>
 
 <section class="block">
-  <h2>{kind}</h2>
+  <div class="head">
+    <h2>{kind}</h2>
+    {#if rec.updatedAt}
+      <!-- 에너지의 `scoredAt`과 같은 자리. 기록 시각이 해석에 영향을 준다 (`F4`). -->
+      <span class="at" title="마지막으로 손댄 시각">
+        {kstDate(rec.updatedAt) === journal.date ? '' : `${kstDate(rec.updatedAt)} `}{kstTime(
+          rec.updatedAt,
+        )}
+      </span>
+    {/if}
+  </div>
 
   {#if previous}
     <div class="previous">
@@ -36,6 +47,19 @@
 </section>
 
 <style>
+  .head {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+  }
+  .head h2 {
+    margin-bottom: 0.5rem;
+  }
+  .at {
+    margin-left: auto;
+    font-size: 0.75rem;
+    color: var(--dim);
+  }
   .previous {
     border-left: 3px solid var(--line);
     padding: 0.1rem 0 0.1rem 0.6rem;

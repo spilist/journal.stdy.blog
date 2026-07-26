@@ -6,6 +6,7 @@
 
   import Conflicts from './Conflicts.svelte'
   import { autogrow } from './autogrow.js'
+  import { kstDate, kstTime } from './date.js'
 
   /** @type {{journal: import('./state.svelte.js').Journal}} */
   let { journal } = $props()
@@ -36,6 +37,9 @@
   </button>
 
   {#if journal.pinnedOpen}
+    {#if rec.updatedAt}
+      <div class="at">마지막 수정 {kstDate(rec.updatedAt)} {kstTime(rec.updatedAt)}</div>
+    {/if}
     <textarea
       use:autogrow={rec.data.text}
       rows="10"
@@ -103,6 +107,11 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+  .at {
+    padding: 0 0.9rem 0.4rem;
+    font-size: 0.75rem;
+    color: var(--dim);
   }
   .pinned.open textarea {
     margin: 0 0.9rem 0.9rem;
