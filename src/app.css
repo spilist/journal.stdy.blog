@@ -11,6 +11,10 @@
   --warn-bg: #fffbe8;
   --warn-fg: #8a6d00;
   --on-accent: #ffffff;
+  /* 그래프의 세 선 (인지·정서·육체). 색만으로 구분하지 않게 범례와 툴팁이 이름을 낸다. */
+  --series-a: #2f6f4f;
+  --series-b: #b4622a;
+  --series-c: #3a5f9e;
   color-scheme: light dark;
 }
 
@@ -27,6 +31,9 @@
     --warn-fg: #e0c34a;
     /* 밝은 --accent 위에는 어두운 글씨라야 읽힌다. */
     --on-accent: #10241a;
+    --series-a: #6cc79a;
+    --series-b: #e0a86c;
+    --series-c: #8ab0e8;
   }
 }
 

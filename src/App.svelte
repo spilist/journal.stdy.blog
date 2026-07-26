@@ -1,8 +1,8 @@
 <script>
-  // 화면 하나. 날짜 이동 · 고정 블록 · 에너지 · 어제 · 오늘.
-  // 그래프는 S2다.
+  // 화면 하나. 날짜 이동 · 고정 블록 · 에너지 · 어제 · 오늘 · 에너지 그래프.
 
   import Energy from './lib/Energy.svelte'
+  import Graph from './lib/Graph.svelte'
   import ImportPanel from './lib/ImportPanel.svelte'
   import LogBlock from './lib/LogBlock.svelte'
   import Pinned from './lib/Pinned.svelte'
@@ -121,6 +121,8 @@
     {#each LOG_KINDS as kind (kind)}
       <LogBlock {journal} {kind} />
     {/each}
+    <!-- 쓰는 자리 아래에 둔다. 앱이 하는 일 둘 중 하나지만, 매일의 손은 위쪽에 있다. -->
+    <Graph {journal} dims={DIMS} />
   {/if}
 
   <footer>
