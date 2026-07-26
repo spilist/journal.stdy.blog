@@ -14,6 +14,15 @@
 
   const PLACEHOLDER = '# 26-03-01\n\n## 에너지\n- 인지: 8. ...'
 
+  /** @type {HTMLElement | undefined} */
+  let root = $state()
+
+  // 이 패널은 화면 위쪽에 열리는데 여는 버튼은 맨 아래에 있다. 폰에서는 몇 화면
+  // 위에 열려서 아무 반응이 없는 것처럼 보인다.
+  $effect(() => {
+    root?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  })
+
   /** @param {Event} e */
   async function pickFile(e) {
     const input = /** @type {HTMLInputElement} */ (e.currentTarget)
@@ -32,7 +41,7 @@
   }
 </script>
 
-<div class="panel">
+<div class="panel" bind:this={root}>
   <h2>가져오기</h2>
   <p class="note">
     마크다운을 붙여넣거나 파일을 고릅니다. <strong>미리 보고 확인해야 저장됩니다.</strong>

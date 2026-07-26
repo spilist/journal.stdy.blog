@@ -2,8 +2,9 @@
   // 점수는 라디오로만, 이유는 텍스트로만 편집된다 (`D1`). 두 수단이 같은 값을
   // 건드리지 않으므로 표면이 겹치지 않는다.
   //
-  // 10점 1행 + 높이 56px (`D7`). 폭 34px은 권장 터치 타깃(44px)에 못 미치지만 세로를
-  // 키워 상쇄한다. 며칠 써보고 거슬리면 5×2행이나 5점으로 내린다 (`P-1`).
+  // 10점 1행 (`D7`). **버튼을 유지하되 스트립 위를 문지르면 슬라이더처럼 움직인다** —
+  // 새 UI를 하나 더 만들지 않고 조작 방식만 늘린 것이다 (설계 취향 1항).
+  // 슬라이더(`input[type=range]`)를 쓰지 않은 이유는 `P-1` 참조.
 
   import { kstTime } from './date.js'
   import Conflicts from './Conflicts.svelte'
@@ -12,6 +13,83 @@
   let { journal, dims } = $props()
 
   const SCORES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+  /** @type {string | null} 문지르는 중인 차원 */
+  let dragging = $state(null)
+  let dragMoved = false
+  /** @type {number | null} */
+  let dragStart = null
+
+  /**
+   * 손가락 x좌표를 점수로 바꾼다. 버튼 경계가 아니라 스트립 전체를 기준으로 재므로
+   * 버튼 사이 간격에서도 값이 끊기지 않는다.
+   *
+   * @param {HTMLElement} strip
+   * @param {number} clientX
+   * @returns {number} 1..10
+   */
+  function scoreAt(strip, clientX) {
+    const rect = strip.getBoundingClientRect()
+    const ratio = (clientX - rect.left) / rect.width
+    return Math.min(10, Math.max(1, Math.ceil(ratio * 10)))
+  }
+
+  /**
+   * @param {PointerEvent} e
+   * @param {string} dim
+   */
+  function onDown(e, dim) {
+    const strip = /** @type {HTMLElement} */ (e.currentTarget)
+    strip.setPointerCapture(e.pointerId)
+    dragging = dim
+    dragMoved = false
+    const picked = scoreAt(strip, e.clientX)
+    dragStart = picked
+    // 이미 그 점수면 손을 뗄 때 해제한다 — 문지르는 중에 깜빡이지 않게.
+    if (journal.energy(dim).data.score !== picked) journal.toggleScore(dim, picked)
+  }
+
+  /**
+   * @param {PointerEvent} e
+   * @param {string} dim
+   */
+  function onMove(e, dim) {
+    if (dragging !== dim) return
+    const picked = scoreAt(/** @type {HTMLElement} */ (e.currentTarget), e.clientX)
+    if (picked === dragStart && !dragMoved) return
+    dragMoved = true
+    if (journal.energy(dim).data.score !== picked) journal.toggleScore(dim, picked)
+  }
+
+  /**
+   * 키보드로도 값을 옮긴다 — 데스크톱에서 마우스를 쓰지 않아도 되게.
+   *
+   * @param {KeyboardEvent} e
+   * @param {string} dim
+   */
+  function onKey(e, dim) {
+    const current = journal.energy(dim).data.score
+    if (e.key === 'ArrowRight' || e.key === 'ArrowUp') {
+      e.preventDefault()
+      journal.toggleScore(dim, Math.min(10, (current ?? 0) + 1))
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') {
+      e.preventDefault()
+      if (current !== null && current > 1) journal.toggleScore(dim, current - 1)
+    } else if ((e.key === 'Backspace' || e.key === 'Delete') && current !== null) {
+      e.preventDefault()
+      journal.toggleScore(dim, current)
+    }
+  }
+
+  /** @param {string} dim */
+  function onUp(dim) {
+    // 움직이지 않고 이미 켜진 점수를 눌렀으면 해제다 (`SC-3`).
+    if (!dragMoved && dragStart !== null && journal.energy(dim).data.score === dragStart) {
+      journal.toggleScore(dim, dragStart)
+    }
+    dragging = null
+    dragStart = null
+  }
 </script>
 
 <section class="block">
@@ -22,20 +100,35 @@
     <div class="dim">
       <div class="head">
         <span class="name">{dim}</span>
+        <span class="value" class:unset={rec.data.score === null}>
+          {rec.data.score ?? '—'}
+        </span>
         {#if rec.data.scoredAt}
           <span class="at" title="점수를 매긴 시각">{kstTime(rec.data.scoredAt)}</span>
         {/if}
       </div>
 
-      <div class="scores" role="radiogroup" aria-label="{dim} 점수">
+      <div
+        class="scores"
+        role="radiogroup"
+        aria-label="{dim} 점수"
+        tabindex="0"
+        onkeydown={(e) => onKey(e, dim)}
+        onpointerdown={(e) => onDown(e, dim)}
+        onpointermove={(e) => onMove(e, dim)}
+        onpointerup={() => onUp(dim)}
+        onpointercancel={() => onUp(dim)}
+      >
         {#each SCORES as score (score)}
-          <button
-            type="button"
+          <span
             role="radio"
             aria-checked={rec.data.score === score}
+            aria-label="{score}점"
+            tabindex="-1"
+            class="cell"
             class:on={rec.data.score === score}
-            onclick={() => journal.toggleScore(dim, score)}
-          >{score}</button>
+            class:filled={rec.data.score !== null && score <= rec.data.score}
+          >{score}</span>
         {/each}
       </div>
 
@@ -54,7 +147,7 @@
 
 <style>
   .dim + .dim {
-    margin-top: 1rem;
+    margin-top: 1.1rem;
   }
   .head {
     display: flex;
@@ -65,38 +158,64 @@
   .name {
     font-weight: 600;
   }
+  .value {
+    font-size: 1.05rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--accent);
+  }
+  .value.unset {
+    color: var(--dim);
+    font-weight: 400;
+  }
   .at {
     font-size: 0.75rem;
     color: var(--dim);
+    margin-left: auto;
   }
+
   .scores {
     display: grid;
     grid-template-columns: repeat(10, 1fr);
-    gap: 2px;
-  }
-  .scores button {
-    height: 56px; /* D7: 폭이 좁은 걸 세로로 상쇄한다 */
     border: 1px solid var(--line);
-    background: var(--bg);
-    color: var(--fg);
-    font-size: 0.9rem;
+    border-radius: 8px;
+    overflow: hidden;
+    /* 가로로 문지르는 동작을 우리가 받고, 세로 스크롤은 브라우저에 넘긴다. */
+    touch-action: pan-y;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .cell {
+    /* 전역 button 의 좌우 padding 이 칸 최소폭을 밀어올려 10번째가 잘렸다.
+       0 으로 두고 min-width 도 풀어야 1fr 이 실제로 균등해진다. */
+    padding: 0;
+    min-width: 0;
+    height: 56px; /* D7: 폭이 좁은 걸 세로로 상쇄한다 */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
     font-variant-numeric: tabular-nums;
+    color: var(--dim);
+    background: var(--bg);
     cursor: pointer;
-    touch-action: manipulation;
   }
-  .scores button:first-child {
-    border-radius: 6px 0 0 6px;
+  .cell + .cell {
+    border-left: 1px solid var(--line);
   }
-  .scores button:last-child {
-    border-radius: 0 6px 6px 0;
+  /* 선택한 값까지 채워서 슬라이더처럼 읽히게 한다. 값 자체는 .on 이 가리킨다. */
+  .cell.filled {
+    background: color-mix(in srgb, var(--accent) 18%, var(--bg));
+    color: var(--fg);
   }
-  .scores button.on {
+  .cell.on {
     background: var(--accent);
-    border-color: var(--accent);
     color: #fff;
     font-weight: 700;
+    font-size: 0.95rem;
   }
+
   textarea {
-    margin-top: 0.35rem;
+    margin-top: 0.4rem;
   }
 </style>

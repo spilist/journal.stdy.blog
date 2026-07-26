@@ -116,7 +116,9 @@
       하루치 복사
     </button>
     <button type="button" class="ghost" onclick={download}>전체 내려받기</button>
-    <button type="button" class="ghost" onclick={() => (showImport = !showImport)}>가져오기</button>
+    <button type="button" class="ghost" class:open={showImport} onclick={() => (showImport = !showImport)}>
+      {showImport ? '가져오기 닫기' : '가져오기'}
+    </button>
   </footer>
 </main>
 
@@ -195,6 +197,10 @@
     border-radius: 6px;
     padding: 0.6rem 0.8rem;
     font-size: 0.9rem;
+  }
+  footer button.open {
+    border-color: var(--accent);
+    color: var(--accent);
   }
   footer {
     display: flex;
