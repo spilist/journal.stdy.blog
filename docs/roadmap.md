@@ -10,7 +10,7 @@ Date: 2026-07-26
 
 ## 현재 상태
 
-**S1 배포됨 (2026-07-26) — https://journal.stdy.blog. S2는 구현됐고 아직 배포 전이다.**
+**S1·S2 배포됨 (2026-07-26) — https://journal.stdy.blog**
 
 D1 `journal-db`와 Cloudflare Access 설정이 끝났고 게이트는 다 초록이다 —
 `npm test` 60개 · `npm run lint` · `npm run check` · `npm run build`.
@@ -23,9 +23,9 @@ D1 `journal-db`와 Cloudflare Access 설정이 끝났고 게이트는 다 초록
 
 ### 1. 수용 확인 (**사람만 할 수 있다**)
 
-`AC-9`~`AC-12`. **절차의 단일 출처는
-[operator-acceptance.md](./operator-acceptance.md) `## 수용 확인`이다** — 여기서
-재선언하지 않는다.
+`AC-9`~`AC-11`은 닫혔다 (2026-07-26). **`AC-12`·`AC-19`가 남았다.** 절차의 단일
+출처는 [operator-acceptance.md](./operator-acceptance.md) `## 수용 확인`이다 —
+여기서 재선언하지 않는다.
 
 ### 2. 폰에서 볼 프로브
 
@@ -40,7 +40,7 @@ D1 `journal-db`와 Cloudflare Access 설정이 끝났고 게이트는 다 초록
 전체 export의 날짜 범위 선택 UI는 **새로 만들지 않았다** — 그래프 창이 이미 범위
 선택기라 그걸 쓴다 (설계 취향 1항). 반대 의견은 같은 문서 `S-5`에 있다.
 
-**남은 것: 배포(`npm run deploy`)와 폰 확인(`P-6`·`P-7`).**
+**남은 것: 폰 확인(`P-6`·`P-7`·`AC-19`)과 `AC-12` 왕복.**
 
 ### 4. 남은 리뷰
 
