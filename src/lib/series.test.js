@@ -1,7 +1,16 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { MAX_SCORE, MIN_SCORE, earliestScored, lines, plot, spanDays, windowDates } from './series.js'
+import {
+  MAX_SCORE,
+  MIN_SCORE,
+  earliestScored,
+  lines,
+  plot,
+  spanDays,
+  windowDates,
+  windowStart,
+} from './series.js'
 
 const DIMS = ['인지', '정서', '육체']
 
@@ -38,6 +47,16 @@ test('전체 창은 가장 이른 점수부터 오늘까지다', () => {
   // 점수가 하나도 없으면 오늘 하루짜리 축이다 — 비어 있어도 그릴 자리는 있어야 한다.
   assert.deepEqual(windowDates(null, '2026-07-26', null), ['2026-07-26'])
   assert.equal(spanDays('2026-07-24', '2026-07-26'), 3)
+})
+
+test('내려받기 범위와 그래프 창은 같은 시작 날짜를 쓴다', () => {
+  // 두 곳에서 따로 계산하면 그래프가 보여준 구간과 파일 내용이 조용히 어긋난다.
+  for (const days of [1, 30, 60, null]) {
+    assert.equal(
+      windowStart('2026-01-01', '2026-07-26', days),
+      windowDates('2026-01-01', '2026-07-26', days)[0],
+    )
+  }
 })
 
 test('미래에만 기록이 있어도 축이 비지 않는다', () => {

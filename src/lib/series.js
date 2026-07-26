@@ -45,10 +45,22 @@ export function earliestScored(records) {
  * @param {string | null} earliest
  * @param {string} today 'YYYY-MM-DD'
  * @param {number | null} days null 이면 전체
+ * @returns {string} 'YYYY-MM-DD'
+ */
+export function windowStart(earliest, today, days) {
+  return days === null ? (earliest ?? today) : addDays(today, -(days - 1))
+}
+
+/**
+ * 창에 들어갈 날짜 전부. `windowStart`부터 오늘까지 하루도 빠뜨리지 않는다.
+ *
+ * @param {string | null} earliest
+ * @param {string} today
+ * @param {number | null} days
  * @returns {string[]}
  */
 export function windowDates(earliest, today, days) {
-  const from = days === null ? (earliest ?? today) : addDays(today, -(days - 1))
+  const from = windowStart(earliest, today, days)
   /** @type {string[]} */
   const dates = []
   for (let d = from; d <= today; d = addDays(d, 1)) dates.push(d)

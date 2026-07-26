@@ -17,8 +17,9 @@
   const PAD = { top: 10, right: 6, bottom: 20, left: 22 }
   const STEP = 30
 
-  /** @type {number | null} 창의 길이(일). `null`이면 전체 (`D14`). */
-  let days = $state(/** @type {number | null} */ (STEP))
+  // 창은 `journal`이 갖고 있다 — **내려받기 범위이기도 해서** 컴포넌트 안에 두면
+  // 푸터의 버튼이 못 읽는다 (`state.svelte.js`의 `graphDays` 주석 참조).
+  let days = $derived(journal.graphDays)
   /** 컨테이너 실측 폭. viewBox로 늘리면 점이 타원이 되고 손가락 좌표가 어긋난다. */
   let width = $state(0)
   /** 선택한 날짜. 같은 날짜를 다시 고르면 이동한다. */
@@ -100,15 +101,22 @@
       onclick={() => {
         const next = (days ?? 0) + STEP
         // 전체를 넘어서면 그냥 전체로 접는다 — 왼쪽에 빈 달을 붙여봐야 읽을 게 없다.
-        days = next >= spanDays(earliest, journal.today) ? null : next
+        journal.graphDays = next >= spanDays(earliest, journal.today) ? null : next
       }}>1개월 더</button
     >
-    <button type="button" class="ghost" disabled={days === null} onclick={() => (days = null)}>
+    <button
+      type="button"
+      class="ghost"
+      disabled={days === null}
+      onclick={() => (journal.graphDays = null)}
+    >
       전체
     </button>
     <!-- 넓힌 창은 되돌릴 수 있어야 한다. -->
     {#if days !== STEP}
-      <button type="button" class="ghost" onclick={() => (days = STEP)}>{STEP}일</button>
+      <button type="button" class="ghost" onclick={() => (journal.graphDays = STEP)}>
+        {STEP}일
+      </button>
     {/if}
   </div>
 

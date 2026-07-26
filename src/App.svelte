@@ -53,18 +53,24 @@
     setTimeout(() => (toast = message === toast ? '' : toast), 2400)
   }
 
+  // 내려받기 범위는 **그래프 창**이다 — 같은 일을 하는 UI를 하나 더 만들지 않는다
+  // (설계 취향 1항). 그래서 라벨이 범위를 말해야 한다. 버튼만 보고 눌러도 무엇이
+  // 나올지 알 수 있어야 아래쪽 그래프 상태에 의존하는 게 함정이 되지 않는다.
+  let rangeLabel = $derived(journal.graphDays === null ? '전체' : `최근 ${journal.graphDays}일`)
+
   function download() {
-    const blob = new Blob([journal.exportAll()], { type: 'text/markdown' })
+    const from = journal.exportFrom()
+    const blob = new Blob([journal.exportAll(from)], { type: 'text/markdown' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `journal-${journal.today}.md`
+    a.download = from ? `journal-${from}_${journal.today}.md` : `journal-${journal.today}.md`
     // 붙이지 않고 클릭하거나 즉시 revoke 하면 Firefox·iOS Safari에서 조용히 실패한다.
     document.body.appendChild(a)
     a.click()
     a.remove()
     setTimeout(() => URL.revokeObjectURL(url), 10_000)
-    say('전체 마크다운을 내려받았습니다')
+    say(`${rangeLabel} 마크다운을 내려받았습니다`)
   }
 </script>
 
@@ -129,7 +135,8 @@
     <button type="button" onclick={() => copy(journal.exportDay(), '하루치를 복사했습니다')}>
       하루치 복사
     </button>
-    <button type="button" class="ghost" onclick={download}>전체 내려받기</button>
+    <!-- 범위는 그래프 창이 정한다. 여기서는 무엇이 나오는지만 말한다. -->
+    <button type="button" class="ghost" onclick={download}>{rangeLabel} 내려받기</button>
     <button type="button" class="ghost" class:open={showImport} onclick={() => (showImport = !showImport)}>
       {showImport ? '가져오기 닫기' : '가져오기'}
     </button>

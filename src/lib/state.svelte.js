@@ -13,6 +13,7 @@ import {
   recordKey,
   resolveRejected,
 } from './merge.js'
+import { earliestScored, windowStart } from './series.js'
 import * as db from './store.js'
 import { pull, push } from './sync.js'
 
@@ -58,6 +59,17 @@ export class Journal {
   syncMessage = $state('')
 
   pinnedOpen = $state(false)
+
+  /**
+   * 그래프 창의 길이(일). `null`이면 전체 (`D14`).
+   *
+   * **내려받기 범위이기도 하다.** 그래프의 창이 이미 날짜 범위 선택기라, 같은 일을
+   * 하는 UI를 하나 더 만들지 않는다 (설계 취향 1항). 경계는 이렇다 — **범위는 그래프
+   * 창으로만 정하고, 내려받기는 버튼으로만 한다** (2항).
+   *
+   * @type {number | null}
+   */
+  graphDays = $state(/** @type {number | null} */ (30))
 
   loaded = $state(false)
 
@@ -378,14 +390,30 @@ export class Journal {
     return assembleDay(this.dayFor(this.date)) + '\n'
   }
 
-  /** 전체. 같은 조립 함수에 범위만 다르게 준 것이다 (`D13`). */
-  exportAll() {
+  /**
+   * 내려받기 범위의 시작 날짜. `null`이면 전부다. **그래프 창과 같은 함수에서 나온다** —
+   * 두 곳에서 따로 계산하면 그래프가 보여준 구간과 파일 내용이 조용히 어긋난다.
+   *
+   * @returns {string | null}
+   */
+  exportFrom() {
+    if (this.graphDays === null) return null
+    return windowStart(earliestScored(Object.values(this.records)), this.today, this.graphDays)
+  }
+
+  /**
+   * 같은 조립 함수에 범위만 다르게 준 것이다 (`D13`). 고정 블록은 범위와 무관하게
+   * 맨 위에 남는다 — 지금 서 있는 문장이지 그 기간의 기록이 아니다.
+   *
+   * @param {string | null} [from] 이 날짜보다 이른 날은 뺀다. `null`이면 전부.
+   */
+  exportAll(from = null) {
     this.flush()
     /** @type {Record<string, true>} */
     const dates = Object.create(null)
     for (const rec of Object.values(this.records)) {
       const m = /^(?:energy|log):(\d{4}-\d{2}-\d{2}):/.exec(rec.key)
-      if (m) dates[m[1]] = true
+      if (m && (from === null || m[1] >= from)) dates[m[1]] = true
     }
     return assemble({
       pinned: this.pinned().data.text,
