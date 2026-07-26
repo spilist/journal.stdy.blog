@@ -116,7 +116,15 @@ export function parse(raw) {
         }
       } else if (LOG_KINDS.includes(/** @type {any} */ (name))) {
         logs.push({ kind: name, text: trimSectionBody(block.body) })
+      } else if (logs.length) {
+        // 사용자가 로그 본문에 소제목을 달았다. 새 블록이 아니라 **그 로그의 일부**다 —
+        // 잘라내면 앱에서 쓴 글을 자기 export로 다시 읽을 때 그 아래가 통째로 사라진다.
+        const last = logs[logs.length - 1]
+        const body = trimSectionBody(block.body)
+        last.text += `\n## ${block.heading}` + (body ? `\n${body}` : '')
       } else {
+        // 로그가 시작되기도 전에 나온 모르는 섹션은 붙일 자리가 없다. 버리지 않고
+        // 원문 그대로 모아 import 미리보기에서 보여준다 (불변식 3).
         unparsed.push({
           line: `## ${block.heading}\n${trimSectionBody(block.body)}`,
           where: section.heading,
@@ -164,7 +172,10 @@ export function assembleEnergyLine({ dim, score, reason }) {
  */
 export function assembleDay(day) {
   const blocks = [`# ${toH1(day.date)}`]
-  blocks.push([`## ${ENERGY}`, ...day.energy.map(assembleEnergyLine)].join('\n'))
+  // 원본에 에너지 섹션이 없었으면 만들어내지 않는다 — 없던 줄을 더하면 왕복이 깨진다.
+  if (day.energy.length) {
+    blocks.push([`## ${ENERGY}`, ...day.energy.map(assembleEnergyLine)].join('\n'))
+  }
   for (const log of day.logs) blocks.push(`## ${log.kind}\n${log.text}`)
   return blocks.join('\n\n')
 }

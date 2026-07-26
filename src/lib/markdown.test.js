@@ -105,7 +105,7 @@ test('형식을 벗어난 에너지 줄은 던지지 않고 unparsed에 원문�
   assert.equal(unparsed[0].line, '인지 8점 정도')
 })
 
-test('모르는 H2 섹션도 버리지 않는다 (불변식 3)', () => {
+test('로그 앞의 모르는 H2 섹션은 버리지 않고 unparsed로 모은다 (불변식 3)', () => {
   const { unparsed } = parse('# 26-03-01\n\n## 에너지\n- 인지: 5.\n\n## 낙서\n- 뭔가 적어둠\n')
   assert.equal(unparsed.length, 1)
   assert.ok(unparsed[0].line.startsWith('## 낙서'))
@@ -145,4 +145,25 @@ test('blankDay는 세 차원과 두 블록을 채운다', () => {
 test('빈 입력이 터지지 않는다', () => {
   assert.deepEqual(parse(''), { pinned: '', days: [], unparsed: [] })
   assert.equal(assemble({ days: [] }), '\n')
+})
+
+// ── 리뷰가 잡은 왕복 파손 (2026-07-26) ────────────────────────────────────
+
+test('로그 본문의 `## ` 소제목이 잘리지 않고 왕복한다', () => {
+  const src = '# 26-03-01\n\n## 오늘\n- 회의 정리\n## 회고\n- 이건 내일 다시 본다\n'
+  const journal = parse(src)
+  assert.equal(journal.unparsed.length, 0)
+  assert.equal(journal.days[0].logs[0].text, '- 회의 정리\n## 회고\n- 이건 내일 다시 본다')
+  assert.equal(assemble(journal), src)
+})
+
+test('에너지 섹션이 없는 날짜에 빈 섹션을 만들어내지 않는다', () => {
+  const src = '# 26-03-01\n\n## 오늘\n뭔가 적음\n'
+  assert.equal(assemble(parse(src)), src)
+})
+
+test('로그가 시작되기 전의 모르는 섹션은 여전히 unparsed로 보존된다', () => {
+  const { unparsed } = parse('# 26-03-01\n\n## 낙서\n- 붙일 자리가 없다\n')
+  assert.equal(unparsed.length, 1)
+  assert.ok(unparsed[0].line.startsWith('## 낙서'))
 })

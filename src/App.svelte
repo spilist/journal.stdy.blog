@@ -59,8 +59,11 @@
     const a = document.createElement('a')
     a.href = url
     a.download = `journal-${journal.today}.md`
+    // 붙이지 않고 클릭하거나 즉시 revoke 하면 Firefox·iOS Safari에서 조용히 실패한다.
+    document.body.appendChild(a)
     a.click()
-    URL.revokeObjectURL(url)
+    a.remove()
+    setTimeout(() => URL.revokeObjectURL(url), 10_000)
   }
 </script>
 

@@ -63,7 +63,9 @@ export class Journal {
     /** @type {Record<string, Rec>} */
     const map = {}
     for (const rec of records) map[rec.key] = rec
-    this.records = map
+    // 로드가 끝나기 전에 이미 편집된 게 있으면 그쪽이 최신이다. 통째로 갈아끼우면
+    // 콜드 스타트에서 친 글자가 사라진다.
+    this.records = { ...map, ...this.records }
     this.conflicts = conflicts
     this.loaded = true
     db.requestPersistence()
@@ -130,7 +132,10 @@ export class Journal {
    * @param {Rec} next
    */
   #commit(prev, next) {
+    // 내용이 그대로면 아무 일도 없었던 것이다 — 되돌린 편집이 더티도, 개정 이력도
+    // 남기지 않는다.
     if (next === prev) return
+    if (next.key === 'pinned') this.#snapshotPinned(prev)
     this.records[next.key] = next
     db.putRecord($state.snapshot(next))
   }
@@ -188,20 +193,30 @@ export class Journal {
    * @param {string} text
    */
   setPinned(text) {
-    this.#snapshotPinnedIfNeeded()
     this.#pending['pinned'] = text
     this.#saveTextSoon('pinned', 'pinned', text)
   }
 
-  #snapshotPinnedIfNeeded() {
+  /**
+   * 그날 처음 실제로 바뀌는 시점에 **직전 내용을** 밀봉한다 (`D11`). 키가 날짜라
+   * 하루 1개가 스키마로 강제된다.
+   *
+   * @param {Rec} previous 바뀌기 전의 pinned 레코드
+   */
+  #snapshotPinned(previous) {
     const today = kstDate()
     const last = this.revisions()[0]
     const lastDay = last ? last.key.slice('revision:'.length) : null
     if (!needsSnapshot(lastDay, today)) return
-    const current = this.pinned()
-    if (!current.data.text) return // 밀봉할 직전 내용이 없다
+    if (!previous.data.text) return // 밀봉할 직전 내용이 없다
     const key = recordKey('revision', today)
-    const rec = { key, kind: 'revision', data: { text: current.data.text }, updatedAt: Date.now(), syncedAt: 0 }
+    const rec = {
+      key,
+      kind: 'revision',
+      data: { text: previous.data.text },
+      updatedAt: Date.now(),
+      syncedAt: 0,
+    }
     this.records[key] = rec
     db.putRecord(rec)
   }
@@ -230,7 +245,10 @@ export class Journal {
     clearTimeout(this.#timers[key])
     this.#timers[key] = setTimeout(() => {
       delete this.#timers[key]
-      const prev = this.energy(dim)
+      // `this.energy(dim)`이 아니라 **입력 시점에 잡은 키**로 읽는다. 지금은 날짜
+      // 이동이 항상 flush를 먼저 하지만, 그러지 않는 호출자가 하나만 생겨도
+      // 디바운스 중이던 이유가 엉뚱한 날짜에 저장된다.
+      const prev = this.#at(key, 'energy', { score: null, reason: '', scoredAt: null })
       this.#commit(prev, nextEnergy(prev, { reason }, Date.now()))
     }, SAVE_DELAY_MS)
   }
@@ -315,12 +333,19 @@ export class Journal {
      * @param {Record<string, any>} data
      * @param {string} label
      */
+    /** @param {string} kind @param {Record<string, any>} data */
+    const isEmpty = (kind, data) =>
+      kind === 'energy' ? data.score === null && !data.reason : !data.text
+
+    /**
+     * @param {string} key
+     * @param {string} kind
+     * @param {Record<string, any>} data
+     * @param {string} label
+     */
     const stage = (key, kind, data, label) => {
       const existing = this.records[key]
-      const filled =
-        kind === 'energy'
-          ? existing && (existing.data.score !== null || existing.data.reason)
-          : existing && existing.data.text
+      const filled = existing && !isEmpty(kind, existing.data)
       const same =
         kind === 'energy'
           ? existing?.data.score === data.score && existing?.data.reason === data.reason
@@ -330,6 +355,9 @@ export class Journal {
         return
       }
       if (same) return
+      // **빈 값을 새 레코드로 쓰지 않는다.** `- 인지:` 같은 빈 줄이 지금 시각으로
+      // 더티가 되면, 다른 기기가 이미 올려둔 점수를 올리기 한 번에 NULL로 덮는다.
+      if (isEmpty(kind, data)) return
       writes.push({ key, kind, data, updatedAt: now, syncedAt: 0 })
     }
 
@@ -341,7 +369,9 @@ export class Journal {
         stage(
           recordKey('energy', day.date, e.dim),
           'energy',
-          { score: e.score, reason: e.reason, scoredAt: e.score === null ? null : now },
+          // 마크다운에 기록 시각이 없다. 지금 시각을 넣으면 과거 점수 전부가
+          // 오늘 매긴 것처럼 보여 `D15`가 지키려던 값이 사라진다. null 이 정직하다.
+          { score: e.score, reason: e.reason, scoredAt: null },
           `${day.date} 에너지/${e.dim}`,
         )
       }
@@ -361,8 +391,21 @@ export class Journal {
 
   // ── 동기화 ──────────────────────────────────────────────────────────────
 
+  /**
+   * 디바운스 중이라 아직 레코드에 안 들어간 입력이 있는가. **더티 판정에 이게 빠지면
+   * pull이 그 위를 덮고, 뒤늦게 뜬 타이머가 원격 글자를 지운다** — 사용자는 원격
+   * 문단을 본 적도 없이 잃는다.
+   *
+   * @param {string} key
+   */
+  #hasPendingEdit(key) {
+    return this.#pending[key] !== undefined || this.#timers[key] !== undefined
+  }
+
   /** 앱을 열 때 자동. **로컬을 파괴하지 않는다** (`D3`). */
   async pullNow() {
+    // 타이핑 중에 pull이 끼어들면 안 된다. 먼저 커밋해서 더티로 만든다.
+    this.flush()
     this.syncState = 'syncing'
     try {
       const since = (await db.getMeta('lastPulledAt')) ?? 0
@@ -375,6 +418,8 @@ export class Journal {
       /** @type {Rec[]} */
       const accepted = []
       for (const remote of res.records) {
+        // 응답을 기다리는 동안 새로 시작된 입력도 로컬 편집이다.
+        if (this.#hasPendingEdit(remote.key)) continue
         if (pullDecision(this.records[remote.key], remote).accept) {
           accepted.push({ ...remote, syncedAt: remote.updatedAt })
         }
@@ -393,34 +438,49 @@ export class Journal {
   /** 사람이 버튼을 눌렀을 때만 (`D3`, 불변식 2). */
   async pushNow() {
     this.flush()
-    const dirty = Object.values(this.records).filter(isDirty)
-    if (!dirty.length) {
+    const sent = Object.values(this.records).filter(isDirty).map((r) => $state.snapshot(r))
+    if (!sent.length) {
       this.syncMessage = '올릴 게 없습니다'
       return
     }
     this.syncState = 'syncing'
+    /** @type {Record<string, Rec>} */
+    const sentByKey = Object.create(null)
+    for (const rec of sent) sentByKey[rec.key] = rec
+
     try {
-      const res = await push(dirty.map((r) => $state.snapshot(r)))
+      const res = await push(sent)
       if (res.relogin) {
         this.syncState = 'relogin'
         this.syncMessage = '로그인이 만료됐습니다. 새로고침하면 다시 로그인합니다.'
         return
       }
-      const now = Date.now()
       /** @type {Rec[]} */
       const updates = []
       /** @type {import('./store.js').Conflict[]} */
       const newConflicts = []
+      let raced = 0
 
       for (const verdict of res.verdicts) {
+        const outbound = sentByKey[verdict.key]
         const local = this.records[verdict.key]
-        if (!local) continue
+        if (!outbound || !local) continue
+
+        // 왕복 중에 사용자가 그 블록을 또 고쳤다면 판정은 **보낸 판본에 대한 것**이라
+        // 지금 값에 적용하면 안 된다. 더티로 남겨 다음 올리기에서 다시 보낸다.
+        if (local.updatedAt !== outbound.updatedAt) {
+          raced += 1
+          continue
+        }
+
         if (verdict.applied) {
-          updates.push({ ...$state.snapshot(local), syncedAt: local.updatedAt })
+          updates.push({ ...outbound, syncedAt: outbound.updatedAt })
         } else if (verdict.server) {
-          const { live, conflict } = resolveRejected($state.snapshot(local), verdict.server)
+          const { live, conflict } = resolveRejected(outbound, verdict.server)
           updates.push(live)
-          if (conflict) newConflicts.push(conflict)
+          // 개정 스냅샷은 사용자가 그 순간 쓴 문장이 아니라 자동 밀봉본이다 (`F-3`).
+          // 사본을 만들면 어느 블록에도 안 붙어 지울 수도 없는 배지가 된다.
+          if (conflict && outbound.kind !== 'revision') newConflicts.push(conflict)
         }
       }
 
@@ -428,12 +488,14 @@ export class Journal {
       await db.addConflicts(newConflicts)
       for (const rec of updates) this.records[rec.key] = rec
       if (newConflicts.length) this.conflicts = await db.allConflicts()
-      await db.setMeta('lastPulledAt', res.now ?? now)
+      // **`lastPulledAt`을 여기서 옮기지 않는다.** push 응답은 내가 보낸 키의 판정만
+      // 담고 있어서, 커서를 밀면 그 사이 서버에 생긴 다른 기기의 변경을 영영 건너뛴다.
 
       this.syncState = 'idle'
-      this.syncMessage = newConflicts.length
-        ? `${updates.length}개 올림, 충돌 ${newConflicts.length}개`
-        : `${updates.length}개 올림`
+      this.syncMessage =
+        `${updates.length}개 올림` +
+        (newConflicts.length ? `, 충돌 ${newConflicts.length}개` : '') +
+        (raced ? `, ${raced}개는 편집 중이라 다음에` : '')
     } catch {
       this.syncState = 'offline'
       this.syncMessage = '네트워크가 없습니다'
