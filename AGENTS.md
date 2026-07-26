@@ -151,6 +151,10 @@ resolution/closeout review runs.
 When the **host blocks** subagent spawning, report that restriction explicitly
 instead of substituting a **same-agent pass**.
 
+Run reviewers **synchronously** (`run_in_background: false`). A background run
+has delivered only the idle signal with the report body lost, and there is no
+supported way to retrieve it afterward.
+
 ## Dynamic Workflows
 
 Dynamic-workflow use (the Workflow tool) and multi-agent orchestration are

@@ -1,50 +1,59 @@
 # Handoff
 
+섹션 제목은 기계가 검증하므로 영어로 둔다. 본문은 한국어다 (AGENTS.md `언어`).
+
 ## Workflow Trigger
 
-`charness:impl` — S1은 배포됐다. 다음은 **S2(에너지 그래프)**다. 다만 그 전에
-[운영자 인수](./operator-acceptance.md)의 **수용 확인 셋을 사람이 해야 한다.**
+`charness:impl` — **S2 에너지 그래프.** 범위의 단일 출처는
+[roadmap.md](./roadmap.md) `### 3. S2`, 계약은
+[spec-first-slice.md](./spec-first-slice.md)다.
 
-## 지금 상태 (2026-07-26)
+먼저 아래 `Next Session` 1번(사람만 할 수 있는 확인)을 사용자에게 상기시킬 것.
 
-**배포됨 — https://journal.stdy.blog**
+## Continuation Capability
 
-- D1 `journal-db` 생성 + 원격 스키마 적용 완료
-- Cloudflare Access: 기존 앱 `routine-stdy-blog`에 `journal.stdy.blog`를
-  destination으로 추가 (AUD 공유, 세션 1개월)
-- 게이트 전부 초록 — `npm test` 38 · `npm run lint` · `npm run check` · `npm run build`
+읽고 나면 **S2를 바로 착수할 수 있어야 한다** — 무엇을 그리는지(`D14`·`D19`),
+데이터를 어디서 읽는지(로컬 IndexedDB, D1이 아니다), 왜 차트 라이브러리를 안 넣는지.
 
-## 다음 행동 — 순서대로
+## Current State
 
-### 1. 사람만 할 수 있는 수용 확인 (`AC-9`~`AC-12`)
+**S1 배포됨 — https://journal.stdy.blog** (Cloudflare Access, 허용 이메일 하나).
 
-**여기가 지금 가장 놓치기 쉬운 자리다.** 절차는
-[operator-acceptance.md](./operator-acceptance.md) `## 수용 확인`에 있다.
+- D1 `journal-db` + 원격 스키마 적용 완료. 재적용은 `npm run db:schema`
+- 게이트 확인: `npm test` · `npm run lint` · `npm run check` · `npm run build`
+- 프레시아이 리뷰 넷을 돌리고 지적을 반영했다(구현 정확성·`$state` 프록시 경계·
+  운영자 인수·UI/모바일). 상세는
+  [charness-artifacts/setup/latest.md](../charness-artifacts/setup/latest.md)와
+  커밋 로그에 있다
+- **`git remote`가 없다.** 이 리포는 이 기계에만 있다 — 아래 `Discuss` 참조
 
-- `AC-9` 인증 경계 — **배포 직후 관측 완료**(루트·`/api/*` 둘 다 Access 로그인으로
-  302, `*.workers.dev` 404). 기록은 같은 문서에 있다
-- `AC-10` 비행기 모드 유실 확인
-- `AC-11` 두 기기 충돌 사본
-- `AC-12` `sample.md` 왕복
+## Next Session
 
-### 2. 폰에서 볼 프로브 (`P-2`~`P-4`)
+1. **수용 확인 — 사람만 할 수 있다.** 절차는
+   [operator-acceptance.md](./operator-acceptance.md) `## 수용 확인`.
+   `AC-9`는 배포 직후 관측으로 닫혔고 **`AC-10`(비행기 모드) · `AC-11`(두 기기 충돌) ·
+   `AC-12`(`sample.md` 왕복)가 남았다.** 링크 라벨이 "배포 전"이 아니므로 열어볼 것 —
+   이게 가장 놓치기 쉬운 자리다.
+2. **S2 에너지 그래프.** 30일 기본 · 「1개월 더」·「전체」 · 결측일은 선을 끊고 ·
+   탭하면 이유 툴팁 → 다시 탭하면 그날로 이동. **SVG로 직접 그린다.**
+3. **폰에서 볼 프로브 `P-2`~`P-5`.** 단일 출처는
+   [spec-first-slice.md](./spec-first-slice.md) `## Probe Questions`.
 
-**단일 출처는 [spec-first-slice.md](./spec-first-slice.md) `## Probe Questions`다.**
-여기서 목록을 재선언하지 않는다 — 이전 판이 그래서 어긋났다.
+## Discuss
 
-### 3. S2 — 에너지 그래프
+- **백업이 없다.** `git remote`가 0개라 코드·문서·아이데이션 기록이 이 기계에만 산다.
+  저널 본문은 D1에 있으니 별개지만, **비공개 원격을 붙일지 사용자 결정이 필요하다.**
+  (붙인다면 `references/sample.md`가 함께 올라간다는 걸 짚을 것 — 실제 저널이다.)
+- **10점 척도를 유지할지**(`A1`). 며칠 써보고 6과 7을 구분해 매기지 않으면 5점으로
+  내린다. 스키마는 안 바뀐다.
+- `conflict` 사본을 서버로 올릴지 — 지금은 로컬 전용(의도적 보류).
 
-범위의 단일 출처는 [roadmap.md](./roadmap.md) `### 3. S2`다.
+## References
 
-## 막힌 곳
-
-**없다.** 이전 판이 적어둔 D1 토큰 권한 문제는 해소됐다(토큰에 `D1: Edit`와
-`Access: Apps and Policies — Read`가 추가됐다).
-
-## 알려진 제약
-
-- **로컬 개발(`npm run dev`)에는 API가 없다.** vite만 뜨므로 `/api/*`는 SPA fallback
-  HTML을 받고 앱이 "다시 로그인" 상태로 간다. **UI 작업용이고 동기화는 배포본에서
-  확인한다.**
-- 서브에이전트 리뷰는 **동기 실행(`run_in_background: false`)으로 돌릴 것.**
-  백그라운드로 돌리면 완료 신호만 오고 보고 본문이 유실된 사례가 있다.
+- [spec-first-slice.md](./spec-first-slice.md) — **구현 정본.** 스키마·동기화
+  프로토콜·수용 기준·프로브
+- [roadmap.md](./roadmap.md) — 순서. 결정을 재선언하지 않는다
+- [operator-acceptance.md](./operator-acceptance.md) — 사람이 하는 확인. `## 1`에
+  **로컬 개발에는 API가 없다**는 제약이 있다(동기화는 배포본에서 본다)
+- [2026-07-26-concept-ideation.md](../charness-artifacts/ideation/2026-07-26-concept-ideation.md)
+  — 결정 `D1`~`D20`의 근거
