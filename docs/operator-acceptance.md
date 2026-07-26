@@ -1,7 +1,8 @@
-# 배포 전에 사람이 해야 하는 일
+# 운영자 인수
 
-코드는 준비됐지만 **Cloudflare 쪽 설정 세 가지는 대시보드에서 사람이 해야 한다.**
-아래를 마치기 전에는 `npm run deploy`가 성공해도 앱이 동작하지 않는다.
+**배포됨 (2026-07-26) — https://journal.stdy.blog**
+
+아래 1~3은 끝났다. 남은 건 §4 첫 사용과 §수용 확인이다.
 
 ## 1. D1 데이터베이스 — **완료 (2026-07-26)**
 
@@ -14,8 +15,19 @@
 npm run db:schema:local
 ```
 
-## 2. Cloudflare Access 애플리케이션 (`D2`·`D9`)
+## 2. Cloudflare Access — **완료 (2026-07-26)**
 
+기존 앱 `routine-stdy-blog`에 **destination을 하나 더 붙이는 방식**으로 처리했다 —
+앱 하나가 `routine.stdy.blog`와 `journal.stdy.blog`를 둘 다 막고 **AUD를 공유**한다.
+정책과 세션이 두 도메인에 똑같이 걸리지만, 허용 이메일 하나짜리 n=1 앱에서는 문제가 없다.
+
+| 값 | |
+|---|---|
+| 팀 도메인 | `stdy.cloudflareaccess.com` |
+| AUD | `eaf8386b…` ([wrangler.jsonc](../wrangler.jsonc)에 들어 있다) |
+| 세션 | `730h` ≈ 1개월 (`D9`) |
+
+새로 만들어야 할 때의 절차는 아래에 남겨 둔다 —
 Zero Trust → Access → Applications → **Add an application** → *Self-hosted*
 
 | 항목 | 값 |
@@ -38,7 +50,7 @@ Zero Trust → Access → Applications → **Add an application** → *Self-host
 > `Cf-Access-Jwt-Assertion`을 직접 검증한다 ([worker/access.js](../worker/access.js)).
 > `workers_dev: false`와 함께 두 겹이다.
 
-## 3. 배포
+## 3. 배포 — **완료 (2026-07-26)**
 
 ```bash
 npm run deploy

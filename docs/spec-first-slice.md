@@ -167,7 +167,9 @@ CREATE TABLE revision (                  -- D11: 하루 1개. 키가 곧 제약�
   앞만 막으므로 이게 없으면 우회된다. JWKS는
   `https://{TEAM}.cloudflareaccess.com/cdn-cgi/access/certs`, 메모리 캐시.
   `aud`·`exp`·`iss`·서명을 확인하고 `email` 클레임이 허용 이메일과 같아야 한다
-- **실패는 JSON 401** (`{"error":"unauthenticated"}`). HTML을 돌려주지 않는다
+- **실패는 JSON 401** (`{"error":"unauthenticated"}`). HTML을 돌려주지 않는다.
+  **다만 배포 환경에서는 Access가 Worker보다 먼저 막으므로 이 401은 밖에서 관측되지
+  않는다** — origin 직접 접근 같은 우회 경로에 대한 두 번째 겹이다
 - `wrangler.jsonc`에 `workers_dev: false`
 - **클라이언트 쪽 계약**: 동기화 응답이 `res.redirected` 이거나 `content-type`이
   `application/json`이 아니면 **재로그인 상태**로 전환하고 안내를 띄운다.
@@ -251,7 +253,8 @@ CREATE TABLE revision (                  -- D11: 하루 1개. 키가 곧 제약�
 | **AC-6** | `unit` | LWW 병합: 로컬이 더티면 pull이 건너뛴다 / push가 `rejected`면 충돌 사본이 생긴다. `SC-6` |
 | **AC-7** | `unit` | `updated_at`은 내용이 같으면 안 바뀌고, `scored_at`은 이유만 고치면 안 바뀐다. `SC-6` |
 | **AC-8** | `unit` | 개정 스냅샷이 같은 KST 날짜에 두 번 편집해도 1개다. `D11` |
-| **AC-9** | `integration` | JWT 없이 `/api/pull` → **401 JSON**. 허용 이메일이 아닌 JWT → 401. `SC-7` |
+| **AC-9** | `integration` | 인증 없이 `/api/pull` → **Access가 로그인으로 302**(Worker보다 앞이라 401까지 가지 않는다). 배포 후 관측 확인. `SC-7` |
+| **AC-9b** | `unit` | Worker의 JWT 검증(`aud`·`iss`·`exp`·서명·이메일) 자체는 **밖에서 관측 불가** — Access가 먼저 막기 때문이다. 두 번째 겹으로 남는다. `SC-7` |
 | **AC-10** | `manual` | 비행기 모드로 폰에서 열고 쓰고 재실행 → 남아 있고 미동기화 배지가 보인다. `SC-2`·`SC-9` |
 | **AC-11** | `manual` | 폰·데스크톱에서 같은 블록을 고치고 둘 다 push → 진 쪽이 접힌 사본으로 보인다. `SC-6` |
 | **AC-13** | `unit` | 로그 본문의 `## ` 소제목이 왕복에서 보존된다. `SC-5` |

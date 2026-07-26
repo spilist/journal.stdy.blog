@@ -21,8 +21,10 @@
   ],
   "vars": {
     // Zero Trust 팀 도메인과 Access 애플리케이션의 AUD 태그.
-    "ACCESS_TEAM_DOMAIN": "PLACEHOLDER.cloudflareaccess.com",
-    "ACCESS_AUD": "PLACEHOLDER",
+    // 앱 하나(routine-stdy-blog)가 destination 둘을 막으므로 AUD를 공유한다.
+    // AUD는 비밀이 아니다 — 검증할 대상을 지정하는 식별자다.
+    "ACCESS_TEAM_DOMAIN": "stdy.cloudflareaccess.com",
+    "ACCESS_AUD": "eaf8386ba3236966570bfdac9d4800144870f85140e65f37cfbbaccc56d9bcb5",
     "ALLOWED_EMAIL": "bae.hwidong@gmail.com"
   },
   "routes": [{ "pattern": "journal.stdy.blog", "custom_domain": true }]
