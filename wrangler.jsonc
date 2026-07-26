@@ -16,7 +16,7 @@
     {
       "binding": "DB",
       "database_name": "journal-db",
-      "database_id": "PLACEHOLDER-run-wrangler-d1-create"
+      "database_id": "cf99f5c5-47ea-4286-a22d-cdee5d0a05d8"
     }
   ],
   "vars": {

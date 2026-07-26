@@ -3,18 +3,15 @@
 코드는 준비됐지만 **Cloudflare 쪽 설정 세 가지는 대시보드에서 사람이 해야 한다.**
 아래를 마치기 전에는 `npm run deploy`가 성공해도 앱이 동작하지 않는다.
 
-## 1. D1 데이터베이스 만들기
+## 1. D1 데이터베이스 — **완료 (2026-07-26)**
+
+`journal-db` (`cf99f5c5-47ea-4286-a22d-cdee5d0a05d8`, APAC)를 만들고
+[wrangler.jsonc](../wrangler.jsonc)에 넣었다. 원격 스키마도 올렸다 — 테이블 4개.
+
+로컬 개발용은 따로 필요하다:
 
 ```bash
-npx wrangler d1 create journal-db
-```
-
-출력된 `database_id`를 [wrangler.jsonc](../wrangler.jsonc)의
-`PLACEHOLDER-run-wrangler-d1-create` 자리에 넣는다. 그다음 스키마를 올린다:
-
-```bash
-npm run db:schema         # 원격
-npm run db:schema:local   # 로컬 개발용
+npm run db:schema:local
 ```
 
 ## 2. Cloudflare Access 애플리케이션 (`D2`·`D9`)
@@ -31,6 +28,11 @@ Zero Trust → Access → Applications → **Add an application** → *Self-host
 만들고 나면 **Application Audience (AUD) Tag**가 나온다. 그걸
 [wrangler.jsonc](../wrangler.jsonc)의 `ACCESS_AUD`에, 팀 도메인
 (`<team>.cloudflareaccess.com`)을 `ACCESS_TEAM_DOMAIN`에 넣는다.
+
+> **CLI로는 못 가져온다.** `.env`의 토큰에 Zero Trust 읽기 권한이 없어
+> `GET /accounts/{id}/access/apps`가 `Authentication error`를 준다. 대시보드에서
+> 복사하거나, 토큰에 `Access: Apps and Policies — Read`를 추가하면 자동으로 채울 수 있다.
+> **AUD는 비밀이 아니다** — 검증할 대상을 지정하는 식별자라 리포에 두어도 된다.
 
 > **Access만으로는 부족하다.** Access는 커스텀 도메인 앞만 막으므로 Worker가
 > `Cf-Access-Jwt-Assertion`을 직접 검증한다 ([worker/access.js](../worker/access.js)).
