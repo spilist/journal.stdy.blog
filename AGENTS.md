@@ -137,6 +137,9 @@ cmanki의 `AI 정책`에서 옮겨온 것이고, 저널에는 "AI가 질문한�
 - **Never commit journal content.** `references/sample.md` is the one exception
   already in the repo; do not add exported journal data, database dumps, or
   fixtures containing real entries.
+- The repo has a **private** GitHub remote (`origin`), so every commit is one
+  `push` away from leaving this machine. Treat that as the reason the rule above
+  is strict, not as a reason to relax it.
 
 ## Subagent Delegation
 

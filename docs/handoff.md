@@ -25,7 +25,7 @@
   운영자 인수·UI/모바일). 상세는
   [charness-artifacts/setup/latest.md](../charness-artifacts/setup/latest.md)와
   커밋 로그에 있다
-- **`git remote`가 없다.** 이 리포는 이 기계에만 있다 — 아래 `Discuss` 참조
+- 원격은 `origin`(GitHub **private**). 상태 확인은 `git status -sb`
 
 ## Next Session
 
@@ -41,9 +41,6 @@
 
 ## Discuss
 
-- **백업이 없다.** `git remote`가 0개라 코드·문서·아이데이션 기록이 이 기계에만 산다.
-  저널 본문은 D1에 있으니 별개지만, **비공개 원격을 붙일지 사용자 결정이 필요하다.**
-  (붙인다면 `references/sample.md`가 함께 올라간다는 걸 짚을 것 — 실제 저널이다.)
 - **10점 척도를 유지할지**(`A1`). 며칠 써보고 6과 7을 구분해 매기지 않으면 5점으로
   내린다. 스키마는 안 바뀐다.
 - `conflict` 사본을 서버로 올릴지 — 지금은 로컬 전용(의도적 보류).
