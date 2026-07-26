@@ -75,9 +75,6 @@
       <input type="date" value={journal.date} onchange={(e) => journal.goTo(e.currentTarget.value)} />
     </label>
     <button type="button" onclick={() => journal.shiftDate(1)} aria-label="다음날">›</button>
-    {#if journal.date !== journal.today}
-      <button type="button" class="ghost today" onclick={() => journal.goToday()}>오늘</button>
-    {/if}
   </nav>
 
   <div class="sync">
@@ -85,6 +82,14 @@
     <button type="button" class:has={dirty > 0} onclick={() => journal.pushNow()}>
       ↑ 올리기{dirty > 0 ? ` ${dirty}` : ''}
     </button>
+    <!-- 날짜 줄이 아니라 여기 산다. 날짜 줄에 조건부로 두면 나타났다 사라질 때마다
+         `›` 버튼이 밀려서 오터치가 난다. 늘 자리를 지키고 오늘이면 비활성이다. -->
+    <button
+      type="button"
+      class="ghost today"
+      disabled={journal.date === journal.today}
+      onclick={() => journal.goToday()}
+    >오늘로</button>
     <span class="state" class:warn={journal.syncState === 'relogin'}>
       {#if journal.syncState === 'syncing'}동기화 중…
       {:else if journal.syncState === 'offline'}오프라인
@@ -164,14 +169,19 @@
     text-align: center;
     padding: 0;
   }
-  .today {
-    height: 44px;
-  }
   .sync {
     display: flex;
     align-items: center;
     gap: 0.5rem;
     margin-top: 0.4rem;
+  }
+  .sync .today:not(:disabled) {
+    border-color: var(--line);
+    color: var(--fg);
+  }
+  .sync .state {
+    margin-left: auto;
+    text-align: right;
   }
   .sync button.has {
     border-color: var(--accent);

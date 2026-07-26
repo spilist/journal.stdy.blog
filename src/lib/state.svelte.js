@@ -383,10 +383,16 @@ export class Journal {
     return { days: journal.days.length, unparsed: journal.unparsed, writes, skipped }
   }
 
-  /** @param {Rec[]} writes */
+  /**
+   * @param {Rec[]} writes
+   */
   async applyImport(writes) {
-    await db.putRecords(writes)
-    for (const rec of writes) this.records[rec.key] = rec
+    // 이 배열은 화면의 `$state`를 거쳐 오므로 **깊은 프록시**다. 프록시는
+    // structured clone이 안 돼서 IndexedDB `put`이 `DataCloneError`로 터진다.
+    // 저장소 경계를 넘기 전에 항상 벗긴다.
+    const plain = writes.map((rec) => $state.snapshot(rec))
+    await db.putRecords(plain)
+    for (const rec of plain) this.records[rec.key] = rec
   }
 
   // ── 동기화 ──────────────────────────────────────────────────────────────
