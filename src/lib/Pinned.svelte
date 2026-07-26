@@ -5,6 +5,7 @@
   // 「하반기 목표」로 고정할 필요가 없고, 사용자가 언제든 바꾼다.
 
   import Conflicts from './Conflicts.svelte'
+  import { autogrow } from './autogrow.js'
 
   /** @type {{journal: import('./state.svelte.js').Journal}} */
   let { journal } = $props()
@@ -36,10 +37,11 @@
 
   {#if journal.pinnedOpen}
     <textarea
-      rows="14"
+      use:autogrow={rec.data.text}
+      rows="10"
       placeholder={PLACEHOLDER}
       value={rec.data.text}
-      oninput={(e) => journal.setPinned(e.currentTarget.value)}
+      oninput={(/** @type {Event & {currentTarget: HTMLTextAreaElement}} */ e) => journal.setPinned(e.currentTarget.value)}
       onblur={() => journal.flush()}
     ></textarea>
 

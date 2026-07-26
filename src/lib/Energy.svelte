@@ -6,6 +6,7 @@
   // 새 UI를 하나 더 만들지 않고 조작 방식만 늘린 것이다 (설계 취향 1항).
   // 슬라이더(`input[type=range]`)를 쓰지 않은 이유는 `P-1` 참조.
 
+  import { autogrow } from './autogrow.js'
   import { kstTime } from './date.js'
   import Conflicts from './Conflicts.svelte'
 
@@ -156,10 +157,11 @@
       </div>
 
       <textarea
+        use:autogrow={rec.data.reason}
         rows="2"
         placeholder="이유"
         value={rec.data.reason}
-        oninput={(e) => journal.setReason(dim, e.currentTarget.value)}
+        oninput={(/** @type {Event & {currentTarget: HTMLTextAreaElement}} */ e) => journal.setReason(dim, e.currentTarget.value)}
         onblur={() => journal.flush()}
       ></textarea>
 

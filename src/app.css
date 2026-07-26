@@ -67,7 +67,9 @@ textarea {
   padding: 0.6rem;
   font: inherit;
   font-size: 16px;
-  resize: vertical;
+  /* autogrow 가 높이를 맞추므로 손잡이도 스크롤바도 필요 없다. */
+  resize: none;
+  overflow: hidden;
 }
 
 textarea:focus,

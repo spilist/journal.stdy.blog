@@ -85,14 +85,11 @@
                   넓어지며 옆 버튼을 밀어 오터치가 난다. -->
       <span class="count">{dirty > 0 ? dirty : ''}</span>
     </button>
-    <!-- 날짜 줄이 아니라 여기 산다. 날짜 줄에 조건부로 두면 나타났다 사라질 때마다
-         `›` 버튼이 밀려서 오터치가 난다. 늘 자리를 지키고 오늘이면 비활성이다. -->
-    <button
-      type="button"
-      class="ghost today"
-      disabled={journal.date === journal.today}
-      onclick={() => journal.goToday()}
-    >오늘로</button>
+    <!-- 날짜 줄이 아니라 여기 산다. 날짜 줄에 두면 나타났다 사라질 때마다 `›` 가
+         밀려 오터치가 났다. 여기서는 앞의 「올리기」가 자리를 지키므로 숨겨도 안 밀린다. -->
+    {#if journal.date !== journal.today}
+      <button type="button" class="ghost today" onclick={() => journal.goToday()}>오늘로</button>
+    {/if}
     <span class="state" class:warn={journal.syncState === 'relogin'}>
       {#if journal.syncState === 'syncing'}동기화 중…
       {:else if journal.syncState === 'offline'}오프라인{journal.syncMessage ? ` · ${journal.syncMessage}` : ''}
@@ -119,16 +116,6 @@
 
   <Pinned {journal} />
 
-  {#if showImport}
-    <ImportPanel
-      {journal}
-      onclose={(message) => {
-        showImport = false
-        if (message) say(message)
-      }}
-    />
-  {/if}
-
   {#if journal.loaded}
     <Energy {journal} dims={DIMS} />
     {#each LOG_KINDS as kind (kind)}
@@ -145,6 +132,18 @@
       {showImport ? '가져오기 닫기' : '가져오기'}
     </button>
   </footer>
+
+  {#if showImport}
+    <!-- 여는 버튼 바로 아래에 뜬다. 위쪽에 삽입하면 폰에서 몇 화면 위에 열려
+         아무 반응이 없는 것처럼 보인다. -->
+    <ImportPanel
+      {journal}
+      onclose={(message) => {
+        showImport = false
+        if (message) say(message)
+      }}
+    />
+  {/if}
 </main>
 
 {#if toast}
@@ -255,7 +254,10 @@
     display: flex;
     flex-wrap: wrap;
     gap: 0.5rem;
-    margin: 1.5rem 0 calc(3rem + env(safe-area-inset-bottom));
+    margin: 1.5rem 0 1rem;
+  }
+  main :global(.panel:last-child) {
+    margin-bottom: calc(3rem + env(safe-area-inset-bottom));
   }
   .toast {
     position: fixed;

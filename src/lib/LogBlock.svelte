@@ -4,6 +4,7 @@
   // 쓰기가 아니라 보면서 회고하기가 된다.
 
   import Conflicts from './Conflicts.svelte'
+  import { autogrow } from './autogrow.js'
 
   /** @type {{journal: import('./state.svelte.js').Journal, kind: string}} */
   let { journal, kind } = $props()
@@ -23,10 +24,11 @@
   {/if}
 
   <textarea
-    rows="8"
+    use:autogrow={rec.data.text}
+    rows="6"
     placeholder="- "
     value={rec.data.text}
-    oninput={(e) => journal.setLog(kind, e.currentTarget.value)}
+    oninput={(/** @type {Event & {currentTarget: HTMLTextAreaElement}} */ e) => journal.setLog(kind, e.currentTarget.value)}
     onblur={() => journal.flush()}
   ></textarea>
 

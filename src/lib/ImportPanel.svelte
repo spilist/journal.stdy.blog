@@ -4,6 +4,8 @@
   //
   // 이게 **마지막 복붙**이다.
 
+  import { autogrow } from './autogrow.js'
+
   /** @type {{journal: import('./state.svelte.js').Journal, onclose: (message?: string) => void}} */
   let { journal, onclose } = $props()
 
@@ -17,10 +19,9 @@
   /** @type {HTMLElement | undefined} */
   let root = $state()
 
-  // 이 패널은 화면 위쪽에 열리는데 여는 버튼은 맨 아래에 있다. 폰에서는 몇 화면
-  // 위에 열려서 아무 반응이 없는 것처럼 보인다.
+  // 여는 버튼 바로 아래에 뜨지만, 긴 화면에서는 접힌 부분에 열릴 수 있다.
   $effect(() => {
-    root?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    root?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
   })
 
   /** @param {Event} e */
@@ -61,6 +62,7 @@
   <input type="file" accept=".md,text/markdown,text/plain" onchange={pickFile} />
 
   <textarea
+    use:autogrow={text}
     rows="6"
     placeholder={PLACEHOLDER}
     bind:value={text}

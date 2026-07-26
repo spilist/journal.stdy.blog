@@ -64,6 +64,25 @@ export class Journal {
   /** @type {Record<string, ReturnType<typeof setTimeout>>} 반응형 상태가 아니다 */
   #timers = Object.create(null)
 
+  /** @type {ReturnType<typeof setTimeout> | undefined} */
+  #messageTimer
+
+  /**
+   * 동기화 결과는 잠시 보이고 사라진다 — 계속 남으면 다음 상태와 헷갈린다.
+   * **오류(`relogin`·`storageError`)는 여기로 오지 않는다.** 그건 사람이 조치할
+   * 때까지 남아야 한다.
+   *
+   * @param {string} message
+   */
+  #say(message) {
+    this.syncMessage = message
+    clearTimeout(this.#messageTimer)
+    if (!message) return
+    this.#messageTimer = setTimeout(() => {
+      if (this.syncMessage === message) this.syncMessage = ''
+    }, 4000)
+  }
+
   async load() {
     try {
       await this.#load()
@@ -495,7 +514,7 @@ export class Journal {
       for (const rec of accepted) this.records[rec.key] = rec
       await db.setMeta('lastPulledAt', res.now)
       this.syncState = 'idle'
-      this.syncMessage = accepted.length ? `${accepted.length}개 받음` : ''
+      this.#say(accepted.length ? `${accepted.length}개 받음` : '')
     } catch {
       this.syncState = 'offline'
       this.syncMessage = ''
@@ -509,7 +528,7 @@ export class Journal {
     if (!sent.length) {
       // 상태도 함께 되돌린다. 안 그러면 직전 'offline' 표시에 묻혀 안 보인다.
       this.syncState = 'idle'
-      this.syncMessage = '올릴 게 없습니다'
+      this.#say('올릴 게 없습니다')
       return
     }
     this.syncState = 'syncing'
@@ -561,13 +580,14 @@ export class Journal {
       // 담고 있어서, 커서를 밀면 그 사이 서버에 생긴 다른 기기의 변경을 영영 건너뛴다.
 
       this.syncState = 'idle'
-      this.syncMessage =
+      this.#say(
         `${updates.length}개 올림` +
-        (newConflicts.length ? `, 충돌 ${newConflicts.length}개` : '') +
-        (raced ? `, ${raced}개는 편집 중이라 다음에` : '')
+          (newConflicts.length ? `, 충돌 ${newConflicts.length}개` : '') +
+          (raced ? `, ${raced}개는 편집 중이라 다음에` : ''),
+      )
     } catch {
       this.syncState = 'offline'
-      this.syncMessage = '네트워크가 없습니다'
+      this.#say('네트워크가 없습니다')
     }
   }
 
