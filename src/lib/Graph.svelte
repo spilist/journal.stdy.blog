@@ -128,9 +128,9 @@
   }
 </script>
 
-<section class="block">
-  <h2>에너지 그래프</h2>
-
+<!-- 에너지 블록 **안에** 산다. 제목은 여는 버튼이 이미 말하므로 여기서 반복하지
+     않는다 (`P-7`). -->
+<div class="graph">
   <div class="range">
     <span class="span">{rangeLabel}</span>
     <button
@@ -234,9 +234,12 @@
       {/each}
     </div>
   {/if}
-</section>
+</div>
 
 <style>
+  .graph {
+    margin: 0.5rem 0 1.2rem;
+  }
   .range {
     display: flex;
     align-items: center;

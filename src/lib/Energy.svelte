@@ -9,11 +9,18 @@
   import { autogrow } from './autogrow.js'
   import { kstTime } from './date.js'
   import Conflicts from './Conflicts.svelte'
+  import Graph from './Graph.svelte'
 
   /** @type {{journal: import('./state.svelte.js').Journal, dims: readonly string[]}} */
   let { journal, dims } = $props()
 
   const SCORES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+  /**
+   * 그래프는 **에너지의 인출 통로**라 같은 블록에 산다 (설계 취향 15항). 접어두는 건
+   * 고정 블록이 이미 쓰는 형태고, 새 UI 종류가 아니다 (`P-7`).
+   */
+  let showGraph = $state(false)
 
   /**
    * 문지르기 상태. **포인터 하나만 추적한다** — 손바닥이 스치는 두 번째 포인터가
@@ -116,7 +123,22 @@
 </script>
 
 <section class="block">
-  <h2>에너지</h2>
+  <div class="title">
+    <h2>에너지</h2>
+    <button
+      type="button"
+      class="ghost graph"
+      class:on={showGraph}
+      aria-expanded={showGraph}
+      onclick={() => (showGraph = !showGraph)}
+    >
+      {showGraph ? '▾' : '▸'} 그래프
+    </button>
+  </div>
+
+  {#if showGraph}
+    <Graph {journal} {dims} />
+  {/if}
 
   {#each dims as dim (dim)}
     {@const rec = journal.energy(dim)}
@@ -171,6 +193,23 @@
 </section>
 
 <style>
+  .title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .title h2 {
+    margin-bottom: 0;
+  }
+  .graph {
+    margin-left: auto;
+    min-height: 32px;
+    padding: 0 0.5rem;
+    font-size: 0.85rem;
+  }
+  .graph.on {
+    color: var(--accent);
+  }
   .dim + .dim {
     margin-top: 1.1rem;
   }
