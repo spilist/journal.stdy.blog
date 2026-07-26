@@ -101,8 +101,8 @@ cmanki의 `AI 정책`에서 옮겨온 것이고, 저널에는 "AI가 질문한�
 | 프레임워크 | Svelte 5 (룬) + Vite. SvelteKit 아님 — SPA 하나면 충분하다 |
 | 언어 | **TypeScript로 옮기지 않는다.** `.js` + JSDoc + `jsconfig.json`의 `checkJs` |
 | 포맷터 | **Prettier 안 씀.** 린터가 취향을 다투면 신호가 잡음에 묻힌다 |
-| 린트 | eslint + eslint-plugin-svelte 권장 설정만 |
-| 테스트 | `node --test src/lib/*.test.js`. 순수 함수(파서·조립·동기화 병합)에 집중 |
+| 린트 | eslint + eslint-plugin-svelte 권장 설정만. **`npm run lint`는 [마크다운 링크 검사](./scripts/check-docs.mjs)도 함께 돈다** |
+| 테스트 | `node --test src/lib/*.test.js scripts/*.test.js`. 순수 함수(파서·조립·동기화 병합·그래프)에 집중 |
 | 배포 | Cloudflare Workers + `wrangler deploy`, 정적 자산은 `assets` |
 | 도메인 | **`journal.stdy.blog`** 커스텀 도메인. `workers_dev: false` |
 | DB | D1. `~/stdy.blog`에 같은 계정 선례(`stdy-blog-db`)가 있다 |
@@ -176,6 +176,27 @@ The SessionStart hook may inject this context when installed; this block is the 
 
 ## 마크다운 링크 규약
 
+**강제된다 (`npm run lint` → [scripts/check-docs.mjs](./scripts/check-docs.mjs)):**
+
 - 상대 링크는 `./` 또는 `../`로 시작한다. 링크 안의 맨 `foo.md`는 lint 실패다.
+- 링크가 가리키는 파일이 실제로 있어야 한다.
+
+**판단으로 남는다 (강제하지 않는다):**
+
 - 백틱은 개념 토큰·실행 가능한 명령·명시적 파일 링크에만 쓴다. 확장자가 있거나 추적
-  경로와 일치하는 백틱 토큰은 인라인 코드로 두지 말고 마크다운 링크 안에 넣는다.
+  경로와 일치하는 백틱 토큰은 되도록 마크다운 링크 안에 넣는다.
+  **기계화하지 않은 이유**: 실측 44건 중 대부분이 `.js`·`.gitignore`처럼 정당한 개념
+  토큰이라, 강제하면 잡음이 신호를 덮는다 (2026-07-26 quality).
+
+## 게이트
+
+`npm run gate` 하나가 넷을 순서대로 돈다 — `test` · `lint` · `check` · `build`.
+**훅으로 자동화하지 않는다** (cmanki `자동화 금지`: 명령형 버튼만 허용). 커밋 전에
+사람이나 에이전트가 부른다 (`Commit Discipline` 참조).
+
+**`&&` 사슬이라 앞이 실패하면 뒤는 안 돈다.** 리팩터 뒤처럼 여러 게이트가 같이
+깨졌을 법하면 넷을 따로 부른다. 실패해도 계속 도는 러너를 새로 만들지 않는다 (9항).
+
+**강제 범위는 인라인 링크와 참조 정의까지다.** 코드 블록·인라인 코드·HTML 주석
+안은 보지 않고, 리포 밖(`../cmanki/...`)은 존재를 묻지 않는다. 존재 검사는
+**git 추적 기준**이다 — 무시된 경로를 가리키는 링크는 로컬에서만 살아 있다.

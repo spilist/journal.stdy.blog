@@ -7,9 +7,10 @@
     "dev": "vite --host",
     "build": "vite build && node scripts/gen-sw.mjs",
     "preview": "vite preview --host",
-    "test": "node --test src/lib/*.test.js",
+    "test": "node --test src/lib/*.test.js scripts/*.test.js",
+    "gate": "npm test && npm run lint && npm run check && npm run build",
     "check": "svelte-check --tsconfig ./jsconfig.json && npm run check:worker",
-    "lint": "eslint .",
+    "lint": "eslint . && node scripts/check-docs.mjs",
     "deploy": "npm run build && wrangler deploy",
     "db:schema": "wrangler d1 execute journal-db --remote --file=worker/schema.sql",
     "check:worker": "tsc -p worker/jsconfig.json"

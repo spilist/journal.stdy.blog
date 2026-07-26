@@ -22,7 +22,8 @@
 S2 배포는 2026-07-26. 배포 직후 `AC-9` 재확인함
 (인증 없이 `/api/pull` → Access가 302).
 
-- 게이트 확인: `npm test` (60개) · `npm run lint` · `npm run check` · `npm run build`
+- 게이트 확인: **`npm run gate`** (= `test` 60개 · `lint` · `check` · `build`).
+  `lint`는 eslint와 마크다운 링크 검사를 둘 다 돈다
 - **S2에서 새로 생긴 것** — 계약은
   [spec-first-slice.md](./spec-first-slice.md) `## S2 — 에너지 그래프`
   - 에너지 그래프. SVG 직접, 차트 라이브러리 없음. 런타임 의존성은 여전히 0개.

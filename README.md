@@ -59,13 +59,14 @@
 ```bash
 npm install
 npm run dev          # 로컬. --host
-npm test             # 순수 함수 35개 — 파서·조립·날짜·병합
+npm run gate         # 커밋 전 표준 게이트 — 아래 넷을 순서대로
+npm test             # 순수 함수 70개 — 파서·조립·날짜·병합·그래프·문서 링크
 npm run check        # svelte-check (jsconfig checkJs + JSDoc) + tsc(worker)
-npm run lint         # eslint + eslint-plugin-svelte
+npm run lint         # eslint + eslint-plugin-svelte, 그리고 마크다운 링크 검사
 npm run deploy       # 빌드 + Cloudflare 업로드
 ```
 
-**런타임 의존성 0개.** 차트도 SVG로 직접 그릴 예정이다 (S2).
+**런타임 의존성 0개.** 에너지 그래프도 SVG로 직접 그렸다 (S2).
 
 ## 문서
 

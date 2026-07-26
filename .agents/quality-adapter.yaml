@@ -1,0 +1,47 @@
+# quality 스킬 어댑터. 부트스트랩이 `typescript-quality` 프리셋을 얹었는데 이 리포는
+# TypeScript도, pytest도, CI도, lefthook도 쓰지 않는다 (AGENTS.md `스택`).
+# **없는 게이트를 선언해두면 다음 세션이 그걸 찾으러 다닌다** — 실제 표면만 남긴다.
+version: 1
+repo: journal.stdy.blog
+language: ko
+output_dir: charness-artifacts/quality
+preset_id: portable-defaults
+customized_from: portable-defaults
+preset_lineage:
+  # 부트스트랩이 얹은 원 프리셋. 잘라낸 게 무엇에서 나온 것인지 알 수 있게 남긴다.
+  - typescript-quality
+
+# 표준 게이트는 npm 스크립트 하나로 묶여 있다. 훅으로 자동화하지 않는다
+# (cmanki `자동화 금지`: 명령형 버튼만 허용).
+# **`&&` 사슬이라 첫 실패에서 멈춘다** — 스킬이 보는 것도 거기까지다.
+gate_commands:
+  - npm run gate
+
+canonical_markdown_surfaces:
+  - AGENTS.md
+  - CLAUDE.md
+  - README.md
+
+concept_paths:
+  - README.md
+  - docs/spec-first-slice.md
+  - docs/roadmap.md
+  - docs/handoff.md
+  - docs/operator-acceptance.md
+  # 결정·전제의 **정본**이다 (AGENTS.md `핵심 메모리 표면`). `D1`~`D20`이 여기 있어
+  # 개념 드리프트를 볼 자리로는 여기가 제일 중요하다.
+  - charness-artifacts/ideation/2026-07-26-concept-ideation.md
+
+# 커버리지 도구가 없다 — `npm test`는 node:test만 돌리고 계측을 하지 않는다.
+# **키를 지우면 바닥이 없어지는 게 아니라 기본값 80%와 존재하지 않는 lefthook/CI
+# 경로를 상속한다** (2026-07-26 리뷰에서 확인). 그래서 명시적으로 꺼 둔다.
+coverage_floor_policy:
+  fail_below_pct: 0.0
+  warn_ceiling_pct: 100.0
+  min_statements_threshold: 0
+
+# 실행 가능한 명세 문서(specdown)를 쓰지 않는다. 계약은 산문이고 증명은 단위 테스트다.
+specdown_smoke_patterns: []
+# 프롬프트 자산이 없다 — 앱에 LLM을 넣지 않는다 (AGENTS.md 불변식 4).
+prompt_asset_policy:
+  source_globs: []
