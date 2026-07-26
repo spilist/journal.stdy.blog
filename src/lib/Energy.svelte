@@ -14,11 +14,13 @@
 
   const SCORES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 
-  /** @type {string | null} 문지르는 중인 차원 */
-  let dragging = $state(null)
-  let dragMoved = false
-  /** @type {number | null} */
-  let dragStart = null
+  /**
+   * 문지르기 상태. **포인터 하나만 추적한다** — 손바닥이 스치는 두 번째 포인터가
+   * 진행 중인 조작을 가로채면 값이 엉뚱하게 해제된다.
+   *
+   * @type {{dim: string, id: number, start: number, before: number | null, moved: boolean} | null}
+   */
+  let drag = null
 
   /**
    * 손가락 x좌표를 점수로 바꾼다. 버튼 경계가 아니라 스트립 전체를 기준으로 재므로
@@ -39,14 +41,14 @@
    * @param {string} dim
    */
   function onDown(e, dim) {
+    if (drag || e.button !== 0 || !e.isPrimary) return
     const strip = /** @type {HTMLElement} */ (e.currentTarget)
     strip.setPointerCapture(e.pointerId)
-    dragging = dim
-    dragMoved = false
     const picked = scoreAt(strip, e.clientX)
-    dragStart = picked
+    // 취소될 수 있으므로 누르기 전 값을 들고 있는다 (아래 `onCancel`).
+    drag = { dim, id: e.pointerId, start: picked, before: journal.energy(dim).data.score, moved: false }
     // 이미 그 점수면 손을 뗄 때 해제한다 — 문지르는 중에 깜빡이지 않게.
-    if (journal.energy(dim).data.score !== picked) journal.toggleScore(dim, picked)
+    if (drag.before !== picked) journal.toggleScore(dim, picked)
   }
 
   /**
@@ -54,10 +56,10 @@
    * @param {string} dim
    */
   function onMove(e, dim) {
-    if (dragging !== dim) return
+    if (!drag || drag.dim !== dim || drag.id !== e.pointerId) return
     const picked = scoreAt(/** @type {HTMLElement} */ (e.currentTarget), e.clientX)
-    if (picked === dragStart && !dragMoved) return
-    dragMoved = true
+    if (picked === drag.start && !drag.moved) return
+    drag.moved = true
     if (journal.energy(dim).data.score !== picked) journal.toggleScore(dim, picked)
   }
 
@@ -81,14 +83,34 @@
     }
   }
 
-  /** @param {string} dim */
-  function onUp(dim) {
-    // 움직이지 않고 이미 켜진 점수를 눌렀으면 해제다 (`SC-3`).
-    if (!dragMoved && dragStart !== null && journal.energy(dim).data.score === dragStart) {
-      journal.toggleScore(dim, dragStart)
+  /**
+   * @param {PointerEvent} e
+   * @param {string} dim
+   */
+  function onUp(e, dim) {
+    if (!drag || drag.dim !== dim || drag.id !== e.pointerId) return
+    // 움직이지 않고 이미 켜져 있던 점수를 눌렀으면 해제다 (`SC-3`).
+    if (!drag.moved && drag.before === drag.start) journal.toggleScore(dim, drag.start)
+    drag = null
+  }
+
+  /**
+   * **취소는 확정이 아니다.** 스트립 위에서 세로 스크롤을 시작하면 브라우저가 제스처를
+   * 가져가며 `pointercancel`을 쏜다 (`touch-action: pan-y`가 그걸 허용한다).
+   * 이걸 `onUp`으로 흘리면 **스크롤만 했는데 점수가 지워진다.** 누르기 전 값으로 되돌린다.
+   *
+   * @param {PointerEvent} e
+   * @param {string} dim
+   */
+  function onCancel(e, dim) {
+    if (!drag || drag.dim !== dim || drag.id !== e.pointerId) return
+    const { before } = drag
+    const now = journal.energy(dim).data.score
+    if (now !== before) {
+      // 되돌린다. before 가 null 이면 지금 값을 한 번 더 눌러 해제하는 게 되돌리기다.
+      journal.toggleScore(dim, before === null ? /** @type {number} */ (now) : before)
     }
-    dragging = null
-    dragStart = null
+    drag = null
   }
 </script>
 
@@ -116,8 +138,9 @@
         onkeydown={(e) => onKey(e, dim)}
         onpointerdown={(e) => onDown(e, dim)}
         onpointermove={(e) => onMove(e, dim)}
-        onpointerup={() => onUp(dim)}
-        onpointercancel={() => onUp(dim)}
+        onpointerup={(e) => onUp(e, dim)}
+        onpointercancel={(e) => onCancel(e, dim)}
+        onlostpointercapture={(e) => onCancel(e, dim)}
       >
         {#each SCORES as score (score)}
           <span
@@ -210,7 +233,8 @@
   }
   .cell.on {
     background: var(--accent);
-    color: #fff;
+    /* 이 숫자가 앱의 핵심 판독값이다. 다크 모드에서 흰 글씨는 대비 2:1 미만이었다. */
+    color: var(--on-accent);
     font-weight: 700;
     font-size: 0.95rem;
   }

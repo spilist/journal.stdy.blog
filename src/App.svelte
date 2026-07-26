@@ -64,6 +64,7 @@
     a.click()
     a.remove()
     setTimeout(() => URL.revokeObjectURL(url), 10_000)
+    say('전체 마크다운을 내려받았습니다')
   }
 </script>
 
@@ -80,7 +81,9 @@
   <div class="sync">
     <!-- 동기화는 사람이 누른다 (불변식 2). 미동기화를 보이게 하는 건 자동화가 아니다. -->
     <button type="button" class:has={dirty > 0} onclick={() => journal.pushNow()}>
-      ↑ 올리기{dirty > 0 ? ` ${dirty}` : ''}
+      ↑ 올리기<!-- 개수는 고정폭 자리에 둔다. 라벨에 붙이면 0→1, 9→10에서 버튼이
+                  넓어지며 옆 버튼을 밀어 오터치가 난다. -->
+      <span class="count">{dirty > 0 ? dirty : ''}</span>
     </button>
     <!-- 날짜 줄이 아니라 여기 산다. 날짜 줄에 조건부로 두면 나타났다 사라질 때마다
          `›` 버튼이 밀려서 오터치가 난다. 늘 자리를 지키고 오늘이면 비활성이다. -->
@@ -92,13 +95,24 @@
     >오늘로</button>
     <span class="state" class:warn={journal.syncState === 'relogin'}>
       {#if journal.syncState === 'syncing'}동기화 중…
-      {:else if journal.syncState === 'offline'}오프라인
+      {:else if journal.syncState === 'offline'}오프라인{journal.syncMessage ? ` · ${journal.syncMessage}` : ''}
       {:else}{journal.syncMessage}{/if}
     </span>
   </div>
 </header>
 
 <main>
+  {#if journal.storageError}
+    <p class="banner warn">{journal.storageError}</p>
+  {/if}
+
+  {#each journal.offscreenConflicts() as c (c.date)}
+    <!-- 다른 날짜의 충돌 사본으로 가는 통로. 새 기능이 아니라 날짜 이동의 조합이다. -->
+    <button type="button" class="banner jump" onclick={() => journal.goTo(c.date)}>
+      ⚠ {c.date}에 충돌 사본 {c.count}개 — 보러 가기
+    </button>
+  {/each}
+
   {#if journal.syncState === 'relogin'}
     <p class="relogin">로그인이 만료됐습니다. <a href={location.pathname}>새로고침</a>하면 다시 로그인합니다.</p>
   {/if}
@@ -106,7 +120,13 @@
   <Pinned {journal} />
 
   {#if showImport}
-    <ImportPanel {journal} onclose={() => (showImport = false)} />
+    <ImportPanel
+      {journal}
+      onclose={(message) => {
+        showImport = false
+        if (message) say(message)
+      }}
+    />
   {/if}
 
   {#if journal.loaded}
@@ -138,7 +158,13 @@
     z-index: 2;
     background: var(--bg);
     border-bottom: 1px solid var(--line);
-    padding: 0.5rem 0.9rem;
+    /* index.html 이 viewport-fit=cover 라 노치 아래로 파고든다. 그 대가를 여기서 치른다. */
+    padding: calc(0.5rem + env(safe-area-inset-top)) calc(0.9rem + env(safe-area-inset-right))
+      0.5rem calc(0.9rem + env(safe-area-inset-left));
+  }
+  header > * {
+    max-width: 46rem;
+    margin: 0 auto;
   }
   .dates {
     display: flex;
@@ -171,6 +197,7 @@
   }
   .sync {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 0.5rem;
     margin-top: 0.4rem;
@@ -182,6 +209,12 @@
   .sync .state {
     margin-left: auto;
     text-align: right;
+  }
+  .count {
+    display: inline-block;
+    min-width: 1.6em;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
   }
   .sync button.has {
     border-color: var(--accent);
@@ -196,17 +229,23 @@
     color: var(--warn-fg);
   }
   main {
-    padding: 0.9rem;
+    padding: 0.9rem calc(0.9rem + env(safe-area-inset-right)) 0.9rem
+      calc(0.9rem + env(safe-area-inset-left));
     max-width: 46rem;
     margin: 0 auto;
   }
-  .relogin {
+  .relogin,
+  .banner {
+    display: block;
+    width: 100%;
+    text-align: left;
     border: 1px solid var(--warn);
     background: var(--warn-bg);
     color: var(--warn-fg);
     border-radius: 6px;
     padding: 0.6rem 0.8rem;
     font-size: 0.9rem;
+    margin-bottom: 0.6rem;
   }
   footer button.open {
     border-color: var(--accent);
@@ -216,12 +255,13 @@
     display: flex;
     flex-wrap: wrap;
     gap: 0.5rem;
-    margin: 1.5rem 0 3rem;
+    margin: 1.5rem 0 calc(3rem + env(safe-area-inset-bottom));
   }
   .toast {
     position: fixed;
     left: 50%;
-    bottom: 1.5rem;
+    /* 홈 인디케이터(~34px)와 겹치지 않게. */
+    bottom: calc(1.5rem + env(safe-area-inset-bottom));
     transform: translateX(-50%);
     background: var(--fg);
     color: var(--bg);

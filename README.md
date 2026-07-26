@@ -39,8 +39,11 @@
 
 ## 현재 상태
 
-**S1 구현 완료, 배포 전.** [배포 전 사람이 할 일](./docs/operator-acceptance.md)의
-Cloudflare 설정 세 가지가 남아 있다.
+**S1 배포됨 (2026-07-26) — https://journal.stdy.blog**
+
+허용 이메일 하나만 Cloudflare Access를 통과한다. 남은 일은 **사람만 할 수 있는
+수용 확인**([운영자 인수](./docs/operator-acceptance.md))과 **S2 에너지 그래프**다 —
+순서는 [로드맵](./docs/roadmap.md)에 있다.
 
 | 있는 것 | 없는 것 |
 |---|---|
@@ -71,5 +74,6 @@ npm run deploy       # 빌드 + Cloudflare 업로드
 | [AGENTS.md](./AGENTS.md) | 에이전트 운영 계약. 설계 취향과 불변식 |
 | [docs/spec-first-slice.md](./docs/spec-first-slice.md) | **구현 정본.** 스키마·프로토콜·수용 기준 |
 | [docs/roadmap.md](./docs/roadmap.md) | 우선순위와 순서 |
-| [docs/operator-acceptance.md](./docs/operator-acceptance.md) | 배포 전 사람이 할 일 |
+| [docs/handoff.md](./docs/handoff.md) | 다음 세션이 먼저 읽을 것 |
+| [docs/operator-acceptance.md](./docs/operator-acceptance.md) | 운영자 인수 + 수용 확인 |
 | [아이데이션 기록](./charness-artifacts/ideation/2026-07-26-concept-ideation.md) | 결정 `D1`~`D20`과 그 근거 |

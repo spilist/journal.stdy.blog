@@ -48,6 +48,12 @@ export class Journal {
   /** @type {'idle' | 'syncing' | 'offline' | 'relogin' | 'error'} */
   syncState = $state('idle')
 
+  /**
+   * 로컬 저장/로드가 실패했을 때의 메시지. **비어 있지 않으면 화면 맨 위에 계속 뜬다** —
+   * 로컬이 작업 정본(불변식 1)이므로 여기가 깨지면 사용자가 즉시 알아야 한다.
+   */
+  storageError = $state('')
+
   /** @type {string} */
   syncMessage = $state('')
 
@@ -59,6 +65,17 @@ export class Journal {
   #timers = Object.create(null)
 
   async load() {
+    try {
+      await this.#load()
+    } catch (err) {
+      // 여기서 조용히 실패하면 `loaded`가 false로 남아 에너지·어제·오늘 블록이
+      // 통째로 안 뜬다. 사용자는 "앱이 반쯤 비어 있다"만 본다.
+      this.storageError = `로컬 저장소를 열지 못했습니다 (${err}). 프라이빗 모드이거나 저장 공간이 부족할 수 있습니다.`
+      this.loaded = true
+    }
+  }
+
+  async #load() {
     const [records, conflicts] = await Promise.all([db.allRecords(), db.allConflicts()])
     /** @type {Record<string, Rec>} */
     const map = {}
@@ -115,6 +132,31 @@ export class Journal {
     return this.conflicts.filter((c) => c.target === key)
   }
 
+  /**
+   * 지금 보고 있는 날짜 밖의 충돌 사본. **화면에 붙을 자리가 없으면 인출 통로가
+   * 없는 저장이 된다** (설계 취향 15항). 날짜 이동의 조합으로 닿게 한다.
+   *
+   * @returns {{date: string, count: number}[]}
+   */
+  offscreenConflicts() {
+    /** @type {Record<string, number>} */
+    const byDate = Object.create(null)
+    for (const c of this.conflicts) {
+      const m = /^(?:energy|log):(\d{4}-\d{2}-\d{2}):/.exec(c.target)
+      const date = m ? m[1] : null
+      if (date === null || date === this.date) continue
+      byDate[date] = (byDate[date] ?? 0) + 1
+    }
+    return Object.entries(byDate)
+      .map(([date, count]) => ({ date, count }))
+      .sort((a, b) => (a.date < b.date ? 1 : -1))
+  }
+
+  /** 접힌 고정 블록에도 보여야 한다. */
+  pinnedConflictCount() {
+    return this.conflictsFor('pinned').length
+  }
+
   /** 개정 이력. 최근 것이 위로 (`D11`, `P-3`). */
   revisions() {
     return Object.values(this.records)
@@ -137,7 +179,19 @@ export class Journal {
     if (next === prev) return
     if (next.key === 'pinned') this.#snapshotPinned(prev)
     this.records[next.key] = next
-    db.putRecord($state.snapshot(next))
+    this.#persist(db.putRecord($state.snapshot(next)))
+  }
+
+  /**
+   * 로컬 쓰기는 화면보다 먼저 실패할 수 있다(쿼터 초과·트랜잭션 중단). 프로미스를
+   * 떠 있게 두면 **화면엔 글자가 남고 앱을 다시 열면 사라진다.**
+   *
+   * @param {Promise<unknown>} promise
+   */
+  #persist(promise) {
+    promise.catch((err) => {
+      this.storageError = `저장 실패 — 이 화면의 글자를 다른 곳에 복사해 두세요 (${err})`
+    })
   }
 
   /**
@@ -218,7 +272,7 @@ export class Journal {
       syncedAt: 0,
     }
     this.records[key] = rec
-    db.putRecord(rec)
+    this.#persist(db.putRecord(rec))
   }
 
   /**
@@ -228,9 +282,16 @@ export class Journal {
    * @param {number} score
    */
   toggleScore(dim, score) {
-    const prev = this.energy(dim)
+    const key = recordKey('energy', this.date, dim)
+    // 점수와 이유는 **한 레코드를 공유한다.** 이유가 디바운스 대기 중일 때 커밋된
+    // 레코드를 prev 로 잡으면, 방금 친 문장이 화면에서 사라졌다가 1초 뒤 돌아온다.
+    const pending = this.#pending[key]
+    const prev = this.#at(key, 'energy', { score: null, reason: '', scoredAt: null })
     const next = prev.data.score === score ? null : score
-    this.#commit(prev, nextEnergy(prev, { score: next }, Date.now()))
+    /** @type {{score: number | null, reason?: string}} */
+    const patch = { score: next }
+    if (pending !== undefined) patch.reason = pending
+    this.#commit(prev, nextEnergy(prev, patch, Date.now()))
   }
 
   /**
@@ -446,6 +507,8 @@ export class Journal {
     this.flush()
     const sent = Object.values(this.records).filter(isDirty).map((r) => $state.snapshot(r))
     if (!sent.length) {
+      // 상태도 함께 되돌린다. 안 그러면 직전 'offline' 표시에 묻혀 안 보인다.
+      this.syncState = 'idle'
       this.syncMessage = '올릴 게 없습니다'
       return
     }

@@ -5,8 +5,9 @@ journal.stdy.blog에서 에이전트가 지켜야 할 운영 계약.
 ## 이 리포의 성격
 
 개인용(n=1) 저널 앱. 사용자 한 명이 쓰고, 사용자 한 명이 읽는다. **멀티유저·공유·유료화·
-바이럴 관련 제안은 이 리포에서 전부 범위 밖이다.** 첫 슬라이스(S1) 코드가 있고
-배포 전이다 — 현재 상태와 순서는 [로드맵](./docs/roadmap.md)에 있다.
+바이럴 관련 제안은 이 리포에서 전부 범위 밖이다.** 첫 슬라이스(S1)가
+**배포돼 있다**(https://journal.stdy.blog) — 현재 상태와 순서는
+[로드맵](./docs/roadmap.md)에 있다.
 
 **이 앱이 하는 일은 두 개다** (사용자, 2026-07-26):
 
@@ -114,7 +115,7 @@ cmanki의 `AI 정책`에서 옮겨온 것이고, 저널에는 "AI가 질문한�
 | [docs/handoff.md](./docs/handoff.md) | **세션 시작 시 여기부터.** 픽업 트리거와 막힌 지점 |
 | [docs/spec-first-slice.md](./docs/spec-first-slice.md) | **구현 정본.** 스키마·동기화 프로토콜·수용 기준 |
 | [docs/roadmap.md](./docs/roadmap.md) | 우선순위와 순서. 결정을 재선언하지 않는다 |
-| [docs/operator-acceptance.md](./docs/operator-acceptance.md) | 배포 전 사람이 해야 하는 일 |
+| [docs/operator-acceptance.md](./docs/operator-acceptance.md) | 운영자 인수. **사람만 할 수 있는 수용 확인이 여기 있다** |
 | [charness-artifacts/ideation/](./charness-artifacts/ideation/) | 결정·전제의 **정본**. 설계 얘기 전에 읽을 것 |
 | [2026-07-26-concept-ideation.md](./charness-artifacts/ideation/2026-07-26-concept-ideation.md) | 현재 개념 모델과 결정 `D1`~`D20` |
 | [references/sample.md](./references/sample.md) | **정본 형식의 단일 출처.** 파서·export 계약이 여기서 나온다 |

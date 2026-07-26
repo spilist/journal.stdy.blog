@@ -28,6 +28,10 @@
   <button type="button" class="toggle" onclick={() => (journal.pinnedOpen = !journal.pinnedOpen)}>
     <span class="caret">{journal.pinnedOpen ? '▾' : '▸'}</span>
     <span class="title">{title || '잊지 않을 것'}</span>
+    {#if !journal.pinnedOpen && journal.pinnedConflictCount() > 0}
+      <!-- 접혀 있으면 안쪽 사본이 안 보인다. 있다는 사실만은 겉에 남긴다. -->
+      <span class="badge">⚠ {journal.pinnedConflictCount()}</span>
+    {/if}
   </button>
 
   {#if journal.pinnedOpen}
@@ -82,6 +86,16 @@
   }
   .caret {
     color: var(--dim);
+  }
+  .badge {
+    margin-left: auto;
+    flex: none;
+    font-size: 0.78rem;
+    color: var(--warn-fg);
+    background: var(--warn-bg);
+    border: 1px solid var(--warn);
+    border-radius: 999px;
+    padding: 0.1rem 0.5rem;
   }
   .title {
     overflow: hidden;

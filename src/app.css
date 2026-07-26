@@ -10,6 +10,7 @@
   --warn: #e0b400;
   --warn-bg: #fffbe8;
   --warn-fg: #8a6d00;
+  --on-accent: #ffffff;
   color-scheme: light dark;
 }
 
@@ -24,6 +25,8 @@
     --warn: #6b5a10;
     --warn-bg: #2a2410;
     --warn-fg: #e0c34a;
+    /* 밝은 --accent 위에는 어두운 글씨라야 읽힌다. */
+    --on-accent: #10241a;
   }
 }
 
@@ -93,8 +96,16 @@ button.ghost {
 button.primary {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  /* 다크 모드의 --accent 는 밝은 연두라 흰 글씨가 안 읽힌다. 배경 대비로 고른다. */
+  color: var(--on-accent);
   font-weight: 600;
+}
+
+/* details 의 유일한 손잡이다. 0.85rem 글씨 높이(~22px)면 44px 기준의 절반이다. */
+summary {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
 }
 
 button:disabled {

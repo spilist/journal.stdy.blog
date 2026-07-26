@@ -10,34 +10,27 @@ Date: 2026-07-26
 
 ## 현재 상태
 
-**S1 코드 완료, 배포 전 (2026-07-26).**
+**S1 배포됨 (2026-07-26) — https://journal.stdy.blog**
 
-게이트는 다 초록이다 — `npm test` 35개 · `npm run lint` · `npm run check`
-(svelte-check + worker `tsc`) · `npm run build`. **CI는 안 한다** (n=1 리포).
+D1 `journal-db`와 Cloudflare Access 설정이 끝났고 게이트는 다 초록이다 —
+`npm test` 38개 · `npm run lint` · `npm run check` · `npm run build`.
+**CI는 안 한다** (n=1 리포).
 
 앱이 하는 일은 둘뿐이고, 그 둘에 닿지 않는 제안은 범위 밖이다 (AGENTS.md):
 **복붙을 없앤다**, **에너지 레벨을 추적한다.**
 
 ## 다음 — 순서대로
 
-### 1. 배포를 막고 있는 것 (**사람만 할 수 있다**)
+### 1. 수용 확인 (**사람만 할 수 있다**)
 
-[operator-acceptance.md](./operator-acceptance.md)에 절차가 있다.
+`AC-9`~`AC-12`. **절차의 단일 출처는
+[operator-acceptance.md](./operator-acceptance.md) `## 수용 확인`이다** — 여기서
+재선언하지 않는다.
 
-1. **`.env`의 API 토큰에 D1 권한이 없다.** `~/stdy.blog/.env`에서 복사한 것이라
-   그 리포에 필요한 범위만 있다. `wrangler d1 create`가
-   `Authentication error [code: 10000]`으로 막혔다 → `D1: Edit`를 추가하거나
-   대시보드에서 `journal-db`를 직접 만든다
-2. **Cloudflare Access 앱**을 만들고 AUD·팀 도메인을
-   [wrangler.jsonc](../wrangler.jsonc)에 채운다
+### 2. 폰에서 볼 프로브
 
-**Access 전에 배포하지 않는다.** 정적 자산이 Worker보다 먼저 나가므로 앱 화면이
-인증 없이 열린다. 데이터는 401로 막히지만 사적인 앱을 공개 URL에 세워둘 이유가 없다.
-
-### 2. 첫 사용 — 마지막 복붙
-
-기존 저널 마크다운을 「가져오기」로 넣는다. **미리보기의 "해석하지 못한 줄"이 0인지
-확인하는 것이 이 단계의 실질**이다. 0이 아니면 그 줄은 저장되지 않는다.
+`P-2`~`P-4`. **단일 출처는 [spec-first-slice.md](./spec-first-slice.md)
+`## Probe Questions`다.** 셋 다 스키마를 바꾸지 않으므로 언제든 되돌린다.
 
 ### 3. S2 — 에너지 그래프
 
@@ -47,20 +40,10 @@ Date: 2026-07-26
 
 전체 export의 날짜 범위 선택 UI도 여기서 같이 본다.
 
-### 4. 프로브 — 며칠 써본 뒤
+### 4. 남은 리뷰
 
-[구현 계약](./spec-first-slice.md)의 `Probe Questions`다. **셋 다 스키마를 바꾸지
-않으므로 언제든 되돌린다.**
-
-- `P-1` 10점 1행 56px에서 오터치가 나는가 → 나면 5×2행이나 5점
-- `P-2` 「어제」 위 전날 「오늘」 병치가 세로를 너무 먹는가 → 먹으면 접어둔다
-- `P-3` 개정 타임라인 위치 → 지금은 고정 블록 펼침 하단
-
-### 5. 남은 리뷰
-
-**S1에 바운디드 프레시아이 크리틱을 아직 못 돌렸다** — 구현 세션의 호스트가
-서브에이전트 생성을 막았다. AGENTS.md `Subagent Delegation`대로 같은 에이전트의
-재검토로 대체하지 않았다. `critique`로 한 번 훑는 게 남아 있다.
+프레시아이 리뷰 넷을 돌렸다 (2026-07-26) — 구현 정확성 · 프록시 경계 ·
+운영자 인수 · UI/모바일. 지적은 전부 반영했다. **다음은 S2를 만든 뒤 다시 돈다.**
 
 ## 의도적으로 미룬 것
 

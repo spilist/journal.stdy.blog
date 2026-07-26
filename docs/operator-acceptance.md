@@ -9,11 +9,12 @@
 `journal-db` (`cf99f5c5-47ea-4286-a22d-cdee5d0a05d8`, APAC)를 만들고
 [wrangler.jsonc](../wrangler.jsonc)에 넣었다. 원격 스키마도 올렸다 — 테이블 4개.
 
-로컬 개발용은 따로 필요하다:
+스키마를 다시 밀어야 하면 `npm run db:schema`(원격). `worker/schema.sql`은 전부
+`IF NOT EXISTS`라 재실행이 안전하다.
 
-```bash
-npm run db:schema:local
-```
+> **로컬 개발에는 API가 없다.** `npm run dev`는 vite만 띄우므로 `/api/*`가 SPA
+> fallback HTML을 받고 앱이 "다시 로그인" 상태로 간다. **UI 작업용이고 동기화는
+> 배포본에서 확인한다** — 그래서 로컬 D1 스크립트를 두지 않았다.
 
 ## 2. Cloudflare Access — **완료 (2026-07-26)**
 

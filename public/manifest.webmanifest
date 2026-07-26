@@ -3,7 +3,7 @@
   "short_name": "저널",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#14161a",
-  "theme_color": "#14161a",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
   "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
 }

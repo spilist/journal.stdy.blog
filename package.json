@@ -12,7 +12,6 @@
     "lint": "eslint .",
     "deploy": "npm run build && wrangler deploy",
     "db:schema": "wrangler d1 execute journal-db --remote --file=worker/schema.sql",
-    "db:schema:local": "wrangler d1 execute journal-db --local --file=worker/schema.sql",
     "check:worker": "tsc -p worker/jsconfig.json"
   },
   "devDependencies": {

@@ -4,7 +4,7 @@
   //
   // 이게 **마지막 복붙**이다.
 
-  /** @type {{journal: import('./state.svelte.js').Journal, onclose: () => void}} */
+  /** @type {{journal: import('./state.svelte.js').Journal, onclose: (message?: string) => void}} */
   let { journal, onclose } = $props()
 
   let text = $state('')
@@ -32,12 +32,23 @@
     preview = journal.previewImport(text)
   }
 
+  let error = $state('')
+
   async function apply() {
     if (!preview) return
     busy = true
-    await journal.applyImport(preview.writes)
-    busy = false
-    onclose()
+    error = ''
+    const count = preview.writes.length
+    try {
+      await journal.applyImport(preview.writes)
+      onclose(`${count}개를 저장했습니다. 「↑ 올리기」를 눌러야 서버로 갑니다`)
+    } catch (err) {
+      // 실패를 삼키면 「쓰는 중…」으로 굳고 몇 개가 쓰였는지 알 수 없다.
+      // `putRecords`는 트랜잭션이라 실제로는 전부 무산이다.
+      error = `저장하지 못했습니다 — 아무것도 쓰이지 않았습니다 (${err})`
+    } finally {
+      busy = false
+    }
   }
 </script>
 
@@ -60,7 +71,7 @@
     <button type="button" onclick={() => (preview = journal.previewImport(text))} disabled={!text.trim()}>
       미리보기
     </button>
-    <button type="button" class="ghost" onclick={onclose}>닫기</button>
+    <button type="button" class="ghost" onclick={() => onclose()}>닫기</button>
   </div>
 
   {#if preview}
@@ -90,6 +101,7 @@
       <button type="button" class="primary" onclick={apply} disabled={busy || !preview.writes.length}>
         {busy ? '쓰는 중…' : `${preview.writes.length}개 저장`}
       </button>
+      {#if error}<p class="error">{error}</p>{/if}
     </div>
   {/if}
 </div>
@@ -125,6 +137,13 @@
   }
   .dim {
     color: var(--dim);
+  }
+  .error {
+    border: 1px solid var(--warn);
+    background: var(--warn-bg);
+    color: var(--warn-fg);
+    border-radius: 6px;
+    padding: 0.5rem 0.7rem;
   }
   input[type='file'] {
     display: block;

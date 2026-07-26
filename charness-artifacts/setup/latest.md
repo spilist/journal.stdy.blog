@@ -49,5 +49,8 @@ Repo mode: NORMALIZE (진입 시 PARTIAL / targeted_missing_surface)
   `Subagent Delegation`이 요구하는 대로 **같은 에이전트의 재검토로 대체하지 않고**
   제약을 그대로 남긴다. 호스트 정책 · 어댑터 적합성 · 운영자 인수 흐름 세 렌즈가
   미검증이다.
-- **배포 경로는 여전히 미검증이다** — `.env` 토큰의 D1 권한 문제와 Access 설정이
-  남아 있다. [operator-acceptance.md](../../docs/operator-acceptance.md) 참조.
+- ~~**배포 경로는 여전히 미검증이다** — `.env` 토큰의 D1 권한 문제와 Access 설정이
+  남아 있다.~~ **해소됨 (같은 날 이후).** 토큰 권한이 추가되고 배포까지 끝났다 —
+  https://journal.stdy.blog. 현재 상태는 [handoff.md](../../docs/handoff.md)를 볼 것.
+- ~~바운디드 프레시아이 리뷰어를 못 돌렸다~~ **해소됨** — 사용자가 명시적으로 요청해
+  동기 실행으로 넷을 돌렸고 지적을 반영했다.
