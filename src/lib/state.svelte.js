@@ -13,7 +13,7 @@ import {
   recordKey,
   resolveRejected,
 } from './merge.js'
-import { datesInRange, recordBounds, spanDays, windowDates, windowLabel } from './series.js'
+import { datesInRange } from './series.js'
 import * as db from './store.js'
 import { pull, push } from './sync.js'
 
@@ -59,17 +59,6 @@ export class Journal {
   syncMessage = $state('')
 
   pinnedOpen = $state(false)
-
-  /**
-   * 그래프 창의 길이(일). `null`이면 전체 (`D14`).
-   *
-   * **내려받기 범위이기도 하다.** 그래프의 창이 이미 날짜 범위 선택기라, 같은 일을
-   * 하는 UI를 하나 더 만들지 않는다 (설계 취향 1항). 경계는 이렇다 — **범위는 그래프
-   * 창으로만 정하고, 내려받기는 버튼으로만 한다** (2항).
-   *
-   * @type {number | null}
-   */
-  graphDays = $state(/** @type {number | null} */ (30))
 
   loaded = $state(false)
 
@@ -391,36 +380,14 @@ export class Journal {
   }
 
   /**
-   * 그래프 창의 날짜 전부. **그래프와 내려받기가 이 하나를 같이 쓴다** — 각자
-   * 계산하면 보여준 구간과 파일 내용이 조용히 어긋난다 (`S-2`).
+   * 전체. 같은 조립 함수에 날짜 범위만 다르게 준 것이다 (`D13`).
    *
-   * @returns {string[]}
-   */
-  graphDates() {
-    return windowDates(recordBounds(Object.values(this.records)), this.today, this.graphDays)
-  }
-
-  /** 전체 창의 길이(일). 「1개월 더」가 여기서 멈춘다. */
-  graphSpan() {
-    return spanDays(recordBounds(Object.values(this.records)), this.today)
-  }
-
-  /** 창의 이름. 그래프의 머리와 내려받기 버튼이 같은 문장을 쓴다. */
-  graphLabel() {
-    return windowLabel(this.graphDays, this.graphDates().length)
-  }
-
-  /**
-   * 같은 조립 함수에 범위만 다르게 준 것이다 (`D13`). 범위는 **그래프 창 그 자체**다.
-   * 고정 블록은 범위와 무관하게 맨 위에 남는다 — 지금 서 있는 문장이지 그 기간의
-   * 기록이 아니다.
-   *
-   * 「전체」 창은 오늘보다 뒤의 기록까지 덮으므로(`windowEnd`) 전량이 그대로 나온다.
+   * **범위는 없다 — 전체는 전체다.** S2에서 그래프 창을 범위로 쓰는 결합을 넣었다가
+   * 되돌렸다 (`S-2` 철회). 날짜 범위 선택 UI는 다시 미룬 결정이다.
    */
   exportAll() {
     this.flush()
-    const dates = this.graphDates()
-    const days = datesInRange(Object.values(this.records), dates[0], dates[dates.length - 1])
+    const days = datesInRange(Object.values(this.records), null, null)
     return assemble({
       pinned: this.pinned().data.text,
       days: days.map((d) => this.dayFor(d)),

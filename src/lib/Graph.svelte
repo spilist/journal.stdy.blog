@@ -7,7 +7,15 @@
   // 기능이 아니라 이미 있는 날짜 이동의 조합이다 (설계 취향 1항).
 
   import { dayLabel } from './date.js'
-  import { dayEnergy, lines, plot } from './series.js'
+  import {
+    dayEnergy,
+    lines,
+    plot,
+    recordBounds,
+    spanDays,
+    windowDates,
+    windowLabel,
+  } from './series.js'
 
   /** @type {{journal: import('./state.svelte.js').Journal, dims: readonly string[]}} */
   let { journal, dims } = $props()
@@ -17,21 +25,27 @@
   const PAD = { top: 10, right: 6, bottom: 20, left: 22 }
   const STEP = 30
 
-  // 창은 `journal`이 갖고 있다 — **내려받기 범위이기도 해서** 컴포넌트 안에 두면
-  // 푸터의 버튼이 못 읽는다 (`state.svelte.js`의 `graphDays` 주석 참조).
-  let days = $derived(journal.graphDays)
+  /**
+   * 창의 길이(일). `null`이면 전체 (`D14`).
+   *
+   * **여기서만 산다.** 한때 `Journal`로 올려 내려받기 범위로도 썼는데, 화면 다른
+   * 곳의 상태가 푸터 버튼의 결과를 바꾸는 강결합이라 되돌렸다 (`S-2` 철회).
+   *
+   * @type {number | null}
+   */
+  let days = $state(/** @type {number | null} */ (STEP))
   /** 컨테이너 실측 폭. viewBox로 늘리면 점이 타원이 되고 손가락 좌표가 어긋난다. */
   let width = $state(0)
   /** 선택한 날짜. 같은 날짜를 다시 고르면 이동한다. */
   let picked = $state('')
 
   let records = $derived(Object.values(journal.records))
-  // 창은 `journal`이 계산한다 — 내려받기와 **같은 배열**이어야 한다 (`S-2`).
-  let dates = $derived(journal.graphDates())
+  let bounds = $derived(recordBounds(records))
+  let dates = $derived(windowDates(bounds, journal.today, days))
   let series = $derived(lines(records, dims, dates))
   let view = $derived(plot(dates, series, { width, height: HEIGHT, pad: PAD }))
   let empty = $derived(series.every((l) => l.points.length === 0))
-  let atFullSpan = $derived(days === null || days >= journal.graphSpan())
+  let atFullSpan = $derived(days === null || days >= spanDays(bounds, journal.today))
 
   /** 지금 보고 있는 날짜가 창 안에 있으면 세로 자를 세운다. */
   let cursor = $derived(dates.indexOf(journal.date))
@@ -45,7 +59,7 @@
    */
   let pickedRows = $derived(pickedIndex >= 0 ? dayEnergy(records, dims, picked) : [])
 
-  let rangeLabel = $derived(journal.graphLabel())
+  let rangeLabel = $derived(windowLabel(days, dates.length))
 
   /** @param {string} date */
   function select(date) {
@@ -140,20 +154,20 @@
       onclick={() => {
         const next = (days ?? STEP) + STEP
         // 전체를 넘어서면 그냥 전체로 접는다 — 왼쪽에 빈 달을 붙여봐야 읽을 게 없다.
-        journal.graphDays = next >= journal.graphSpan() ? null : next
+        days = next >= spanDays(bounds, journal.today) ? null : next
       }}>1개월 더</button
     >
     <button
       type="button"
       class="ghost"
       disabled={days === null}
-      onclick={() => (journal.graphDays = null)}
+      onclick={() => (days = null)}
     >
       전체
     </button>
     <!-- 넓힌 창은 되돌릴 수 있어야 한다. -->
     {#if days !== STEP}
-      <button type="button" class="ghost" onclick={() => (journal.graphDays = STEP)}>
+      <button type="button" class="ghost" onclick={() => (days = STEP)}>
         {STEP}일
       </button>
     {/if}
