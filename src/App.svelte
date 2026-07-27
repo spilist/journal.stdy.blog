@@ -19,14 +19,22 @@
     journal.load().then(() => journal.pullNow())
 
     // 폰에서 앱을 전환하거나 화면을 끌 때 디바운스 중인 글자를 잃지 않게 한다.
+    // 돌아올 때는 반대로 받아온다 — **PC 탭을 열어둔 채 폰에서 고치는 게 실제 루프다.**
+    // 로드 때 한 번만 pull하면 그 탭은 영영 낡은 채로 남는다.
     const flush = () => journal.flush()
-    const onHide = () => {
+    const onVisibility = () => {
       if (document.visibilityState === 'hidden') flush()
+      else journal.pullNow({ auto: true })
     }
-    document.addEventListener('visibilitychange', onHide)
+    // 오프라인에서 돌아왔을 때. 이게 없으면 `syncState`가 'offline'에 갇혀 있다가
+    // 새로고침해야 풀린다.
+    const onOnline = () => journal.pullNow({ auto: true })
+    document.addEventListener('visibilitychange', onVisibility)
+    window.addEventListener('online', onOnline)
     window.addEventListener('pagehide', flush)
     return () => {
-      document.removeEventListener('visibilitychange', onHide)
+      document.removeEventListener('visibilitychange', onVisibility)
+      window.removeEventListener('online', onOnline)
       window.removeEventListener('pagehide', flush)
       flush()
     }
@@ -104,6 +112,15 @@
 <main>
   {#if journal.storageError}
     <p class="banner warn">{journal.storageError}</p>
+  {/if}
+
+  <!-- 충돌이 아니라 분기다 — pull은 충돌을 만들지 않는다 (`D3`). 지워지지 않고
+       남아야 하므로 사라지는 `syncMessage`가 아니라 배너다. -->
+  {#if journal.diverged > 0}
+    <p class="banner warn">
+      다른 기기에서 고친 {journal.diverged}개를 아직 안 받았습니다 — 여기서도 고쳐서
+      갈립니다. 「올리기」를 누르면 정해집니다.
+    </p>
   {/if}
 
   {#each journal.offscreenConflicts() as c (c.date)}

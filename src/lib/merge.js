@@ -61,6 +61,50 @@ export function pullDecision(local, remote) {
 }
 
 /**
+ * 못 받은 원격 레코드가 **분기**인가 — 이 기기가 본 적 없는 판본인가.
+ *
+ * **더티하다는 것만으로 분기라고 세면 거짓말이 된다.** `pushNow`는 `lastPulledAt`을
+ * 옮기지 않으므로, 올린 직후 계속 편집하면 다음 pull이 **내가 방금 올린 그 판본**을
+ * 도로 실어온다. 로컬은 더티라 안 받는데, 이건 다른 기기와 갈린 게 아니라 내 메아리다.
+ * 기준은 `syncedAt` — 여기까지는 이미 본 것이다.
+ *
+ * `revision`은 세지 않는다. 자동 밀봉본이라 사용자가 고친 적이 없고, 「올리기」를 눌러도
+ * 사본조차 남지 않아(먼저 쓴 쪽이 남는다) **확인할 결과가 없는 배너**가 된다.
+ *
+ * @param {Rec | undefined} local
+ * @param {Rec} remote
+ * @returns {boolean}
+ */
+export function isDiverged(local, remote) {
+  if (!local) return false
+  if (remote.kind === 'revision') return false
+  return remote.updatedAt > (local.syncedAt ?? 0)
+}
+
+/**
+ * pull 커서를 어디까지 미룰지. **건너뛴 레코드를 커서로 넘겨버리면 그 원격 변경은
+ * 영영 다시 안 온다** — 사용자는 다음 push까지 분기 사실 자체를 모른다. 그래서 건너뛴
+ * 게 있으면 그 중 가장 이른 `updatedAt` 직전에서 커서를 멈춘다. 다음 pull이 같은
+ * 레코드를 다시 실어오므로 **분기 표시가 새로고침을 넘어 살아남고, 저장할 상태가 없다.**
+ *
+ * 해소되면(사람이 push해서 더티가 풀리면) 같은 레코드가 `stale`로 떨어지고 커서는
+ * 저절로 `now`까지 간다.
+ *
+ * **메아리는 붙잡지 않는다** (`isDiverged` 참조). 붙잡으면 "올리기 → 계속 편집"만으로
+ * 커서가 영영 안 나아가고 매 pull이 같은 구간을 통째로 다시 받는다.
+ *
+ * @param {number} now 서버가 준 시각
+ * @param {Rec[]} diverged 분기라 못 받은 원격 레코드
+ * @returns {number}
+ */
+export function nextPullCursor(now, diverged) {
+  if (!diverged.length) return now
+  const earliest = Math.min(...diverged.map((r) => r.updatedAt))
+  // `updated_at > since`라 1을 빼야 그 레코드가 다음 응답에 다시 들어온다.
+  return Math.min(now, earliest - 1)
+}
+
+/**
  * 서버 쪽 판정. `revision`은 추가 전용이라 먼저 쓴 쪽이 남는다 — 개정 스냅샷은
  * 사용자가 그 순간 작성한 문장이 아니라 자동 밀봉본이므로 사본을 만들지 않는다.
  *

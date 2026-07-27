@@ -5,8 +5,10 @@ import {
   countDirty,
   describe,
   isDirty,
+  isDiverged,
   needsSnapshot,
   nextEnergy,
+  nextPullCursor,
   nextText,
   pullDecision,
   pushVerdict,
@@ -49,6 +51,37 @@ test('pull은 깨끗한 로컬만 더 새 값으로 덮는다', () => {
   assert.equal(pullDecision(undefined, log()).accept, true)
   assert.equal(pullDecision(log(), log({ updatedAt: 2000 })).accept, true)
   assert.equal(pullDecision(log({ updatedAt: 3000, syncedAt: 3000 }), log()).accept, false)
+})
+
+test('내가 방금 올린 판본이 도로 오는 건 분기가 아니다 — 메아리다', () => {
+  // push는 커서를 안 옮기므로(F-3) 올린 뒤 계속 편집하면 이 상황이 매번 온다.
+  const local = log({ updatedAt: 9000, syncedAt: 5000 })
+  assert.equal(isDiverged(local, log({ updatedAt: 5000 })), false)
+})
+
+test('본 적 없는 원격 판본만 분기다', () => {
+  const local = log({ updatedAt: 9000, syncedAt: 5000 })
+  assert.equal(isDiverged(local, log({ updatedAt: 7000 })), true)
+  // 로컬에 없으면 그냥 받으면 된다 — 갈릴 게 없다.
+  assert.equal(isDiverged(undefined, log({ updatedAt: 7000 })), false)
+})
+
+test('revision은 분기로 세지 않는다 — 해소해도 확인할 결과가 없다', () => {
+  const local = log({ kind: 'revision', updatedAt: 9000, syncedAt: 0 })
+  assert.equal(isDiverged(local, log({ kind: 'revision', updatedAt: 7000 })), false)
+})
+
+test('건너뛴 게 없으면 커서는 서버 시각까지 간다', () => {
+  assert.equal(nextPullCursor(9000, []), 9000)
+})
+
+test('건너뛴 게 있으면 커서를 그 앞에 세운다 — 안 그러면 분기가 영영 안 보인다', () => {
+  // 다음 pull이 5000짜리를 다시 실어와야 한다 (`updated_at > since`).
+  assert.equal(nextPullCursor(9000, [log({ updatedAt: 7000 }), log({ updatedAt: 5000 })]), 4999)
+})
+
+test('커서는 서버 시각을 넘지 않는다', () => {
+  assert.equal(nextPullCursor(3000, [log({ updatedAt: 9000 })]), 3000)
 })
 
 test('push는 더 새로운 쪽만 쓴다', () => {

@@ -6,8 +6,10 @@ import { DIMS, LOG_KINDS, assemble, assembleDay, parse } from './markdown.js'
 import {
   countDirty,
   isDirty,
+  isDiverged,
   needsSnapshot,
   nextEnergy,
+  nextPullCursor,
   nextText,
   pullDecision,
   recordKey,
@@ -21,6 +23,13 @@ import { pull, push } from './sync.js'
 
 /** 저장 디바운스. 타이핑이 이만큼 멈추면 로컬에 쓴다 (`D6`). */
 const SAVE_DELAY_MS = 1000
+
+/**
+ * 자동 pull의 최소 간격. **모바일 `visibilitychange`는 앱을 오갈 때마다 연달아 뜬다** —
+ * 간격이 없으면 탭 전환을 반복하는 것만으로 왕복이 쌓인다. 사람이 부른 pull은 이
+ * 간격을 무시한다.
+ */
+const AUTO_PULL_MIN_MS = 30_000
 
 /**
  * @param {string} key
@@ -58,6 +67,16 @@ export class Journal {
   /** @type {string} */
   syncMessage = $state('')
 
+  /**
+   * 자동 pull이 **로컬이 더티라 못 받은** 원격 레코드 수. 충돌이 아니라 **분기**다 —
+   * pull은 충돌을 만들지 않으므로(`D3`) 여기서 할 수 있는 건 보이게 하는 것뿐이고,
+   * 해소는 사람이 「올리기」를 누르는 기존 경로 그대로다 (불변식 2).
+   *
+   * 커서를 붙잡아 두므로(`nextPullCursor`) 이 값은 **저장되지 않고 매 pull에서 다시
+   * 계산된다.**
+   */
+  diverged = $state(0)
+
   pinnedOpen = $state(false)
 
   loaded = $state(false)
@@ -67,6 +86,15 @@ export class Journal {
 
   /** @type {ReturnType<typeof setTimeout> | undefined} */
   #messageTimer
+
+  /**
+   * pull이 도는 중인가. **겹쳐 돌면 두 응답이 `lastPulledAt`을 서로 밀어** 그 사이
+   * 서버에 생긴 변경을 건너뛴다. 반응형 상태가 아니다.
+   */
+  #pulling = false
+
+  /** 마지막 pull 시작 시각. 자동 pull의 간격 판정에만 쓴다. */
+  #lastPullAt = 0
 
   /**
    * 동기화 결과는 잠시 보이고 사라진다 — 계속 남으면 다음 상태와 헷갈린다.
@@ -489,14 +517,45 @@ export class Journal {
     return this.#pending[key] !== undefined || this.#timers[key] !== undefined
   }
 
-  /** 앱을 열 때 자동. **로컬을 파괴하지 않는다** (`D3`). */
-  async pullNow() {
+  /**
+   * 앱을 열 때, 앱으로 돌아올 때, 온라인이 될 때 자동. **로컬을 파괴하지 않는다** (`D3`).
+   *
+   * 타이머로 돌리지 않는다 — 사람의 행동(앱으로 돌아옴)에 묶여 있어야 화면이 바뀐
+   * 이유가 보인다. 쓰는 쪽(push)은 여전히 사람이 누른다 (불변식 2).
+   *
+   * @param {{auto?: boolean}} [opts] `auto`면 최소 간격을 지킨다
+   */
+  async pullNow({ auto = false } = {}) {
+    if (this.#pulling) return
+    // **재로그인 안내를 자동 pull이 지우면 안 된다.** 지우고 나면 실패는 '오프라인'으로
+    // 표시되고, 사용자는 새로고침해야 한다는 걸 모른 채 계속 쓴다.
+    if (auto && this.syncState === 'relogin') return
+    const at = Date.now()
+    if (auto && at - this.#lastPullAt < AUTO_PULL_MIN_MS) return
+    this.#pulling = true
+    this.#lastPullAt = at
     // 타이핑 중에 pull이 끼어들면 안 된다. 먼저 커밋해서 더티로 만든다.
     this.flush()
     this.syncState = 'syncing'
+
+    /** @type {Awaited<ReturnType<typeof pull>>} */
+    let res
+    /** @type {number} */
+    let since
     try {
-      const since = (await db.getMeta('lastPulledAt')) ?? 0
-      const res = await pull(since)
+      since = (await db.getMeta('lastPulledAt')) ?? 0
+      res = await pull(since)
+    } catch {
+      this.syncState = 'offline'
+      this.syncMessage = ''
+      // **실패는 간격을 소비하지 않는다.** 안 그러면 오프라인에서 한 번 실패한 뒤
+      // 30초 안에 온 `online` 이벤트가 조용히 무시돼, 그 트리거의 존재 이유가 사라진다.
+      this.#lastPullAt = 0
+      this.#pulling = false
+      return
+    }
+
+    try {
       if (res.relogin) {
         this.syncState = 'relogin'
         this.syncMessage = '로그인이 만료됐습니다. 새로고침하면 다시 로그인합니다.'
@@ -504,21 +563,32 @@ export class Journal {
       }
       /** @type {Rec[]} */
       const accepted = []
+      /** @type {Rec[]} */
+      const diverged = []
       for (const remote of res.records) {
+        const local = this.records[remote.key]
         // 응답을 기다리는 동안 새로 시작된 입력도 로컬 편집이다.
-        if (this.#hasPendingEdit(remote.key)) continue
-        if (pullDecision(this.records[remote.key], remote).accept) {
-          accepted.push({ ...remote, syncedAt: remote.updatedAt })
-        }
+        const blocked = this.#hasPendingEdit(remote.key) || !pullDecision(local, remote).accept
+        if (!blocked) accepted.push({ ...remote, syncedAt: remote.updatedAt })
+        else if (isDiverged(local, remote)) diverged.push(remote)
       }
-      await db.putRecords(accepted)
+      try {
+        await db.putRecords(accepted)
+        // 커서는 레코드가 실제로 저장된 뒤에 옮긴다. 순서가 뒤집히면 받아온 걸
+        // 잃고도 다시 받을 기회가 없다.
+        await db.setMeta('lastPulledAt', nextPullCursor(res.now, diverged))
+      } catch (err) {
+        // **로컬 쓰기 실패는 '오프라인'이 아니다** (`F-6`, 불변식 1). 네트워크는 멀쩡한데
+        // 오프라인이라고 말하면 사용자는 로컬이 깨진 걸 모른다.
+        this.storageError = `저장 실패 — 이 화면의 글자를 다른 곳에 복사해 두세요 (${err})`
+        return
+      }
       for (const rec of accepted) this.records[rec.key] = rec
-      await db.setMeta('lastPulledAt', res.now)
+      this.diverged = diverged.length
       this.syncState = 'idle'
       this.#say(accepted.length ? `${accepted.length}개 받음` : '')
-    } catch {
-      this.syncState = 'offline'
-      this.syncMessage = ''
+    } finally {
+      this.#pulling = false
     }
   }
 
@@ -527,6 +597,9 @@ export class Journal {
     this.flush()
     const sent = Object.values(this.records).filter(isDirty).map((r) => $state.snapshot(r))
     if (!sent.length) {
+      // 더티가 없으면 분기도 없다. 배너를 남겨두면 "「올리기」를 누르면 정해집니다"가
+      // 통하지 않는 막다른 골목이 된다.
+      this.diverged = 0
       // 상태도 함께 되돌린다. 안 그러면 직전 'offline' 표시에 묻혀 안 보인다.
       this.syncState = 'idle'
       this.#say('올릴 게 없습니다')
@@ -580,6 +653,10 @@ export class Journal {
       // **`lastPulledAt`을 여기서 옮기지 않는다.** push 응답은 내가 보낸 키의 판정만
       // 담고 있어서, 커서를 밀면 그 사이 서버에 생긴 다른 기기의 변경을 영영 건너뛴다.
 
+      // 보낸 것은 판정을 받았으므로(적용됐거나 사본이 됐다) 분기는 여기서 닫힌다.
+      // **단 `raced`는 아직 더티다** — 그 분기는 해소되지 않았는데 배너를 내리면
+      // 사용자는 4초짜리 토스트를 놓치는 것만으로 사실을 못 본다.
+      if (!raced) this.diverged = 0
       this.syncState = 'idle'
       this.#say(
         `${updates.length}개 올림` +
