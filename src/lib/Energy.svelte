@@ -148,8 +148,11 @@
         <span class="value" class:unset={rec.data.score === null}>
           {rec.data.score ?? '—'}
         </span>
-        {#if rec.data.scoredAt}
-          <span class="at" title="점수를 매긴 시각">{kstTime(rec.data.scoredAt)}</span>
+        <!-- **화면에 띄우는 건 `updatedAt`이다** (사용자 판정 2026-07-28). 이유를 고친
+             것도 수정이다. `scoredAt`은 계속 저장되지만(`D15`) 화면 규칙은 어제·오늘·
+             고정 블록과 같다 — 블록마다 시각의 뜻이 다르면 읽는 사람이 매번 헷갈린다. -->
+        {#if rec.updatedAt}
+          <span class="at" title="마지막으로 손댄 시각">{kstTime(rec.updatedAt)}</span>
         {/if}
       </div>
 

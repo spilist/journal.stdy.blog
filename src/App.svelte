@@ -6,7 +6,7 @@
   import ImportPanel from './lib/ImportPanel.svelte'
   import LogBlock from './lib/LogBlock.svelte'
   import Pinned from './lib/Pinned.svelte'
-  import { dayLabel } from './lib/date.js'
+  import { dayLabel, kstDate, kstTime } from './lib/date.js'
   import { DIMS, LOG_KINDS } from './lib/markdown.js'
   import { Journal } from './lib/state.svelte.js'
 
@@ -41,6 +41,16 @@
   })
 
   let dirty = $derived(journal.dirtyCount())
+
+  /**
+   * 마지막 동기화 시각. **날이 다르면 날짜를 함께 보인다** — 시각만 보이면 어제 아침에
+   * 맞춘 걸 오늘 아침으로 읽는다(블록의 기록 시각과 같은 규칙, `F-5`).
+   */
+  let syncedLabel = $derived.by(() => {
+    if (!journal.lastSyncAt) return '동기화 전'
+    const day = kstDate(journal.lastSyncAt)
+    return `↕ ${day === journal.today ? '' : `${day.slice(5)} `}${kstTime(journal.lastSyncAt)}`
+  })
 
   /**
    * @param {string} text
@@ -107,7 +117,13 @@
     >
       {#if journal.syncState === 'syncing'}동기화 중…
       {:else if journal.syncState === 'offline'}오프라인{journal.syncMessage ? ` · ${journal.syncMessage}` : ''}
-      {:else}{journal.syncMessage}{/if}
+      {:else if journal.syncMessage}{journal.syncMessage}
+      {:else}
+        <!-- **늘 떠 있는 자리.** 토스트는 4초 뒤 사라지므로 그것만으로는 "언제
+             마지막으로 맞췄더라"에 답이 없다 (설계 취향 15항). 자동화가 아니라
+             사실을 보이게 하는 것이라 불변식 2와 충돌하지 않는다. -->
+        <span class="synced" title="마지막으로 서버와 통한 시각">{syncedLabel}</span>
+      {/if}
     </span>
   </div>
 </header>
@@ -249,6 +265,10 @@
   }
   .state.warn {
     color: var(--warn-fg);
+  }
+  .synced {
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
   }
   main {
     padding: 0.9rem calc(0.9rem + env(safe-area-inset-right)) 0.9rem

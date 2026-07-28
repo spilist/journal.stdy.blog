@@ -78,6 +78,14 @@ export class Journal {
    */
   diverged = $state(0)
 
+  /**
+   * 마지막으로 서버와 실제로 통한 시각(로컬 시계). **헤더에 늘 떠 있다** — 동기화
+   * 결과 토스트는 4초 뒤 사라지므로, 그것만으로는 "언제 마지막으로 맞췄더라"에
+   * 답이 없다 (설계 취향 15항). 커서(`lastPulledAt`)와 **다른 값이다**: 그건 서버
+   * 시계의 위치고, 이건 사람이 읽는 시각이다.
+   */
+  lastSyncAt = $state(0)
+
   pinnedOpen = $state(false)
 
   loaded = $state(false)
@@ -125,7 +133,12 @@ export class Journal {
   }
 
   async #load() {
-    const [records, conflicts] = await Promise.all([db.allRecords(), db.allConflicts()])
+    const [records, conflicts, lastSyncAt] = await Promise.all([
+      db.allRecords(),
+      db.allConflicts(),
+      db.getMeta('lastSyncAt'),
+    ])
+    this.lastSyncAt = lastSyncAt ?? 0
     /** @type {Record<string, Rec>} */
     const map = {}
     for (const rec of records) map[rec.key] = rec
@@ -666,6 +679,7 @@ export class Journal {
       for (const rec of accepted) this.records[rec.key] = rec
       this.diverged = diverged
       this.syncState = 'idle'
+      this.#stampSync()
       this.#say(accepted.length ? `${accepted.length}개 받음` : '')
     } finally {
       this.#pulling = false
@@ -764,6 +778,7 @@ export class Journal {
       // 사용자는 4초짜리 토스트를 놓치는 것만으로 사실을 못 본다.
       if (!raced && !stuck) this.diverged = 0
       this.syncState = 'idle'
+      this.#stampSync()
       this.#say(
         `${applied}개 올림` +
           (rejected ? `, ${rejected}개는 서버가 더 새로워 받아옴` : '') +
@@ -775,6 +790,15 @@ export class Journal {
       this.syncState = 'offline'
       this.#say('네트워크가 없습니다')
     }
+  }
+
+  /**
+   * 서버와 통한 사실을 남긴다. **실패한 왕복은 찍지 않는다** — 그러면 "마지막 동기화"가
+   * 아니라 "마지막 시도"가 되고, 안 맞은 채로 맞았다고 읽힌다.
+   */
+  #stampSync() {
+    this.lastSyncAt = Date.now()
+    this.#persist(db.setMeta('lastSyncAt', this.lastSyncAt))
   }
 
   /** @param {number} id */
