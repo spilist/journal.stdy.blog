@@ -9,6 +9,12 @@ import { verifyAccess } from './access.js'
 
 /** @typedef {import('../src/lib/merge.js').Rec} Rec */
 
+/**
+ * pull 커서가 서버 시각에서 물러서는 폭. push의 판정~커밋 창을 덮는다 (`F-9`).
+ * 이만큼은 매 pull에서 겹쳐 받지만, 연 1000행대라 비용이 없다.
+ */
+const PULL_CURSOR_SLACK_MS = 10_000
+
 /** @param {unknown} body @param {number} [status] */
 const json = (body, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -82,40 +88,54 @@ async function readOne(db, key) {
 /**
  * @param {D1Database} db
  * @param {Rec} rec
+ * @param {number} now 서버 시각. `synced_at`에 박힌다 (`F-9`)
  */
-function writeStatement(db, rec) {
+function writeStatement(db, rec, now) {
   const [kind, ...rest] = rec.key.split(':')
   if (kind === 'energy') {
     return db
       .prepare(
-        `INSERT INTO energy (date, dim, score, reason, scored_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)
+        `INSERT INTO energy (date, dim, score, reason, scored_at, updated_at, synced_at) VALUES (?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(date, dim) DO UPDATE SET
            score = excluded.score, reason = excluded.reason,
-           scored_at = excluded.scored_at, updated_at = excluded.updated_at`,
+           scored_at = excluded.scored_at, updated_at = excluded.updated_at,
+           synced_at = excluded.synced_at`,
       )
-      .bind(rest[0], rest[1], rec.data.score ?? null, rec.data.reason ?? '', rec.data.scoredAt ?? null, rec.updatedAt)
+      .bind(
+        rest[0],
+        rest[1],
+        rec.data.score ?? null,
+        rec.data.reason ?? '',
+        rec.data.scoredAt ?? null,
+        rec.updatedAt,
+        now,
+      )
   }
   if (kind === 'log') {
     return db
       .prepare(
-        `INSERT INTO log (date, kind, text, updated_at) VALUES (?, ?, ?, ?)
-         ON CONFLICT(date, kind) DO UPDATE SET text = excluded.text, updated_at = excluded.updated_at`,
+        `INSERT INTO log (date, kind, text, updated_at, synced_at) VALUES (?, ?, ?, ?, ?)
+         ON CONFLICT(date, kind) DO UPDATE SET
+           text = excluded.text, updated_at = excluded.updated_at, synced_at = excluded.synced_at`,
       )
-      .bind(rest[0], rest[1], rec.data.text ?? '', rec.updatedAt)
+      .bind(rest[0], rest[1], rec.data.text ?? '', rec.updatedAt, now)
   }
   if (kind === 'pinned') {
     return db
       .prepare(
-        `INSERT INTO pinned (id, text, updated_at) VALUES (1, ?, ?)
-         ON CONFLICT(id) DO UPDATE SET text = excluded.text, updated_at = excluded.updated_at`,
+        `INSERT INTO pinned (id, text, updated_at, synced_at) VALUES (1, ?, ?, ?)
+         ON CONFLICT(id) DO UPDATE SET
+           text = excluded.text, updated_at = excluded.updated_at, synced_at = excluded.synced_at`,
       )
-      .bind(rec.data.text ?? '', rec.updatedAt)
+      .bind(rec.data.text ?? '', rec.updatedAt, now)
   }
   if (kind === 'revision') {
     // 추가 전용. 먼저 쓴 쪽이 남는다 (`D11`).
     return db
-      .prepare('INSERT INTO revision (day, text, created_at) VALUES (?, ?, ?) ON CONFLICT(day) DO NOTHING')
-      .bind(rest[0], rec.data.text ?? '', rec.updatedAt)
+      .prepare(
+        'INSERT INTO revision (day, text, created_at, synced_at) VALUES (?, ?, ?, ?) ON CONFLICT(day) DO NOTHING',
+      )
+      .bind(rest[0], rec.data.text ?? '', rec.updatedAt, now)
   }
   return null
 }
@@ -127,11 +147,14 @@ function writeStatement(db, rec) {
  * @param {number} since
  */
 async function pullSince(db, since) {
+  // **커서는 `synced_at`(서버가 쓴 시각)으로만 긁는다** (`F-9`). `updated_at`은
+  // 클라이언트가 글자를 고친 시각이라, 오프라인에서 어제 쓰고 오늘 올린 행은
+  // 이미 커서보다 뒤에 있어 **다른 기기에 영영 안 간다.**
   const [energy, log, pinned, revision] = await db.batch([
-    db.prepare('SELECT * FROM energy WHERE updated_at > ?').bind(since),
-    db.prepare('SELECT * FROM log WHERE updated_at > ?').bind(since),
-    db.prepare('SELECT * FROM pinned WHERE updated_at > ?').bind(since),
-    db.prepare('SELECT * FROM revision WHERE created_at > ?').bind(since),
+    db.prepare('SELECT * FROM energy WHERE synced_at > ?').bind(since),
+    db.prepare('SELECT * FROM log WHERE synced_at > ?').bind(since),
+    db.prepare('SELECT * FROM pinned WHERE synced_at > ?').bind(since),
+    db.prepare('SELECT * FROM revision WHERE synced_at > ?').bind(since),
   ])
   return [
     ...energy.results.map(energyRec),
@@ -148,15 +171,29 @@ async function pullSince(db, since) {
 async function applyPush(db, incoming) {
   /** @type {{key: string, applied: boolean, server?: Rec}[]} */
   const verdicts = []
-  /** @type {D1PreparedStatement[]} */
-  const writes = []
+  /** @type {{rec: Rec, server: Rec | undefined}[]} */
+  const winners = []
 
   for (const rec of incoming) {
     const server = await readOne(db, rec.key)
-    const { applied } = pushVerdict(server, rec)
-    if (applied) {
-      const stmt = writeStatement(db, rec)
-      if (stmt) writes.push(stmt)
+    if (pushVerdict(server, rec).applied) winners.push({ rec, server })
+    else verdicts.push({ key: rec.key, applied: false, server })
+  }
+
+  // **`synced_at`은 커밋 직전에 잡는다** (`F-9`). 요청 시작 시각을 박으면, 위
+  // `readOne` 루프가 도는 동안(레코드가 많으면 초 단위다) 다른 기기가 pull을 돌려
+  // 커서를 그 시각 너머로 옮길 수 있다 — 그러면 여기서 쓴 행은 영영 안 잡힌다.
+  const now = Date.now()
+  /** @type {D1PreparedStatement[]} */
+  const writes = []
+  for (const { rec, server } of winners) {
+    // **안 쓰고 `applied`를 주지 않는다.** 클라이언트는 그걸 보고 `syncedAt`을 붙여
+    // 영원히 비-더티로 만든다 — 서버엔 행이 없는데 로컬은 올렸다고 믿게 된다.
+    // (`revision`은 예외다: 문장은 만들어지되 `DO NOTHING`으로 안 써질 수 있다.
+    // 자동 밀봉본이고 먼저 쓴 쪽이 남는 게 `D11`이라 그대로 둔다.)
+    const stmt = writeStatement(db, rec, now)
+    if (stmt) {
+      writes.push(stmt)
       verdicts.push({ key: rec.key, applied: true })
     } else {
       verdicts.push({ key: rec.key, applied: false, server })
@@ -182,7 +219,12 @@ export default {
     try {
       if (url.pathname === '/api/pull' && request.method === 'GET') {
         const since = Number(url.searchParams.get('since') ?? 0) || 0
-        return json({ records: await pullSince(env.DB, since), now: Date.now() })
+        // 커서는 **질의 전** 시각에서 여유를 두고 물러선다. push는 판정을 다 낸 뒤
+        // 커밋하므로 "스탬프는 찍혔는데 아직 안 보이는" 창이 ms가 아니라 그 요청
+        // 길이만큼이다. 그 창을 안 덮으면 그 행은 영영 안 잡힌다. 겹쳐 받는 건
+        // 안전하다 — `pullDecision`이 `stale`로 떨군다 (`F-9`).
+        const now = Date.now() - PULL_CURSOR_SLACK_MS
+        return json({ records: await pullSince(env.DB, since), now })
       }
 
       if (url.pathname === '/api/push' && request.method === 'POST') {

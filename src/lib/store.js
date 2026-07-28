@@ -74,6 +74,11 @@ export function putRecord(record) {
   return putRecords([record])
 }
 
+/** @param {string} key */
+export async function dropRecord(key) {
+  return done((await store('records', 'readwrite')).delete(key))
+}
+
 /** @typedef {{id?: number, target: string, text: string, at: number}} Conflict */
 
 /** @returns {Promise<Conflict[]>} */

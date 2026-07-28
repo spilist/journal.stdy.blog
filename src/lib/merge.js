@@ -38,6 +38,20 @@ export function isDirty(rec) {
 }
 
 /**
+ * 보존할 내용이 있는가. **빈 레코드는 글자가 아니다** — 불변식 3이 지키는 건 사용자가
+ * 쓴 글자이지 아무것도 없는 자리가 아니다. 충돌 사본과 로컬 정리가 같은 기준을 쓴다.
+ *
+ * @param {{kind: string, data: Record<string, any>}} rec
+ * @returns {boolean}
+ */
+export function hasContent(rec) {
+  if (rec.kind === 'energy') {
+    return (rec.data.score ?? null) !== null || Boolean(rec.data.reason)
+  }
+  return Boolean(rec.data.text)
+}
+
+/**
  * @param {Rec[]} records
  * @returns {number}
  */
@@ -83,25 +97,28 @@ export function isDiverged(local, remote) {
 
 /**
  * pull 커서를 어디까지 미룰지. **건너뛴 레코드를 커서로 넘겨버리면 그 원격 변경은
- * 영영 다시 안 온다** — 사용자는 다음 push까지 분기 사실 자체를 모른다. 그래서 건너뛴
- * 게 있으면 그 중 가장 이른 `updatedAt` 직전에서 커서를 멈춘다. 다음 pull이 같은
- * 레코드를 다시 실어오므로 **분기 표시가 새로고침을 넘어 살아남고, 저장할 상태가 없다.**
+ * 영영 다시 안 온다** — 사용자는 다음 push까지 분기 사실 자체를 모른다.
  *
- * 해소되면(사람이 push해서 더티가 풀리면) 같은 레코드가 `stale`로 떨어지고 커서는
- * 저절로 `now`까지 간다.
+ * **붙잡을 게 있으면 커서를 그대로 둔다.** 붙잡은 행은 정의상 이번 응답에 온 것이므로
+ * `synced_at > since`에 다음에도 반드시 다시 걸린다. 예전엔 원격 `updatedAt`에서
+ * 1을 뺐는데, 커서는 서버 `synced_at` 축이고 `updatedAt`은 **클라이언트가 글자를 고친**
+ * 시각이라 **축이 섞였다** (`F-9`) — 기기 시계가 서버보다 앞서면 그 행을 붙잡은 셈
+ * 치고도 커서가 넘어가 영영 못 받는다. `since`를 그대로 두면 축이 하나로 유지되고
+ * 커서가 뒤로 가지도 않는다.
  *
- * **메아리는 붙잡지 않는다** (`isDiverged` 참조). 붙잡으면 "올리기 → 계속 편집"만으로
- * 커서가 영영 안 나아가고 매 pull이 같은 구간을 통째로 다시 받는다.
+ * 해소되면(사람이 push해서 더티가 풀리면) 같은 레코드가 `stale`로 떨어져 붙잡히지
+ * 않고 커서는 저절로 `now`까지 간다.
  *
+ * **메아리는 붙잡지 않는다** (`isDiverged`·`pullNow` 참조). 붙잡으면 "올리기 → 계속
+ * 편집"만으로 커서가 영영 안 나아가고 매 pull이 같은 구간을 통째로 다시 받는다.
+ *
+ * @param {number} since 이번 pull에 쓴 커서
  * @param {number} now 서버가 준 시각
- * @param {Rec[]} diverged 분기라 못 받은 원격 레코드
+ * @param {Rec[]} held 못 받아서 다시 받아야 하는 원격 레코드
  * @returns {number}
  */
-export function nextPullCursor(now, diverged) {
-  if (!diverged.length) return now
-  const earliest = Math.min(...diverged.map((r) => r.updatedAt))
-  // `updated_at > since`라 1을 빼야 그 레코드가 다음 응답에 다시 들어온다.
-  return Math.min(now, earliest - 1)
+export function nextPullCursor(since, now, held) {
+  return held.length ? since : now
 }
 
 /**
@@ -131,7 +148,10 @@ export function resolveRejected(local, server) {
   const text = describe(local)
   const same = text === describe(server)
   // 내용이 같으면 사본을 만들지 않는다 — 해소할 게 없는 배지는 잡음이다.
-  return { live, conflict: same ? null : { target: local.key, text, at: local.updatedAt } }
+  // **진 쪽이 비어 있을 때도 만들지 않는다.** 옮길 문장이 없는데 빈 칸 아래
+  // `⚠ 충돌 사본`만 붙으면, 사용자는 잃은 게 있는 줄 알고 열어보게 된다.
+  const keep = !same && hasContent(local)
+  return { live, conflict: keep ? { target: local.key, text, at: local.updatedAt } : null }
 }
 
 /**

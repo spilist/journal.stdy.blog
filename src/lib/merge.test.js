@@ -13,6 +13,7 @@ import {
   pullDecision,
   pushVerdict,
   recordKey,
+  hasContent,
   resolveRejected,
 } from './merge.js'
 
@@ -72,16 +73,17 @@ test('revision은 분기로 세지 않는다 — 해소해도 확인할 결과�
 })
 
 test('건너뛴 게 없으면 커서는 서버 시각까지 간다', () => {
-  assert.equal(nextPullCursor(9000, []), 9000)
+  assert.equal(nextPullCursor(1000, 9000, []), 9000)
 })
 
-test('건너뛴 게 있으면 커서를 그 앞에 세운다 — 안 그러면 분기가 영영 안 보인다', () => {
-  // 다음 pull이 5000짜리를 다시 실어와야 한다 (`updated_at > since`).
-  assert.equal(nextPullCursor(9000, [log({ updatedAt: 7000 }), log({ updatedAt: 5000 })]), 4999)
+test('붙잡을 게 있으면 커서를 안 옮긴다 — 다음 pull이 그 행을 다시 실어온다', () => {
+  assert.equal(nextPullCursor(1000, 9000, [log({ updatedAt: 7000 })]), 1000)
 })
 
-test('커서는 서버 시각을 넘지 않는다', () => {
-  assert.equal(nextPullCursor(3000, [log({ updatedAt: 9000 })]), 3000)
+test('커서는 원격 updatedAt(클라이언트 시계)을 근거로 삼지 않는다 (F-9)', () => {
+  // 기기 시계가 서버보다 앞선 행. 예전 규칙(`updatedAt - 1`)이면 커서가 그 행의
+  // `synced_at`을 넘어가 **영영 못 받았다.**
+  assert.equal(nextPullCursor(1000, 3000, [log({ updatedAt: 9_999_999 })]), 1000)
 })
 
 test('push는 더 새로운 쪽만 쓴다', () => {
@@ -112,6 +114,23 @@ test('내용이 같으면 사본을 만들지 않는다 — 해소할 게 없는
   const mine = log({ updatedAt: 5000, data: { text: '같은 줄' } })
   const theirs = log({ updatedAt: 9000, data: { text: '같은 줄' } })
   assert.equal(resolveRejected(mine, theirs).conflict, null)
+})
+
+test('진 쪽이 비어 있으면 사본을 만들지 않는다 — 옮길 문장이 없는 배지다 (F-8)', () => {
+  const mine = log({ updatedAt: 5000, data: { text: '' } })
+  const theirs = log({ updatedAt: 9000, data: { text: '서버가 가진 줄' } })
+  const { live, conflict } = resolveRejected(mine, theirs)
+  assert.equal(conflict, null)
+  assert.equal(live.data.text, '서버가 가진 줄')
+})
+
+test('hasContent — 빈 레코드는 글자가 아니다 (F-8)', () => {
+  assert.equal(hasContent({ kind: 'log', data: { text: '' } }), false)
+  assert.equal(hasContent({ kind: 'log', data: { text: 'ㅇ' } }), true)
+  assert.equal(hasContent({ kind: 'energy', data: { score: null, reason: '' } }), false)
+  // 0점은 없다(1..10)지만, 있더라도 값이 있는 것으로 센다.
+  assert.equal(hasContent({ kind: 'energy', data: { score: 0, reason: '' } }), true)
+  assert.equal(hasContent({ kind: 'energy', data: { score: null, reason: '피곤' } }), true)
 })
 
 test('내용이 같으면 updatedAt이 안 움직인다 — 가짜 더티가 LWW를 오염시킨다 (AC-7)', () => {

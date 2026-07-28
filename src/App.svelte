@@ -101,7 +101,10 @@
     {#if journal.date !== journal.today}
       <button type="button" class="ghost today" onclick={() => journal.goToday()}>오늘로</button>
     {/if}
-    <span class="state" class:warn={journal.syncState === 'relogin'}>
+    <span
+      class="state"
+      class:warn={journal.syncState === 'relogin' || journal.syncState === 'error'}
+    >
       {#if journal.syncState === 'syncing'}동기화 중…
       {:else if journal.syncState === 'offline'}오프라인{journal.syncMessage ? ` · ${journal.syncMessage}` : ''}
       {:else}{journal.syncMessage}{/if}

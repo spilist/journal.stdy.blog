@@ -5,6 +5,7 @@ import { addDays, kstDate } from './date.js'
 import { DIMS, LOG_KINDS, assemble, assembleDay, parse } from './markdown.js'
 import {
   countDirty,
+  hasContent,
   isDirty,
   isDiverged,
   needsSnapshot,
@@ -171,6 +172,18 @@ export class Journal {
     return this.records[recordKey('log', addDays(this.date, -1), '오늘')]?.data.text ?? ''
   }
 
+  /**
+   * 점수를 매길 때 위에 띄우는 전날의 같은 차원 (`D21`). 「어제」블록의 `D8`과
+   * 같은 형태 — 기능이 아니라 이미 있는 데이터의 자리 하나다.
+   *
+   * @param {string} dim
+   * @returns {{score: number | null, reason: string}}
+   */
+  previousEnergy(dim) {
+    const data = this.records[recordKey('energy', addDays(this.date, -1), dim)]?.data
+    return { score: data?.score ?? null, reason: data?.reason ?? '' }
+  }
+
   dirtyCount() {
     return countDirty(Object.values(this.records))
   }
@@ -225,9 +238,55 @@ export class Journal {
     // 내용이 그대로면 아무 일도 없었던 것이다 — 되돌린 편집이 더티도, 개정 이력도
     // 남기지 않는다.
     if (next === prev) return
+    // 개정 스냅샷은 **지우기 분기보다 먼저다.** 뒤에 두면 고정 블록을 통째로 지운
+    // 순간에만 밀봉이 건너뛰어져, `D11`이 지키려던 되돌리기가 그 경우에만 사라진다.
     if (next.key === 'pinned') this.#snapshotPinned(prev)
+    // **빈 값으로 되돌아왔고 한 번도 올린 적이 없으면 레코드를 지운다** (`F-8`).
+    // 남겨두면 지울 것도 없는데 영원히 더티인 빈 레코드가 되어, 「올리기」가 그걸
+    // 서버에 심는다. 그 빈 행은 **나중 타임스탬프로 다른 기기가 먼저 매긴 점수를
+    // 덮고**, 로컬에서는 더티라 그 키의 pull까지 막는다.
+    // 서버에 올린 적이 있으면(`syncedAt > 0`) 빈 값은 **지우기**이므로 올려야 한다.
+    // `loaded` 전에는 `records`가 반쪽이라 `syncedAt`을 근거로 쓸 수 없다 —
+    // 콜드 스타트에 지웠다가 **디스크에 있던 동기화 완료 레코드**를 날린다.
+    if (this.loaded && !hasContent(next) && !(next.syncedAt ?? 0)) {
+      delete this.records[next.key]
+      this.#persist(db.dropRecord(next.key))
+      return
+    }
     this.records[next.key] = next
     this.#persist(db.putRecord($state.snapshot(next)))
+  }
+
+  /**
+   * 취소된 점수 조작을 되돌린다. **점수 축만 되돌린다** (`D1` 직교성) — 이유는 다른
+   * 수단으로 편집되고, 손가락이 스트립에 있는 동안 디바운스로 커밋됐을 수 있다.
+   * 레코드를 통째로 되돌리면 **그 이유 문장이 사라진다** (불변식 3).
+   *
+   * @param {Rec} snapshot 조작 전 레코드 (`updatedAt === 0`이면 손댄 적 없음)
+   */
+  restoreScore(snapshot) {
+    const current = this.records[snapshot.key]
+    if (!current || current === snapshot) return
+    // 조작 중에 pull이 이 키를 받아왔으면 되돌릴 대상이 아니다 — 남의 판본이다.
+    if ((current.syncedAt ?? 0) > (snapshot.syncedAt ?? 0)) return
+
+    if (current.data.reason !== snapshot.data.reason) {
+      // 이유가 그 사이 바뀌었다. 그건 진짜 편집이므로 더티로 남기고 점수만 되돌린다.
+      this.#commit(current, {
+        ...current,
+        data: { ...current.data, score: snapshot.data.score, scoredAt: snapshot.data.scoredAt },
+      })
+      return
+    }
+    // 이유도 그대로면 이 조작은 없던 일이다 — `updatedAt`까지 되돌린다.
+    if (current.updatedAt === snapshot.updatedAt) return
+    if (!snapshot.updatedAt && !hasContent(snapshot)) {
+      delete this.records[snapshot.key]
+      this.#persist(db.dropRecord(snapshot.key))
+      return
+    }
+    this.records[snapshot.key] = snapshot
+    this.#persist(db.putRecord($state.snapshot(snapshot)))
   }
 
   /**
@@ -443,8 +502,7 @@ export class Journal {
      * @param {string} label
      */
     /** @param {string} kind @param {Record<string, any>} data */
-    const isEmpty = (kind, data) =>
-      kind === 'energy' ? data.score === null && !data.reason : !data.text
+    const isEmpty = (kind, data) => !hasContent({ kind, data })
 
     /**
      * @param {string} key
@@ -561,22 +619,44 @@ export class Journal {
         this.syncMessage = '로그인이 만료됐습니다. 새로고침하면 다시 로그인합니다.'
         return
       }
+      // 서버가 500을 내면 `records`가 없다. 그대로 훑으면 예외가 `syncState`를
+      // 'syncing'에 얼려놓고, 사용자는 영원히 도는 표시만 본다.
+      if (!Array.isArray(res.records)) {
+        this.syncState = 'error'
+        this.syncMessage = '서버가 응답을 제대로 주지 않았습니다. 로컬은 그대로입니다.'
+        return
+      }
       /** @type {Rec[]} */
       const accepted = []
-      /** @type {Rec[]} */
-      const diverged = []
+      /**
+       * 커서를 붙잡을 것과 배너에 셀 것은 **다르다.** 붙잡기는 "다시 받아야 한다"는
+       * 사실이고, 배너는 "다른 기기와 갈렸다"는 판단이다. 예전엔 후자만으로 커서를
+       * 붙잡아서, **로컬에 아직 그 키가 없는 채로 타이핑을 시작하면**(새 날짜 첫
+       * 진입 + 자동 pull) 그 원격 판본이 버려지고 다시 오지 않았다.
+       *
+       * @type {Rec[]}
+       */
+      const held = []
+      let diverged = 0
       for (const remote of res.records) {
         const local = this.records[remote.key]
         // 응답을 기다리는 동안 새로 시작된 입력도 로컬 편집이다.
-        const blocked = this.#hasPendingEdit(remote.key) || !pullDecision(local, remote).accept
-        if (!blocked) accepted.push({ ...remote, syncedAt: remote.updatedAt })
-        else if (isDiverged(local, remote)) diverged.push(remote)
+        const pending = this.#hasPendingEdit(remote.key)
+        const decision = pullDecision(local, remote)
+        if (!pending && decision.accept) {
+          accepted.push({ ...remote, syncedAt: remote.updatedAt })
+        } else if (pending || decision.reason === 'local-dirty') {
+          // `stale`은 붙잡지 않는다 — 이미 가진 판본이라 다시 받을 이유가 없고,
+          // 붙잡으면 커서가 영영 안 나아간다.
+          held.push(remote)
+          if (isDiverged(local, remote)) diverged += 1
+        }
       }
       try {
         await db.putRecords(accepted)
         // 커서는 레코드가 실제로 저장된 뒤에 옮긴다. 순서가 뒤집히면 받아온 걸
         // 잃고도 다시 받을 기회가 없다.
-        await db.setMeta('lastPulledAt', nextPullCursor(res.now, diverged))
+        await db.setMeta('lastPulledAt', nextPullCursor(since, res.now, held))
       } catch (err) {
         // **로컬 쓰기 실패는 '오프라인'이 아니다** (`F-6`, 불변식 1). 네트워크는 멀쩡한데
         // 오프라인이라고 말하면 사용자는 로컬이 깨진 걸 모른다.
@@ -584,7 +664,7 @@ export class Journal {
         return
       }
       for (const rec of accepted) this.records[rec.key] = rec
-      this.diverged = diverged.length
+      this.diverged = diverged
       this.syncState = 'idle'
       this.#say(accepted.length ? `${accepted.length}개 받음` : '')
     } finally {
@@ -617,11 +697,24 @@ export class Journal {
         this.syncMessage = '로그인이 만료됐습니다. 새로고침하면 다시 로그인합니다.'
         return
       }
+      // **500을 '네트워크가 없습니다'로 말하지 않는다.** 아래 루프가 예외로 터지면
+      // 바깥 catch가 오프라인이라고 알리고, 사용자는 안 올라간 이유를 못 본다.
+      if (!Array.isArray(res.verdicts)) {
+        this.syncState = 'error'
+        this.syncMessage = '서버가 올리기를 거절했습니다. 글자는 로컬에 그대로 있습니다.'
+        return
+      }
       /** @type {Rec[]} */
       const updates = []
       /** @type {import('./store.js').Conflict[]} */
       const newConflicts = []
       let raced = 0
+      // **거절은 올린 게 아니다.** 예전엔 둘을 합쳐 세서 "N개 올림"이 서버 값을
+      // 받아온 건까지 포함했다. 진 쪽이 비어 사본도 안 남는 경우(`F-8`)에는
+      // 그 토스트가 유일한 신호인데, 그게 거짓말이면 사용자는 올라간 줄 안다.
+      let applied = 0
+      let rejected = 0
+      let stuck = 0
 
       for (const verdict of res.verdicts) {
         const outbound = sentByKey[verdict.key]
@@ -636,8 +729,14 @@ export class Journal {
         }
 
         if (verdict.applied) {
+          applied += 1
           updates.push({ ...outbound, syncedAt: outbound.updatedAt })
-        } else if (verdict.server) {
+        } else if (!verdict.server) {
+          // 서버가 거절하면서 자기 값도 안 준 경우 — 아무것도 안 쓴 것이다. 로컬은
+          // 더티로 남는데, 여기서 안 세면 **`0개 올림`만 뜨고 신호가 사라진다.**
+          stuck += 1
+        } else {
+          rejected += 1
           const { live, conflict } = resolveRejected(outbound, verdict.server)
           updates.push(live)
           // 개정 스냅샷은 사용자가 그 순간 쓴 문장이 아니라 자동 밀봉본이다 (`F-3`).
@@ -646,8 +745,15 @@ export class Journal {
         }
       }
 
-      await db.putRecords(updates)
-      await db.addConflicts(newConflicts)
+      try {
+        await db.putRecords(updates)
+        await db.addConflicts(newConflicts)
+      } catch (err) {
+        // **로컬 쓰기 실패는 '오프라인'이 아니다** (`F-6`). 서버엔 이미 써졌는데
+        // 네트워크 탓이라고 말하면, 사용자는 영구 더티가 된 이유를 못 본다.
+        this.storageError = `저장 실패 — 이 화면의 글자를 다른 곳에 복사해 두세요 (${err})`
+        return
+      }
       for (const rec of updates) this.records[rec.key] = rec
       if (newConflicts.length) this.conflicts = await db.allConflicts()
       // **`lastPulledAt`을 여기서 옮기지 않는다.** push 응답은 내가 보낸 키의 판정만
@@ -656,12 +762,14 @@ export class Journal {
       // 보낸 것은 판정을 받았으므로(적용됐거나 사본이 됐다) 분기는 여기서 닫힌다.
       // **단 `raced`는 아직 더티다** — 그 분기는 해소되지 않았는데 배너를 내리면
       // 사용자는 4초짜리 토스트를 놓치는 것만으로 사실을 못 본다.
-      if (!raced) this.diverged = 0
+      if (!raced && !stuck) this.diverged = 0
       this.syncState = 'idle'
       this.#say(
-        `${updates.length}개 올림` +
+        `${applied}개 올림` +
+          (rejected ? `, ${rejected}개는 서버가 더 새로워 받아옴` : '') +
           (newConflicts.length ? `, 충돌 ${newConflicts.length}개` : '') +
-          (raced ? `, ${raced}개는 편집 중이라 다음에` : ''),
+          (raced ? `, ${raced}개는 편집 중이라 다음에` : '') +
+          (stuck ? `, ${stuck}개는 서버가 받지 않았습니다` : ''),
       )
     } catch {
       this.syncState = 'offline'

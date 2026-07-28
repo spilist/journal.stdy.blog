@@ -34,6 +34,8 @@ S1은 **에너지 그래프를 뺀 전부**였다. 입력이 먼저인 이유는
 ```sql
 -- 'YYYY-MM-DD'는 전부 KST 캘린더 날짜다 (D16).
 -- updated_at / scored_at / created_at 은 epoch ms (UTC 순간). 날짜와 순간을 섞지 않는다.
+-- synced_at 은 **서버가 그 행을 쓴** 시각이다 (F-9). LWW 판정은 updated_at 으로,
+-- pull 커서는 synced_at 으로만 한다 — 두 시계를 섞으면 행이 영영 안 간다.
 
 CREATE TABLE energy (
   date       TEXT    NOT NULL,           -- 'YYYY-MM-DD'
@@ -42,6 +44,7 @@ CREATE TABLE energy (
   reason     TEXT    NOT NULL DEFAULT '',
   scored_at  INTEGER,                    -- D15: score 값이 바뀔 때만 갱신
   updated_at INTEGER NOT NULL,
+  synced_at  INTEGER NOT NULL DEFAULT 0, -- F-9: pull 커서 축
   PRIMARY KEY (date, dim)
 );
 
@@ -50,19 +53,22 @@ CREATE TABLE log (
   kind       TEXT NOT NULL,              -- '어제'|'오늘'
   text       TEXT NOT NULL DEFAULT '',   -- 사용자가 친 그대로. 불릿 '- '도 사용자 글자다
   updated_at INTEGER NOT NULL,
+  synced_at  INTEGER NOT NULL DEFAULT 0,
   PRIMARY KEY (date, kind)
 );
 
 CREATE TABLE pinned (                    -- 「잊지 않을 것」 싱글톤 (D10)
   id         INTEGER PRIMARY KEY CHECK (id = 1),
   text       TEXT NOT NULL DEFAULT '',   -- 자기 제목('# ...')을 텍스트에 포함한다
-  updated_at INTEGER NOT NULL
+  updated_at INTEGER NOT NULL,
+  synced_at  INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE revision (                  -- D11: 하루 1개. 키가 곧 제약이다
   day        TEXT PRIMARY KEY,           -- 'YYYY-MM-DD'
   text       TEXT NOT NULL,              -- 그날 첫 편집 직전의 pinned 내용
-  created_at INTEGER NOT NULL
+  created_at INTEGER NOT NULL,
+  synced_at  INTEGER NOT NULL DEFAULT 0
 );
 ```
 
@@ -134,7 +140,8 @@ CREATE TABLE revision (                  -- D11: 하루 1개. 키가 곧 제약�
 
 **`GET /api/pull?since={ms}`** — 자동 (`D3`)
 
-- 서버는 `updated_at > since` 인 레코드 전부와 `now`를 준다
+- 서버는 `synced_at > since` 인 레코드 전부와 `now`를 준다. **`updated_at`이 아니다**
+  (`F-9`) — 커서는 서버 시계로만 잰다
 - 클라이언트 적용 규칙:
   - 로컬이 **더티면 건너뛴다.** ← **pull은 절대 충돌을 만들지 않는다.**
     사람이 push를 눌렀을 때만 충돌이 생긴다
@@ -150,11 +157,21 @@ CREATE TABLE revision (                  -- D11: 하루 1개. 키가 곧 제약�
 > (`AUTO_PULL_MIN_MS`)를 지키고, `pullNow`는 **재진입 가드**를 둔다 — 겹쳐 돌면 두
 > 응답이 `lastPulledAt`을 서로 밀어 그 사이 변경을 건너뛴다.
 >
-> **커서는 분기 레코드 앞에서 멈춘다** (`nextPullCursor`). 커서를 `now`까지 밀면 그
-> 원격 변경은 다시 오지 않아, 사용자는 다음 push까지 분기 사실을 모른다. 멈춰 두면 다음
-> pull이 같은 레코드를 다시 실어오므로 **분기 표시가 새로고침을 넘어 살아남고 저장할
-> 상태가 없다.** 사람이 push해 더티가 풀리면 같은 레코드가 `stale`로 떨어지고 커서는
-> 저절로 `now`까지 간다.
+> **못 받은 레코드가 있으면 커서를 옮기지 않는다** (`nextPullCursor(since, now, held)`).
+> 커서를 `now`까지 밀면 그 원격 변경은 다시 오지 않아, 사용자는 다음 push까지 분기
+> 사실을 모른다. `since`에 그대로 두면 그 행은 `synced_at > since`에 다음에도 반드시
+> 다시 걸리므로 **분기 표시가 새로고침을 넘어 살아남고 저장할 상태가 없다.** 사람이
+> push해 더티가 풀리면 같은 레코드가 `stale`로 떨어져 붙잡히지 않고 커서는 저절로
+> `now`까지 간다.
+>
+> **원격 `updatedAt`으로 커서를 되밀지 않는다** (`F-9`). 커서는 서버 `synced_at` 축이고
+> `updatedAt`은 클라이언트가 글자를 고친 시각이라, 되밀면 축이 섞여 그 행을 붙잡은 셈
+> 치고도 넘어가 버린다.
+>
+> **붙잡기와 배너는 다른 판단이다.** 붙잡기는 "다시 받아야 한다"는 사실(`local-dirty`
+> 이거나 편집 대기 중), 배너는 "다른 기기와 갈렸다"는 판단(`isDiverged`)이다. 예전엔
+> 후자만으로 붙잡아서, **로컬에 아직 그 키가 없는 채로 타이핑을 시작한 사이**에 온
+> 원격 판본이 조용히 버려졌다.
 >
 > **대가**: 분기를 며칠 안 풀면 매 pull이 그 시점 이후 전량을 다시 받는다. 불변식 2가
 > "안 누를 자유"를 보장하므로 이건 정상 경로다 — n=1 규모에서 몇십 KB라 감수한다.
@@ -225,6 +242,56 @@ CREATE TABLE revision (                  -- D11: 하루 1개. 키가 곧 제약�
 - **화면 밖에서 일어난 일은 화면 안으로 끌어온다** — 지금 날짜 밖의 충돌 사본은
   배너로 띄우고 탭하면 그 날짜로 이동한다(날짜 이동의 조합이지 새 기능이 아니다).
   접힌 고정 블록에는 충돌 배지를 남긴다
+
+### F-9. pull 커서는 서버 시계로 잰다 (2026-07-28, 관측된 사고)
+
+**증상: 폰에서 7/27 저녁에 써둔 7/28의 「어제」를 다음 날 올렸는데, PC에는 영영
+안 왔다.** 원인은 커서와 필터가 **다른 시계**였던 것이다 — pull은
+`updated_at > since`(클라이언트가 **글자를 고친** 시각)로 긁는데, `since`는 서버가
+준 `now`(**받아간** 시각)였다. 오프라인에서 어제 쓰고 오늘 올린 행은 태어날 때부터
+상대 기기의 커서보다 뒤에 있어서, 다시 받을 기회가 없다. **동기화는 사람이 누르므로
+(불변식 2) 편집과 업로드 사이의 시차는 예외가 아니라 정상이다.**
+
+- 각 테이블에 **`synced_at`(서버가 그 행을 쓴 시각)** 을 둔다. push가 박고, pull은
+  `synced_at > since`로만 긁는다. **`updated_at`은 LWW 판정에만 쓴다** — 두 시계를
+  섞지 않는다
+- pull이 주는 커서는 **질의 직전 시각 − 1ms**다. 같은 ms에 커밋되는 push를 건너뛰지
+  않게. 겹쳐 받는 건 안전하다(`stale`로 떨어진다)
+- **막힌 원격 레코드는 커서로 붙잡는다** — 로컬에 그 키가 아직 없어도 그렇다.
+  예전엔 `isDiverged`(분기 배너용 판단)만으로 붙잡아서, **로컬에 없는 키에 타이핑을
+  시작한 사이**에 온 원격 판본이 조용히 버려졌다. 붙잡기는 "다시 받아야 한다"는
+  사실이고 배너는 "갈렸다"는 판단이다 — 둘을 분리한다
+- 서버는 **행을 실제로 쓰지 않았으면 `applied`를 주지 않는다.** 주면 클라이언트가
+  `syncedAt`을 붙여 영원히 비-더티로 만들고, 서버엔 없는데 올렸다고 믿는다
+- 마이그레이션은 [worker/migrations/2026-07-28-synced-at.sql](../worker/migrations/2026-07-28-synced-at.sql).
+  모든 행의 `synced_at`을 실행 시각으로 올려 **모든 기기가 한 번 전량을 다시 받게**
+  한다 — 이 버그로 지나간 행이 그때 도착한다
+
+### F-8. 빈 레코드는 올리지 않는다 (2026-07-28, 관측된 사고)
+
+**서버에 `energy:2026-07-28:정서`가 `score=null, reason=''`로 실제로 올라가 있었다.**
+점수 스트립 위에서 세로 스크롤을 하다 취소된 조작이 값만 되돌리고 `updatedAt`은
+지금으로 남겨, **손댄 적 없는 칸이 더티가 되어 빈 값을 올린 것**이다. 이 빈 행은
+나중 타임스탬프라 **다른 기기가 먼저 매긴 점수를 덮을 수 있고**, 로컬에서는 더티라
+그 키의 pull까지 막는다.
+
+- **취소는 점수 축만 되돌린다** (`Journal.restoreScore`). 값만 되돌리면 내용은 같은데
+  더티인 판본이 남아 다음 「올리기」에서 남의 최신 편집을 밀어내고, 반대로 레코드를
+  통째로 되돌리면 **그 사이 디바운스로 커밋된 이유 문장이 사라진다** (불변식 3).
+  점수와 이유는 한 레코드를 공유하지만 편집 수단이 다르다 (`D1`)
+- **개정 스냅샷(`D11`)은 지우기 판정보다 먼저 밀봉한다.** 뒤에 두면 고정 블록을
+  통째로 지운 경우에만 밀봉이 건너뛰어져, 되돌릴 방법이 그 경우에만 없다
+- **`loaded` 전에는 지우지 않는다.** 콜드 스타트의 `records`는 반쪽이라 `syncedAt`이
+  근거가 못 되고, 디스크에 있던 동기화 완료 레코드를 날린다
+- **빈 값이 됐는데 한 번도 올린 적이 없으면(`syncedAt === 0`) 레코드를 지운다.**
+  올린 적이 있으면 빈 값은 **지우기**이므로 그대로 올린다 — 두 경우를 `syncedAt`이
+  가른다
+- **진 쪽이 비어 있으면 충돌 사본을 만들지 않는다.** 불변식 3이 지키는 건 사용자가
+  쓴 글자이지 빈 자리가 아니다. 옮길 문장이 없는 `⚠ 충돌 사본`은 잃은 게 있다는
+  거짓 신호다
+- **서버 500을 '오프라인'이라 말하지 않는다.** `verdicts`/`records`가 없는 응답을
+  그대로 훑으면 예외가 나고, 바깥 catch가 네트워크 문제로 보고해 **안 올라간 이유가
+  가려진다**
 
 ### F-5. 자동저장과 시각 필드
 

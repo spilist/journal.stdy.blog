@@ -26,7 +26,10 @@
    * 문지르기 상태. **포인터 하나만 추적한다** — 손바닥이 스치는 두 번째 포인터가
    * 진행 중인 조작을 가로채면 값이 엉뚱하게 해제된다.
    *
-   * @type {{dim: string, id: number, start: number, before: number | null, moved: boolean} | null}
+   * `before`는 **레코드 통째로** 들고 있는다. 점수만 들고 있으면 취소를 되돌릴 때
+   * `updatedAt`이 지금으로 남아, 값은 그대로인데 더티가 된다 (`F-8`).
+   *
+   * @type {{dim: string, id: number, start: number, before: import('./merge.js').Rec, moved: boolean} | null}
    */
   let drag = null
 
@@ -53,10 +56,10 @@
     const strip = /** @type {HTMLElement} */ (e.currentTarget)
     strip.setPointerCapture(e.pointerId)
     const picked = scoreAt(strip, e.clientX)
-    // 취소될 수 있으므로 누르기 전 값을 들고 있는다 (아래 `onCancel`).
-    drag = { dim, id: e.pointerId, start: picked, before: journal.energy(dim).data.score, moved: false }
+    // 취소될 수 있으므로 누르기 전 레코드를 들고 있는다 (아래 `onCancel`).
+    drag = { dim, id: e.pointerId, start: picked, before: journal.energy(dim), moved: false }
     // 이미 그 점수면 손을 뗄 때 해제한다 — 문지르는 중에 깜빡이지 않게.
-    if (drag.before !== picked) journal.toggleScore(dim, picked)
+    if (drag.before.data.score !== picked) journal.toggleScore(dim, picked)
   }
 
   /**
@@ -98,26 +101,22 @@
   function onUp(e, dim) {
     if (!drag || drag.dim !== dim || drag.id !== e.pointerId) return
     // 움직이지 않고 이미 켜져 있던 점수를 눌렀으면 해제다 (`SC-3`).
-    if (!drag.moved && drag.before === drag.start) journal.toggleScore(dim, drag.start)
+    if (!drag.moved && drag.before.data.score === drag.start) journal.toggleScore(dim, drag.start)
     drag = null
   }
 
   /**
    * **취소는 확정이 아니다.** 스트립 위에서 세로 스크롤을 시작하면 브라우저가 제스처를
    * 가져가며 `pointercancel`을 쏜다 (`touch-action: pan-y`가 그걸 허용한다).
-   * 이걸 `onUp`으로 흘리면 **스크롤만 했는데 점수가 지워진다.** 누르기 전 값으로 되돌린다.
+   * 이걸 `onUp`으로 흘리면 **스크롤만 했는데 점수가 지워진다.** 누르기 전 레코드로
+   * 되돌린다 — 값만 되돌리면 손댄 적 없는 칸이 더티로 남아 빈 값이 올라간다 (`F-8`).
    *
    * @param {PointerEvent} e
    * @param {string} dim
    */
   function onCancel(e, dim) {
     if (!drag || drag.dim !== dim || drag.id !== e.pointerId) return
-    const { before } = drag
-    const now = journal.energy(dim).data.score
-    if (now !== before) {
-      // 되돌린다. before 가 null 이면 지금 값을 한 번 더 눌러 해제하는 게 되돌리기다.
-      journal.toggleScore(dim, before === null ? /** @type {number} */ (now) : before)
-    }
+    journal.restoreScore(drag.before)
     drag = null
   }
 </script>
@@ -142,6 +141,7 @@
 
   {#each dims as dim (dim)}
     {@const rec = journal.energy(dim)}
+    {@const prev = journal.previousEnergy(dim)}
     <div class="dim">
       <div class="head">
         <span class="name">{dim}</span>
@@ -152,6 +152,14 @@
           <span class="at" title="점수를 매긴 시각">{kstTime(rec.data.scoredAt)}</span>
         {/if}
       </div>
+
+      {#if prev.score !== null || prev.reason}
+        <div class="previous">
+          <span class="label">전날</span>
+          <span class="score">{prev.score ?? '—'}</span>
+          {#if prev.reason}<span class="reason">{prev.reason}</span>{/if}
+        </div>
+      {/if}
 
       <div
         class="scores"
@@ -236,6 +244,39 @@
     font-size: 0.75rem;
     color: var(--dim);
     margin-left: auto;
+  }
+
+  /* 「어제」의 전날 병치와 같은 형태 (`D8`·`D21`) — 왼쪽 선 + 흐린 글씨. */
+  .previous {
+    display: flex;
+    align-items: baseline;
+    gap: 0.4rem;
+    border-left: 3px solid var(--line);
+    padding: 0.1rem 0 0.1rem 0.6rem;
+    margin-bottom: 0.4rem;
+    color: var(--dim);
+    font-size: 0.8rem;
+  }
+  /* 이유가 길면 flex 축소가 형제에게도 분배된다. CJK 라벨의 min-content 는 한 글자
+     폭이라, 막아두지 않으면 「전날」이 두 줄로 감기며 스트립을 아래로 민다. */
+  .previous .label,
+  .previous .score {
+    flex: none;
+  }
+  .previous .label {
+    font-size: 0.72rem;
+    letter-spacing: 0.02em;
+  }
+  .previous .score {
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  /* 이유는 한 줄로 자른다 — 점수 스트립을 아래로 밀면 매기는 동작이 멀어진다. */
+  .previous .reason {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
   }
 
   .scores {
