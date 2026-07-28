@@ -274,12 +274,13 @@
     font-weight: 700;
     font-variant-numeric: tabular-nums;
   }
-  /* 이유는 한 줄로 자른다 — 점수 스트립을 아래로 밀면 매기는 동작이 멀어진다. */
+  /* 전날 이유는 통째로 보여준다 (사용자 판정 2026-07-28). 한 줄로 자르면 어제 뭐라
+     썼는지 못 읽어 인출 통로가 막힌다 (설계 취향 15항) — 스트립이 조금 내려가는
+     것보다 그게 크다. 원문 줄바꿈도 살린다. */
   .previous .reason {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
     min-width: 0;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
   }
 
   .scores {
