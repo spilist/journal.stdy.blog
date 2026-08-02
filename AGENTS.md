@@ -5,9 +5,10 @@ journal.stdy.blog에서 에이전트가 지켜야 할 운영 계약.
 ## 이 리포의 성격
 
 개인용(n=1) 저널 앱. 사용자 한 명이 쓰고, 사용자 한 명이 읽는다. **멀티유저·공유·유료화·
-바이럴 관련 제안은 이 리포에서 전부 범위 밖이다.** 첫 슬라이스(S1)가
+바이럴 관련 제안은 이 리포에서 전부 범위 밖이다.** 첫 두 슬라이스(S1·S2)가
 **배포돼 있다**(https://journal.stdy.blog) — 현재 상태와 순서는
-[로드맵](./docs/roadmap.md)에 있다.
+[로드맵](./docs/roadmap.md)에 있다. 코드는 공개돼 있고, 외부 기여의 경계는
+[CONTRIBUTING.md](./CONTRIBUTING.md)에 있다.
 
 **이 앱이 하는 일은 두 개다** (사용자, 2026-07-26):
 
@@ -31,12 +32,44 @@ journal.stdy.blog에서 에이전트가 지켜야 할 운영 계약.
 
 ## 설계 취향 — 판정 기준
 
-**[cmanki AGENTS.md](../cmanki/AGENTS.md)의 `설계 취향` 15항을 그대로 쓴다.**
-같은 사람의 같은 취향이고, 여기서 다시 유도하거나 복사할 이유가 없다. **설계 판단을
-내리기 전에 그 절을 읽을 것.** 원 출처는
-[g15e 위키](https://wiki.g15e.com/pages/Wiki%20gardening%20rules.md)의 설계 철학이고,
-정리본이 [cmanki 쪽 gather 기록](../cmanki/charness-artifacts/gather/2026-07-25-g15e-design-philosophy.md)에
-있다. **재fetch 금지.**
+원 출처는 [g15e 위키](https://wiki.g15e.com/pages/Wiki%20gardening%20rules.md)의 설계
+철학이고, 사용자가 아주 많이 영향을 받았다. 아래 15항은 그 철학을 판정에 바로 쓸 수 있는
+형태로 압축한 것이다. 같은 사람의 같은 취향이라 다른 리포에도 같은 목록이 있지만,
+**이 리포 안에서 읽을 수 있어야 하므로 여기 인라인으로 둔다** — 리포 밖을 가리키는 참조는
+이 리포를 공개했을 때 통째로 끊긴다. **재fetch 금지.**
+
+1. **기능보다 가능성.** 최소한의 기능으로 최대한의 가능성을 만든다. 방법은 **기능을
+   직교적으로 만들고 조합 가능성을 높이는 것**이다.
+2. **비직교성이 최악의 실패 모드다.** 같은 일을 하는 수단이 둘 이상 있으면 사용자를
+   구렁텅이로 몬다 — 옵시디언에 폴더·태그·링크가 **동시에** 있는 게 그 예다.
+3. **태그와 폴더를 만들지 않는다.** 태그는 자료가 늘면 "태그가 많지 않아야 한다"와
+   "태그당 자료가 많지 않아야 한다"가 필연적으로 상충하고, 폴더는 배타적 분류를 강제한다.
+4. **분류가 필요하면 기능을 늘리지 말고 조합한다.** 태그가 필요하면 **항목을 하나 만들고
+   링크로 잇는다** — 역링크가 곧 태그 목록이다. 새 기능 0개로 태그의 가능성을 얻는 이
+   패턴은 1·2항의 실천법이고, **"이 기능이 필요하다"는 제안마다 먼저 시도한다.**
+5. **링크는 맥락 안에 있어야 한다.** 무맥락 "See also"가 나쁜 이유가 곧 라벨 없는 연결이
+   나쁜 이유다 — 왜 이어졌는지가 연결 옆에 없으면 나중에 읽히지 않는다.
+6. **과도한 자동화를 경계한다. 과정에 담긴 가치를 지킨다.** 도구는 자동으로 해버리는 대신
+   **제안**한다 — 진단은 기계가, 결정은 사람이.
+7. **외재화된 믿음.** 어떤 내용이 담겨 있는 이유는 **내가 의식적으로 검토하고 담기로
+   결정했기 때문**이어야 한다. 기계가 대신 채워 넣은 것은 내 믿음이 아니다.
+8. **잘 설계된 제약이 자유를 만든다.** 뭘 안 해야 하는지 알아야 나머지를 자유롭게 탐색할
+   수 있다. **자유 입력이 더 자유로운 게 아니다.**
+9. **적을수록 좋다.** 가능성이 같으면 기능이 적을수록 / 기능이 같으면 코드가 적을수록 /
+   코드가 같으면 **절차적보다 선언적**일수록 좋다.
+10. **결에 맞는 디자인.** 결을 맞추면 가벼워지고 거스르면 무거워진다. 기술 선택은
+    "되는가"가 아니라 **"결에 맞는가"**로 묻는다.
+11. **타협해야 하면 배우기 쉬움보다 사용하기 쉬움.** n=1에서는 더 그렇다 — 배우는 건 한
+    번이고 쓰는 건 6개월이다.
+12. **점진적으로 꾸준하게.** 완벽한 구조를 먼저 설계하고 채우는 전략도, 몰아서 하는
+    대개조도 안 된다. **중복을 만들지 않는다** — 같은 문서를 v1/v2/v3로 복사하는 게
+    전형적인 위반이다.
+13. **정량화한다.** 목표는 셀 수 있는 지표로 두고 지표가 낡으면 진화시킨다. 단 **지표가
+    판정 축을 대체하지 않게** 한다.
+14. **카피캣도 취향이 필요하다.** 베낄 요소를 감별하지 못하면 개선한다며 개악한다. 남의
+    도구를 참고할 때는 **무엇을 베끼고 무엇을 베끼지 않을지**를 같이 말해야 한다.
+15. **기록보다 인출.** 기록되었으나 인출되지 않는 정보가 많은 건 나쁜 신호다. 쓰는 행위
+    자체가 중요하지만(과정의 가치) 결국 인출이 되어야 의미가 있다.
 
 이 리포에서 특히 자주 쓰이는 것 넷:
 
@@ -56,21 +89,20 @@ journal.stdy.blog에서 에이전트가 지켜야 할 운영 계약.
 1. **오프라인이 기본이다.** 로컬 저장소가 **작업 정본**이고 D1은 동기화 대상이다.
    네트워크 없이 앱이 완전히 동작해야 한다. "온라인일 때만 되는 기능"은 동기화 자체
    말고는 없어야 한다. (사용자 결정 2026-07-26)
-2. **동기화는 사람이 누른다.** 상시 자동 동기화를 넣지 않는다 — cmanki `자동화 금지`
-   2항("명령형 버튼만 허용")과 같은 형태다. 미동기화 상태를 **보이게** 하는 건 자동화가
-   아니므로 허용된다.
+2. **동기화는 사람이 누른다.** 상시 자동 동기화를 넣지 않는다 — **명령형 버튼만
+   허용한다.** 미동기화 상태를 **보이게** 하는 건 자동화가 아니므로 허용된다.
 3. **사용자가 쓴 글자를 잃지 않는다.** 동기화 충돌에서 진 쪽도 버리지 않고 `conflict`
    사본으로 남긴다. 파싱이 실패해도 원문은 그대로 둔다. **저널은 다시 못 쓴다.**
 4. **앱에 LLM을 넣지 않는다.** 저널 작성은 그 자체가 목적인 행위다 — AI가 문장을
-   대신 쓰거나 요약하면 과정의 가치가 지워진다 (cmanki 6항·15항). 회고 보조가 필요하면
-   **export한 마크다운을 앱 밖에서** 쓴다.
+   대신 쓰거나 요약하면 과정의 가치가 지워진다 (`설계 취향` 6항·15항). 회고 보조가
+   필요하면 **export한 마크다운을 앱 밖에서** 쓴다.
 
 넷 다 **하지 않는 것에 대한 금지**라 잘못 올려도 기능이 늘지 않는다. 불변식 4는
-cmanki의 `AI 정책`에서 옮겨온 것이고, 저널에는 "AI가 질문한다" 예외도 아직 없다.
+같은 사람의 다른 리포에서 옮겨온 것이고, 저널에는 "AI가 질문한다" 예외도 아직 없다.
 
 ## 요청을 받는 방식 — 조합안 + 반대 의견
 
-[cmanki AGENTS.md](../cmanki/AGENTS.md)의 `요청을 받는 방식` 절을 그대로 따른다. 요약:
+같은 사람의 다른 리포와 같은 방식이다. 셋이 전부다:
 
 1. **되묻지 않는다.** "정말 필요합니까?"는 에이전트가 판단할 수 있는 걸 미루는 것이다.
 2. **조합안을 먼저 만들어 보여준다.** `설계 취향` 1항을 시도해 대안을 제시한다.
@@ -83,18 +115,20 @@ cmanki의 `AI 정책`에서 옮겨온 것이고, 저널에는 "AI가 질문한�
 
 ## 사용자 데이터를 다룰 때
 
-이 저널에는 가족·건강·회사 이야기가 들어 있다. **아주 사적인 데이터다.**
+이 저널에는 가족·건강·회사 이야기가 들어 있다. **아주 사적인 데이터다.** 그리고 이 리포는
+**공개된다** — 여기 들어온 것은 되돌릴 수 없다고 보는 게 맞다.
 
-- **`references/sample.md`의 내용을 예시로 인용하거나 외부에 노출하지 않는다.**
-  형식(H1/H2 구조, `- 인지: 7. ...`)은 인용해도 되지만 본문 문장은 안 된다.
-- 로그·에러 리포트·커밋 메시지에 저널 본문이 새지 않게 한다.
-- 테스트 픽스처는 **지어낸 문장**을 쓴다. 실제 기록을 복사하지 않는다.
+- **실제 기록을 리포에 넣지 않는다.** 저널 본문, export한 마크다운, DB 덤프 전부.
+- [references/sample.md](./references/sample.md)는 **지어낸 형식 예시다** (2026-08-03에
+  실제 기록에서 교체했다). 형식 계약의 단일 출처이므로 **본문까지 자유롭게 인용해도 된다.**
+  대신 **여기에 실제 기록을 다시 넣지 않는다** — 이 파일은 공개된다.
+- 로그·에러 리포트·커밋 메시지·이슈에 저널 본문이 새지 않게 한다.
+- 테스트 픽스처는 **지어낸 문장**을 쓴다.
 - `.env`는 `~/stdy.blog/.env`에서 복사한 것이고 `.gitignore`에 있다. **열지 않는다.**
 
-## 스택 — cmanki를 따른다
+## 스택
 
-같은 사람의 같은 취향이므로 [cmanki](../cmanki)의 구성을 기본값으로 삼는다. 벗어나려면
-근거를 대야 한다.
+같은 사람의 다른 리포와 같은 구성을 기본값으로 삼는다. 벗어나려면 근거를 대야 한다.
 
 | 항목 | 선택 |
 |---|---|
@@ -106,7 +140,7 @@ cmanki의 `AI 정책`에서 옮겨온 것이고, 저널에는 "AI가 질문한�
 | 배포 | Cloudflare Workers + `wrangler deploy`, 정적 자산은 `assets` |
 | 도메인 | **`journal.stdy.blog`** 커스텀 도메인. `workers_dev: false` |
 | DB | D1. `~/stdy.blog`에 같은 계정 선례(`stdy-blog-db`)가 있다 |
-| 의존성 | **최소.** cmanki는 런타임 의존성이 1개다 |
+| 의존성 | **최소.** 런타임 의존성은 **0개**이고 그 상태를 유지한다 |
 
 ## 핵심 메모리 표면
 
@@ -118,8 +152,8 @@ cmanki의 `AI 정책`에서 옮겨온 것이고, 저널에는 "AI가 질문한�
 | [docs/operator-acceptance.md](./docs/operator-acceptance.md) | 운영자 인수. **사람만 할 수 있는 수용 확인이 여기 있다** |
 | [charness-artifacts/ideation/](./charness-artifacts/ideation/) | 결정·전제의 **정본**. 설계 얘기 전에 읽을 것 |
 | [2026-07-26-concept-ideation.md](./charness-artifacts/ideation/2026-07-26-concept-ideation.md) | 현재 개념 모델과 결정 `D1`~`D20` |
-| [references/sample.md](./references/sample.md) | **정본 형식의 단일 출처.** 파서·export 계약이 여기서 나온다 |
-| [../cmanki/AGENTS.md](../cmanki/AGENTS.md) | 설계 취향 15항의 원본. **복사하지 말고 참조할 것** |
+| [references/sample.md](./references/sample.md) | **정본 형식의 단일 출처.** 파서·export 계약이 여기서 나온다. 지어낸 예시다 |
+| [CONTRIBUTING.md](./CONTRIBUTING.md) | 외부 기여의 경계. 무엇을 받고 무엇을 안 받는지 |
 
 아이데이션 아티팩트의 결정이 대화에서 바뀌면 **아티팩트를 갱신**할 것. 모순된 버전을
 쌓아두지 말고 낡은 부분을 다시 쓴다. 철회는 지우지 말고 **철회 표시**로 남긴다.
@@ -134,12 +168,13 @@ cmanki의 `AI 정책`에서 옮겨온 것이고, 저널에는 "AI가 질문한�
 - Meaningful changes under `charness-artifacts/` are **repo state** and commit
   targets. Current-pointer helpers should no-op when the **canonical content**
   has not changed.
-- **Never commit journal content.** `references/sample.md` is the one exception
-  already in the repo; do not add exported journal data, database dumps, or
-  fixtures containing real entries.
-- The repo has a **private** GitHub remote (`origin`), so every commit is one
-  `push` away from leaving this machine. Treat that as the reason the rule above
-  is strict, not as a reason to relax it.
+- **Never commit journal content.** No exported journal data, database dumps, or
+  fixtures containing real entries. `references/sample.md` is a **fabricated**
+  format example, not an exception to this rule.
+- The GitHub remote (`origin`) is **being opened to the public** (decided
+  2026-08-03; the flip happens after the history rewrite). Every commit is one
+  `push` away from being world-readable and permanently indexable. Treat that as
+  the reason the rule above is strict, not as a reason to relax it.
 
 ## Subagent Delegation
 
@@ -191,12 +226,12 @@ The SessionStart hook may inject this context when installed; this block is the 
 ## 게이트
 
 `npm run gate` 하나가 넷을 순서대로 돈다 — `test` · `lint` · `check` · `build`.
-**훅으로 자동화하지 않는다** (cmanki `자동화 금지`: 명령형 버튼만 허용). 커밋 전에
+**훅으로 자동화하지 않는다** — 명령형 버튼만 허용한다. 커밋 전에
 사람이나 에이전트가 부른다 (`Commit Discipline` 참조).
 
 **`&&` 사슬이라 앞이 실패하면 뒤는 안 돈다.** 리팩터 뒤처럼 여러 게이트가 같이
 깨졌을 법하면 넷을 따로 부른다. 실패해도 계속 도는 러너를 새로 만들지 않는다 (9항).
 
 **강제 범위는 인라인 링크와 참조 정의까지다.** 코드 블록·인라인 코드·HTML 주석
-안은 보지 않고, 리포 밖(`../cmanki/...`)은 존재를 묻지 않는다. 존재 검사는
+안은 보지 않고, 리포 밖(`../...`)은 존재를 묻지 않는다. 존재 검사는
 **git 추적 기준**이다 — 무시된 경로를 가리키는 링크는 로컬에서만 살아 있다.

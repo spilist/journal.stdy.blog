@@ -27,6 +27,7 @@
 | 팀 도메인 | `stdy.cloudflareaccess.com` |
 | AUD | `eaf8386b…` ([wrangler.jsonc](../wrangler.jsonc)에 들어 있다) |
 | 세션 | `730h` ≈ 1개월 (`D9`) |
+| 허용 이메일 | **Worker 시크릿 `ALLOWED_EMAIL`.** 리포에 없다 — 아래 `## 3` 참조 |
 
 새로 만들어야 할 때의 절차는 아래에 남겨 둔다 —
 Zero Trust → Access → Applications → **Add an application** → *Self-hosted*
@@ -41,6 +42,7 @@ Zero Trust → Access → Applications → **Add an application** → *Self-host
 만들고 나면 **Application Audience (AUD) Tag**가 나온다. 그걸
 [wrangler.jsonc](../wrangler.jsonc)의 `ACCESS_AUD`에, 팀 도메인
 (`<team>.cloudflareaccess.com`)을 `ACCESS_TEAM_DOMAIN`에 넣는다.
+**허용 이메일은 거기 넣지 않는다** — 시크릿으로 주입한다 (`## 3`).
 
 > **CLI로는 못 가져온다.** `.env`의 토큰에 Zero Trust 읽기 권한이 없어
 > `GET /accounts/{id}/access/apps`가 `Authentication error`를 준다. 대시보드에서
@@ -54,8 +56,17 @@ Zero Trust → Access → Applications → **Add an application** → *Self-host
 ## 3. 배포 — **완료 (2026-07-26). S2도 배포됨 (같은 날)**
 
 ```bash
+wrangler secret put ALLOWED_EMAIL   # 최초 1회 — 아래를 먼저 읽을 것
 npm run deploy
 ```
+
+**시크릿이 선행 단계다.** `wrangler deploy`는 시크릿을 주입하지 않는다 —
+`vars`와 달리 계정에 한 번 올려두는 값이다. 안 올리면 Worker가 허용 목록을 모르므로
+**모든 요청이 401**이 되고, 앱에서는 「로그인이 만료됐습니다」로만 보인다
+([worker/access.js](../worker/access.js)의 `no-allowlist` 가드).
+
+값은 Access 정책의 Include에 넣은 것과 **같은 이메일**이다. 계정을 옮기거나 Worker를
+다시 만들면 이 명령을 다시 부른다.
 
 `.env`의 `CLOUDFLARE_API_TOKEN`·`CLOUDFLARE_ACCOUNT_ID`를 쓴다
 (`~/stdy.blog/.env`에서 복사했고 `.gitignore`에 있다).
@@ -83,9 +94,9 @@ npm run deploy
 - **AC-12** `references/sample.md`를 가져온 뒤 「전체 내려받기」 →
   원본과 같다 (**파일 끝 개행 개수만 다르다**). **S1과 같은 절차다** — S2에서 잠깐
   범위가 붙었다가 철회됐으므로, 그래프를 열 필요가 없다
-- **AC-19** 에너지 헤더의 「그래프」를 열고, 폰에서 30일 그래프의 점을 짚어본다 →
-  한 칸이 약 11px이다. 오터치가 나거나 세로 스크롤과 싸우면 `P-6`에 적고 창
-  기본값을 14일로 내린다
+- **AC-19** 에너지 헤더의 「그래프」를 열고, 폰에서 기본 창(**4주**) 그래프의 점을
+  짚어본다 → 한 칸이 약 12px이다. 오터치가 나거나 세로 스크롤과 싸우면 `P-6`에 적고
+  창 기본값을 2주로 내린다
 
 **폰은 PWA 캐시가 있어 새 판이 바로 안 뜰 수 있다.** 홈 화면 아이콘으로 연 뒤에도
 그래프가 없으면, 앱을 완전히 닫았다 다시 열거나 브라우저에서 한 번 새로고침한다.

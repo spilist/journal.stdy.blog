@@ -13,7 +13,7 @@ Date: 2026-07-26
 **S1·S2 배포됨 (2026-07-26) — https://journal.stdy.blog**
 
 D1 `journal-db`와 Cloudflare Access 설정이 끝났고 게이트는 다 초록이다 —
-`npm run gate` (= `test` 60개 · `lint` · `check` · `build`).
+`npm run gate` (= `test` 86개 · `lint` · `check` · `build`).
 **CI는 안 한다** (n=1 리포).
 
 앱이 하는 일은 둘뿐이고, 그 둘에 닿지 않는 제안은 범위 밖이다 (AGENTS.md):
