@@ -59,6 +59,7 @@ Ambient repo findings: 직전 3커밋(그래프 눈금 변경, sample.md 교체,
 ## Delegated Review
 
 - Delegated Review: executed — **채널: `charness:bounded-reviewer` 바운디드 서브에이전트(읽기 전용), 동기 실행 2회.** 반환된 처분은 아래와 같다. 1회차(그래프+공개 준비)는 **눈금 사다리의 실제 결함 둘**을 잡았다: 541일 창에서 눈금이 양 끝 둘로 붕괴(1월이 창에 하나뿐일 때), 월 눈금이 12개까지 나와 폰 폭에서 겹침. 둘 다 재현 후 수정. 2회차(공개 관점)는 `handoff.md`가 히스토리 잔여물의 존재를 공개 문서로 알리는 것, 이슈 템플릿의 상대 링크가 이슈 본문에서 404가 되는 것, `state.svelte.js`의 동기화 표시 고착을 잡았다 — 전부 수정. 2회차의 지적 2·3번(AGENTS.md가 낡았다)은 **낡은 상태를 읽은 오탐**으로 판정했다(`command: grep -c cmanki AGENTS.md` → 0).
+- **2차·3차 라운드 (같은 날, 사용자 요청).** 렌즈 다섯(보안·데이터유실·기여자·개념무결성·접근성) → 각 지적을 **반증 패스**에 통과시켰다. 반증이 과장·오탐을 걷어냈고, CONFIRMED만 고쳤다(자정 넘김·가져오기 중복 키·`# 제목` 흡수·빈 날짜·SW 부분 캐시·`verifyAccess` try·Origin·표시 둘). 이어 `SC-6` 사본 경로를 구현한 뒤 렌즈 넷(동기화 정확성·회귀·기여자·운영)을 다시 돌렸고, **그 라운드가 방금 넣은 코드의 회귀를 잡았다** (spilist/journal.stdy.blog#2 의 수정에서 난 것) — `raced`에서 `syncedAt`이 안 올라가 내 글자가 충돌 사본이 되고 거짓 분기 배너까지 뜨던 것, 그리고 워커 가드가 죽은 코드이고 계약 문구가 거짓이던 것. 둘 다 같은 턴에 고쳤다(`b5b0330`).
 - Slow-gate lenses (fixture-economics, parallel-critical-path, duplicated-proof): 재위임하지 않았다 — 전체 게이트가 7.9s라 slow-gate 범위가 아니다.
 
 ## Commands Run
