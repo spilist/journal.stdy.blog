@@ -19,6 +19,19 @@ import { addDays } from './date.js'
 export const MIN_SCORE = 1
 export const MAX_SCORE = 10
 
+/** 세로 눈금의 개수. 1·10 사이에 넷이면 1·4·7·10이라 간격이 3으로 고르다. */
+const GRID_COUNT = 4
+
+/** 일주일. 창의 걸음이자 가로 눈금의 간격이다 — 저널은 주 단위로 읽힌다. */
+export const WEEK = 7
+
+/**
+ * 가로 눈금 하나가 쓸 수 있는 라벨의 최대 개수. **주·월 모두 이 예산 안에서 논다** —
+ * 폰 폭(≈360px)에서 9px 라벨이 겹치지 않는 한계가 아홉 개다. 주 눈금이 이걸 넘으면
+ * 월 눈금에 자리를 내주고, 월 눈금이 넘으면 몇 달씩 건너뛴다.
+ */
+const MAX_TICKS = 9
+
 /** 하루에 속한 레코드. `revision`은 날짜 기록이 아니라 개정 스냅샷이라 빠진다. */
 const DAY_KEY = /^(?:energy|log):(\d{4}-\d{2}-\d{2}):(.+)$/
 
@@ -49,7 +62,7 @@ export function recordBounds(records) {
  * 창의 시작 날짜 (`D14`).
  *
  * 창은 **오늘에 붙어 있다** — 과거 날짜를 보고 있어도 그래프는 최근 N일이다.
- * 기록이 창보다 늦게 시작해도 왼쪽을 잘라내지 않는다: 「최근 30일」이 30일이 아니면
+ * 기록이 창보다 늦게 시작해도 왼쪽을 잘라내지 않는다: 「최근 4주」가 4주가 아니면
  * 가로 간격이 창마다 달라져 읽는 값이 흔들린다.
  *
  * @param {Bounds} bounds
@@ -95,7 +108,7 @@ export function windowDates(bounds, today, days) {
 }
 
 /**
- * 전체 창의 길이(일). 「1개월 더」가 전체를 넘어서면 그냥 전체로 접는 데 쓴다.
+ * 전체 창의 길이(일). 「4주 더」가 전체를 넘어서면 그냥 전체로 접는 데 쓴다.
  *
  * @param {Bounds} bounds
  * @param {string} today
@@ -109,12 +122,17 @@ export function spanDays(bounds, today) {
  * 창의 이름. **그래프와 내려받기 버튼이 같은 문장을 쓴다** — 따로 만들면 같은 창을
  * 두 이름으로 부르게 된다.
  *
+ * 7의 배수는 **주로 읽는다.** 창을 주 단위로 넓히고 눈금도 7일 간격이라, 「최근 28일」로
+ * 부르면 사람이 다시 7로 나눠야 한다. 배수가 아닌 창은 그대로 일로 남는다 — 「4.3주」는
+ * 아무도 못 읽는다.
+ *
  * @param {number | null} days
  * @param {number} count 창의 날짜 수
  * @returns {string}
  */
 export function windowLabel(days, count) {
-  return days === null ? `전체 ${count}일` : `최근 ${days}일`
+  if (days === null) return `전체 ${count}일`
+  return days % WEEK === 0 ? `최근 ${days / WEEK}주` : `최근 ${days}일`
 }
 
 /**
@@ -267,8 +285,33 @@ function anchorFor(i, n) {
 }
 
 /**
- * 가로 눈금. **라벨은 창 안에서 유일해야 한다** — 여러 해에 걸친 창에서 `2월`이 두 번
- * 나오면 읽는 사람이 어느 해인지 모른다.
+ * 주 눈금의 자리. **오른쪽 끝에서 거꾸로 7일씩 짚는다.**
+ *
+ * 창은 오늘에 붙어 있으므로(`D14`) 거꾸로 세면 오늘이 항상 눈금이 되고, 창을 넓혀도
+ * 이미 있던 눈금이 제자리에 남는다. 앞에서부터 세면 창 길이가 7의 배수가 아닐 때
+ * 오른쪽 끝에 이름 없는 여백이 남아 마지막 점이 언제인지 못 읽는다.
+ *
+ * @param {number} n
+ * @returns {number[]} 오름차순
+ */
+function weekIndices(n) {
+  /** @type {number[]} */
+  const out = []
+  for (let i = n - 1; i >= 0; i -= WEEK) out.push(i)
+  return out.reverse()
+}
+
+/**
+ * 가로 눈금. 창이 길어지면 **주 → 월 → 몇 달씩 건너뛴 월**로 성긴다 — 어느 창
+ * 길이에서도 라벨이 `MAX_TICKS`개를 넘지 않는다.
+ *
+ * **라벨은 창 안에서 유일해야 한다** — 여러 해에 걸친 창에서 `2월`이 두 번 나오면 읽는
+ * 사람이 어느 해인지 모른다. 그래서 해를 넘는 창은 월 라벨에 연도를 붙인다. 주 눈금의
+ * `7/26`은 창이 `MAX_TICKS`주를 못 넘으므로 해를 넘을 수 없어 그냥 안전하다.
+ *
+ * **한때 "월 경계가 12개를 넘으면 1월만 낸다"였다.** 그 규칙은 1월이 창 안에 하나뿐일 때
+ * (예: 2025-02-01~2026-07-26) 눈금이 통째로 사라져 양 끝 두 개로 붕괴했다. 예산 안에서
+ * 균등하게 솎는 지금 방식은 그런 구멍이 없다.
  *
  * @param {string[]} dates
  * @param {(i: number) => number} x
@@ -276,21 +319,32 @@ function anchorFor(i, n) {
  */
 function ticks(dates, x) {
   const n = dates.length
-  const monthStarts = dates.map((d, i) => ({ d, i })).filter(({ d }) => d.endsWith('-01'))
-  // 월 경계가 12개를 넘으면 `2월`이 두 해에 나와 라벨이 겹친다. 그때는 1월만 낸다.
-  const yearly = monthStarts.length > 12
-  const chosen = yearly ? monthStarts.filter(({ d }) => d.slice(5, 7) === '01') : monthStarts
-
-  if (chosen.length >= 2) {
-    return chosen.map(({ d, i }) => ({
-      x: x(i),
-      label: yearly ? `${d.slice(2, 4)}년` : `${Number(d.slice(5, 7))}월`,
-      anchor: anchorFor(i, n),
-    }))
-  }
-
   /** @param {number} i */
   const short = (i) => `${Number(dates[i].slice(5, 7))}/${Number(dates[i].slice(8, 10))}`
+
+  // 눈금이 하나뿐이면 주 단위로 부를 이유가 없다 — 아래 양 끝 눈금이 더 많이 말해준다.
+  const weeks = weekIndices(n)
+  if (weeks.length >= 2 && weeks.length <= MAX_TICKS) {
+    return weeks.map((i) => ({ x: x(i), label: short(i), anchor: anchorFor(i, n) }))
+  }
+
+  const monthStarts = dates.map((d, i) => ({ d, i })).filter(({ d }) => d.endsWith('-01'))
+  if (monthStarts.length >= 2) {
+    // 예산을 넘으면 몇 달씩 건너뛴다. 첫 경계부터 세므로 왼쪽 끝이 늘 눈금을 갖는다.
+    const stride = Math.ceil(monthStarts.length / MAX_TICKS)
+    const multiYear = dates[0].slice(0, 4) !== dates[n - 1].slice(0, 4)
+    return monthStarts
+      .filter((_, k) => k % stride === 0)
+      .map(({ d, i }) => ({
+        x: x(i),
+        // 해를 넘으면 `25/3`. 같은 해 안이면 `3월` — 한 해짜리 창에 연도는 잡음이다.
+        label: multiYear
+          ? `${d.slice(2, 4)}/${Number(d.slice(5, 7))}`
+          : `${Number(d.slice(5, 7))}월`,
+        anchor: anchorFor(i, n),
+      }))
+  }
+
   const last = n - 1
   return last === 0
     ? [{ x: x(0), label: short(0), anchor: 'middle' }]
@@ -301,11 +355,19 @@ function ticks(dates, x) {
 }
 
 /**
- * 세로 눈금. 위·가운데·아래 셋이면 값을 읽는 데 충분하다.
+ * 세로 눈금. 위에서 아래로 등간격 `GRID_COUNT`개 — 기본 눈금에서 1·4·7·10이 된다.
+ *
+ * 셋(1·6·10)이었는데 간격이 5와 4로 달라 7점과 8점이 어느 칸인지 눈으로 못 셌다.
+ * 넷은 간격이 3으로 고르다.
  *
  * @param {(score: number) => number} y
  */
 function gridlines(y) {
-  const mid = Math.round((MIN_SCORE + MAX_SCORE) / 2)
-  return [MAX_SCORE, mid, MIN_SCORE].map((score) => ({ score, y: y(score) }))
+  const step = (MAX_SCORE - MIN_SCORE) / (GRID_COUNT - 1)
+  // **점수가 유일해야 한다.** `Graph.svelte`가 눈금을 `score`로 키잉하는데, 축이 좁으면
+  // (1~3 처럼) 반올림이 같은 값을 두 번 내고 `each_key_duplicate`로 앱이 통째로 죽는다.
+  // 지금 축(1~10)에서는 안 겹치지만, 겹치는 순간의 대가가 화면 하나가 아니라 전부다.
+  const seen = new Set()
+  for (let i = 0; i < GRID_COUNT; i++) seen.add(Math.round(MAX_SCORE - i * step))
+  return [...seen].map((score) => ({ score, y: y(score) }))
 }

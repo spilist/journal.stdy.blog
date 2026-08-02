@@ -8,6 +8,7 @@
 
   import { dayLabel } from './date.js'
   import {
+    WEEK,
     dayEnergy,
     lines,
     plot,
@@ -23,7 +24,13 @@
   const HEIGHT = 170
   /** 왼쪽은 점수 눈금, 아래는 날짜 눈금이 산다. */
   const PAD = { top: 10, right: 6, bottom: 20, left: 22 }
-  const STEP = 30
+  /**
+   * 창의 기본 길이이자 넓히는 걸음. **주 단위다** — 가로 눈금이 7일 간격이라 7의 배수가
+   * 아니면 창을 넓힐 때마다 눈금이 통째로 밀려 같은 날이 다른 자리에 선다.
+   */
+  const STEP = 4 * WEEK
+  /** 버튼에 쓰는 걸음의 이름. 「4주」와 「4주 더」가 같은 수에서 나오게 한다. */
+  const STEP_LABEL = `${STEP / WEEK}주`
 
   /**
    * 창의 길이(일). `null`이면 전체 (`D14`).
@@ -153,9 +160,9 @@
       disabled={atFullSpan}
       onclick={() => {
         const next = (days ?? STEP) + STEP
-        // 전체를 넘어서면 그냥 전체로 접는다 — 왼쪽에 빈 달을 붙여봐야 읽을 게 없다.
+        // 전체를 넘어서면 그냥 전체로 접는다 — 왼쪽에 빈 주를 붙여봐야 읽을 게 없다.
         days = next >= spanDays(bounds, journal.today) ? null : next
-      }}>1개월 더</button
+      }}>{STEP_LABEL} 더</button
     >
     <button
       type="button"
@@ -168,7 +175,7 @@
     <!-- 넓힌 창은 되돌릴 수 있어야 한다. -->
     {#if days !== STEP}
       <button type="button" class="ghost" onclick={() => (days = STEP)}>
-        {STEP}일
+        {STEP_LABEL}
       </button>
     {/if}
   </div>

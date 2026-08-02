@@ -71,7 +71,7 @@ test('전체 창은 기록의 양 끝을 덮는다 — 점수가 아니라 기�
 test('전체 창은 오늘 뒤의 기록까지 덮는다 — 내려받기가 조용히 빠뜨리면 안 된다', () => {
   const b = bounds({ earliest: '2026-07-20', latest: '2026-07-30' })
   assert.equal(windowEnd(b, '2026-07-26', null), '2026-07-30')
-  // 「최근 N일」 창은 오늘에서 끊는다 — 미래는 최근 30일이 아니다.
+  // 「최근 N주」 창은 오늘에서 끊는다 — 미래는 최근 4주가 아니다.
   assert.equal(windowEnd(b, '2026-07-26', 30), '2026-07-26')
   assert.equal(windowDates(b, '2026-07-26', null).at(-1), '2026-07-30')
 })
@@ -95,7 +95,7 @@ test('기록이 없으면 오늘 하루짜리 축이다', () => {
   assert.deepEqual(recordBounds([]), { earliest: null, latest: null })
 })
 
-test('전체가 30일보다 좁을 수 있다 — 그때도 파일과 창이 같은 범위다', () => {
+test('전체가 기본 창보다 좁을 수 있다 — 그때도 파일과 창이 같은 범위다', () => {
   // 기록이 20일치뿐이면 「전체」는 창을 넓히는 게 아니라 좁힌다. 의도된 결과다.
   const b = bounds({ earliest: '2026-07-07', latest: '2026-07-26' })
   assert.equal(spanDays(b, '2026-07-26'), 20)
@@ -132,9 +132,35 @@ test('개정 스냅샷은 날짜 기록이 아니라 범위에 들어오지 않�
   assert.deepEqual(datesInRange(records, null, null), [])
 })
 
-test('창의 이름은 한 곳에서 나온다', () => {
-  assert.equal(windowLabel(30, 30), '최근 30일')
+test('창의 이름은 한 곳에서 나오고, 주 단위 창은 주로 읽는다', () => {
+  assert.equal(windowLabel(28, 28), '최근 4주')
+  assert.equal(windowLabel(56, 56), '최근 8주')
   assert.equal(windowLabel(null, 12), '전체 12일')
+  // 7의 배수가 아니면 일로 남는다 — 「4.3주」는 아무도 못 읽는다.
+  assert.equal(windowLabel(30, 30), '최근 30일')
+})
+
+test('세로 눈금은 등간격 넷이다 — 1·4·7·10', () => {
+  const view = plot(windowDates(NONE, '2026-07-26', 28), [], BOX)
+  assert.deepEqual(
+    view.gridlines.map((g) => g.score),
+    [10, 7, 4, 1],
+  )
+  // 간격이 고르면 가로선 사이를 눈으로 나눌 수 있다.
+  const gaps = view.gridlines.slice(1).map((g, i) => view.gridlines[i].score - g.score)
+  assert.deepEqual(new Set(gaps), new Set([3]))
+  // 눈금은 축의 양 끝에 정확히 앉는다.
+  assert.equal(view.gridlines[0].score, MAX_SCORE)
+  assert.equal(view.gridlines.at(-1)?.score, MIN_SCORE)
+  // 위에서 아래로 내려간다 — y는 커진다.
+  const ys = view.gridlines.map((g) => g.y)
+  assert.deepEqual(ys, [...ys].sort((a, b) => a - b))
+})
+
+test('세로 눈금의 점수는 유일하다 — 중복은 each 키를 깨서 앱을 죽인다 (AC-21과 같은 종류)', () => {
+  const view = plot(windowDates(NONE, '2026-07-26', 28), [], BOX)
+  const scores = view.gridlines.map((g) => g.score)
+  assert.equal(new Set(scores).size, scores.length, scores.join(','))
 })
 
 test('결측일에서 선이 끊긴다 (D19, AC-15)', () => {
@@ -246,12 +272,14 @@ test('점 하나짜리 구간은 선이 아니라 dot으로만 남는다', () =>
   assert.equal(cognitive.polylines[0], `${view.x(3)},${view.y(9)} ${view.x(4)},${view.y(8)}`)
 })
 
-test('눈금: 월이 두 번 이상 바뀌면 월 경계, 아니면 양 끝 날짜', () => {
-  const short = plot(windowDates(NONE, '2026-07-26', 5), [], BOX)
+test('눈금: 창이 넓어지면 주 → 월 → 년으로 성긴다', () => {
+  // 주가 하나도 안 차는 창은 양 끝만 부른다.
+  const tiny = plot(windowDates(NONE, '2026-07-26', 5), [], BOX)
   assert.deepEqual(
-    short.ticks.map((t) => t.label),
+    tiny.ticks.map((t) => t.label),
     ['7/22', '7/26'],
   )
+  // 열 주를 넘으면 라벨이 겹쳐 월 경계로 넘어간다.
   const long = plot(
     windowDates(bounds({ earliest: '2026-05-15', latest: '2026-07-26' }), '2026-07-26', null),
     [],
@@ -261,6 +289,64 @@ test('눈금: 월이 두 번 이상 바뀌면 월 경계, 아니면 양 끝 날�
     long.ticks.map((t) => t.label),
     ['6월', '7월'],
   )
+})
+
+test('기본 창의 가로 눈금은 7일 간격이고 오늘이 오른쪽 끝이다', () => {
+  const view = plot(windowDates(NONE, '2026-07-26', 28), [], BOX)
+  assert.deepEqual(
+    view.ticks.map((t) => t.label),
+    ['7/5', '7/12', '7/19', '7/26'],
+  )
+})
+
+test('주 눈금은 창 길이가 7의 배수가 아니어도 오늘에서 거꾸로 짚는다', () => {
+  // 앞에서부터 세면 오른쪽 끝에 이름 없는 여백이 남아 마지막 점이 언제인지 못 읽는다.
+  const view = plot(windowDates(NONE, '2026-07-26', 25), [], BOX)
+  assert.deepEqual(
+    view.ticks.map((t) => t.label),
+    ['7/5', '7/12', '7/19', '7/26'],
+  )
+})
+
+test('창을 걸음만큼 넓혀도 이미 있던 주 눈금이 제자리에 남는다', () => {
+  const four = plot(windowDates(NONE, '2026-07-26', 28), [], BOX)
+  const eight = plot(windowDates(NONE, '2026-07-26', 56), [], BOX)
+  const wide = new Set(eight.ticks.map((t) => t.label))
+  for (const t of four.ticks) assert.ok(wide.has(t.label), `${t.label}이 사라졌다`)
+})
+
+test('주 눈금은 열 주 앞에서 월 눈금에 자리를 내준다', () => {
+  // 경계 양쪽. 63일이면 눈금 9개, 64일이면 10개라 월로 넘어간다.
+  const nine = plot(windowDates(NONE, '2026-07-26', 63), [], BOX)
+  assert.equal(nine.ticks.length, 9)
+  assert.ok(nine.ticks.every((t) => t.label.includes('/')))
+  const over = plot(windowDates(NONE, '2026-07-26', 64), [], BOX)
+  assert.ok(
+    over.ticks.every((t) => t.label.endsWith('월')),
+    over.ticks.map((t) => t.label).join(','),
+  )
+})
+
+test('열여덟 달짜리 창도 눈금이 양 끝 둘로 붕괴하지 않는다', () => {
+  // 한때 "월 경계가 12개를 넘으면 1월만 낸다"였는데, 1월이 창 안에 하나뿐이면 눈금이
+  // 통째로 사라져 폴백으로 떨어졌다. 541일 창에 라벨이 둘이면 가운데를 못 읽는다.
+  const dates = windowDates(bounds({ earliest: '2025-02-01', latest: '2026-07-26' }), '2026-07-26', null)
+  assert.equal(dates.length, 541)
+  const labels = plot(dates, [], BOX).ticks.map((t) => t.label)
+  assert.ok(labels.length >= 5, labels.join(','))
+  // 해를 넘는 창은 연도를 붙여야 `2월`이 두 번 나오지 않는다.
+  assert.ok(labels.every((l) => l.includes('/')), labels.join(','))
+})
+
+test('모든 창 길이에서 라벨이 유일하고 개수가 예산 안이다 (AC-21을 전 구간으로)', () => {
+  // 주·월·건너뛴 월·양 끝 폴백 넷이 상호작용하는데, 개별 케이스만 찍으면 규칙 사이의
+  // 틈을 못 잡는다. 4년치를 하루 단위로 훑는다.
+  for (let n = 1; n <= 1500; n++) {
+    const labels = plot(windowDates(NONE, '2026-08-03', n), [], BOX).ticks.map((t) => t.label)
+    assert.equal(new Set(labels).size, labels.length, `${n}일: ${labels.join(',')}`)
+    assert.ok(labels.length >= 1 && labels.length <= 9, `${n}일: 라벨 ${labels.length}개`)
+    if (n >= 30) assert.ok(labels.length >= 2, `${n}일: 눈금이 ${labels.length}개뿐이다`)
+  }
 })
 
 test('여러 해에 걸친 창에서도 눈금 라벨이 유일하다', () => {
