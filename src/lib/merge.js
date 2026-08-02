@@ -96,6 +96,50 @@ export function isDiverged(local, remote) {
 }
 
 /**
+ * **덮어쓰려는 서버 값을 이 기기가 본 적 있는가.** `isDiverged`의 push 방향 쌍둥이다 —
+ * 같은 질문("`syncedAt`까지는 이미 본 것이다")을 반대 방향으로 묻는다.
+ *
+ * 이게 없으면 push가 이겼을 때 덮어쓰인 서버 판본이 **아무 데도 안 남는다.** 지금은
+ * 내 push가 거절됐을 때만 사본이 생기므로, 두 기기가 둘 다 push한 어떤 순서에서는
+ * 진 쪽 글자가 사라져 `SC-6`가 깨진다.
+ *
+ * **그렇다고 이길 때마다 사본을 만들면 안 된다.** pull로 받아 그 위에 고친 정상 편집도
+ * 전부 "덮어쓰기"라, 편집 한 번에 배지 하나가 쌓인다. 갈라주는 건 `syncedAt`이다:
+ * 서버의 지금 판본을 이미 봤으면 내 편집은 **그 위에 얹은 것**이지 못 본 걸 지운 게
+ * 아니다.
+ *
+ * `revision`은 세지 않는다 — 자동 밀봉본이고 먼저 쓴 쪽이 남는 게 `D11`이다.
+ *
+ * @param {Rec} outbound 올리는 쪽
+ * @param {Rec | undefined} server 서버에 있던 값
+ * @returns {boolean}
+ */
+export function overwritesUnseen(outbound, server) {
+  if (!server) return false
+  if (outbound.kind === 'revision' || server.kind === 'revision') return false
+  return server.updatedAt > (outbound.syncedAt ?? 0)
+}
+
+/**
+ * push가 이겼는데 **못 본 값을 덮은** 경우 남길 사본 (`SC-6`).
+ *
+ * `resolveRejected`와 같은 규칙을 반대편에 적용한다 — 내용이 같거나 덮인 쪽이 비어
+ * 있으면 만들지 않는다. 사본에 담는 건 **덮인 서버 값**이고, 라이브는 이긴 내 값
+ * 그대로다(그건 호출자가 이미 쓴다).
+ *
+ * @param {Rec} outbound 이긴 쪽 — 내가 올린 값
+ * @param {Rec | undefined} server 덮인 쪽
+ * @returns {{target: string, text: string, at: number} | null}
+ */
+export function preserveOverwritten(outbound, server) {
+  if (!overwritesUnseen(outbound, server)) return null
+  const kept = /** @type {Rec} */ (server)
+  const text = describe(kept)
+  if (text === describe(outbound) || !hasContent(kept)) return null
+  return { target: kept.key, text, at: kept.updatedAt }
+}
+
+/**
  * pull 커서를 어디까지 미룰지. **건너뛴 레코드를 커서로 넘겨버리면 그 원격 변경은
  * 영영 다시 안 온다** — 사용자는 다음 push까지 분기 사실 자체를 모른다.
  *

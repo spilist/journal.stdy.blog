@@ -4,7 +4,7 @@
 // **병합 규칙은 여기 없다** — `src/lib/merge.js`의 `pushVerdict` 하나를 클라이언트와
 // 공유한다. 규칙이 두 곳에 있으면 언젠가 갈라진다.
 
-import { pushVerdict } from '../src/lib/merge.js'
+import { overwritesUnseen, pushVerdict } from '../src/lib/merge.js'
 import { verifyAccess } from './access.js'
 
 /** @typedef {import('../src/lib/merge.js').Rec} Rec */
@@ -194,7 +194,15 @@ async function applyPush(db, incoming) {
     const stmt = writeStatement(db, rec, now)
     if (stmt) {
       writes.push(stmt)
-      verdicts.push({ key: rec.key, applied: true })
+      // **못 본 값을 덮었으면 덮인 쪽을 실어 보낸다** (`SC-6`). 클라이언트가 그걸로
+      // 사본을 만든다 — 안 보내면 진 쪽 글자가 서버에도 어느 기기에도 안 남는다.
+      // **판정을 여기서 하는 이유는 페이로드다.** 이길 때마다 `server`를 실으면 정상
+      // 편집의 왕복이 매번 두 배가 되는데, 그중 사본이 되는 건 극소수다.
+      verdicts.push(
+        overwritesUnseen(rec, server)
+          ? { key: rec.key, applied: true, server }
+          : { key: rec.key, applied: true },
+      )
     } else {
       verdicts.push({ key: rec.key, applied: false, server })
     }

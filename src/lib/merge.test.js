@@ -14,6 +14,8 @@ import {
   pushVerdict,
   recordKey,
   hasContent,
+  overwritesUnseen,
+  preserveOverwritten,
   resolveRejected,
 } from './merge.js'
 
@@ -185,4 +187,51 @@ test('개정 스냅샷은 하루에 하나다 (AC-8, D11)', () => {
   assert.equal(needsSnapshot(null, '2026-03-01'), true)
   assert.equal(needsSnapshot('2026-02-28', '2026-03-01'), true)
   assert.equal(needsSnapshot('2026-03-01', '2026-03-01'), false)
+})
+
+test('push가 이겨도 못 본 값을 덮었으면 사본이 남는다 (SC-6)', () => {
+  // 노트북이 A를 올려둔 걸 폰이 못 본 채 B를 쓰고 이긴 경우. 사본이 없으면 A가
+  // 서버에도 두 기기에도 안 남는다 — 둘 다 push했는데 진 쪽이 사라진다.
+  const server = log({ data: { text: '노트북에서 쓴 지어낸 문단' }, updatedAt: 100, syncedAt: 100 })
+  const outbound = log({ data: { text: '폰에서 쓴 지어낸 문단' }, updatedAt: 200, syncedAt: 50 })
+  assert.equal(overwritesUnseen(outbound, server), true)
+  assert.deepEqual(preserveOverwritten(outbound, server), {
+    target: 'log:2026-03-01:오늘',
+    text: '노트북에서 쓴 지어낸 문단',
+    at: 100,
+  })
+})
+
+test('pull로 받아 그 위에 고친 정상 편집은 사본을 만들지 않는다', () => {
+  // 이걸 못 가르면 편집 한 번에 배지 하나가 쌓인다. 갈라주는 건 syncedAt이다 —
+  // 서버의 지금 판본을 이미 봤으면 내 편집은 그 위에 얹은 것이다.
+  const server = log({ data: { text: '받아온 지어낸 문단' }, updatedAt: 100, syncedAt: 100 })
+  const outbound = log({ data: { text: '그 위에 고친 문단' }, updatedAt: 200, syncedAt: 100 })
+  assert.equal(overwritesUnseen(outbound, server), false)
+  assert.equal(preserveOverwritten(outbound, server), null)
+})
+
+test('서버에 행이 없거나 revision이면 사본을 만들지 않는다', () => {
+  assert.equal(overwritesUnseen(log({ syncedAt: 0 }), undefined), false)
+  const snap = log({ key: 'revision:2026-03-01', kind: 'revision', updatedAt: 200, syncedAt: 0 })
+  const server = log({ key: 'revision:2026-03-01', kind: 'revision', updatedAt: 100, syncedAt: 100 })
+  assert.equal(overwritesUnseen(snap, server), false)
+})
+
+test('덮인 쪽이 비었거나 내용이 같으면 사본을 만들지 않는다 — 배지는 잡음이다', () => {
+  const outbound = log({ data: { text: '지어낸 문단' }, updatedAt: 200, syncedAt: 50 })
+  const empty = log({ data: { text: '' }, updatedAt: 100, syncedAt: 100 })
+  assert.equal(preserveOverwritten(outbound, empty), null)
+  const same = log({ data: { text: '지어낸 문단' }, updatedAt: 100, syncedAt: 100 })
+  assert.equal(preserveOverwritten(outbound, same), null)
+})
+
+test('거절 경로와 이긴 경로가 서로의 거울이다 — 어느 쪽이 져도 글자가 남는다 (SC-6)', () => {
+  const mine = log({ data: { text: '내가 쓴 지어낸 문단' }, updatedAt: 200, syncedAt: 50 })
+  const theirs = log({ data: { text: '저쪽이 쓴 지어낸 문단' }, updatedAt: 300, syncedAt: 300 })
+  // 내가 지면 내 글자가 사본으로
+  assert.equal(resolveRejected(mine, theirs).conflict?.text, '내가 쓴 지어낸 문단')
+  // 내가 이기면 저쪽 글자가 사본으로
+  const older = log({ data: { text: '저쪽이 쓴 지어낸 문단' }, updatedAt: 100, syncedAt: 100 })
+  assert.equal(preserveOverwritten(mine, older)?.text, '저쪽이 쓴 지어낸 문단')
 })
