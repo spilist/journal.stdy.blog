@@ -341,8 +341,19 @@ test('열여덟 달짜리 창도 눈금이 양 끝 둘로 붕괴하지 않는다
 test('모든 창 길이에서 라벨이 유일하고 개수가 예산 안이다 (AC-21을 전 구간으로)', () => {
   // 주·월·건너뛴 월·양 끝 폴백 넷이 상호작용하는데, 개별 케이스만 찍으면 규칙 사이의
   // 틈을 못 잡는다. 4년치를 하루 단위로 훑는다.
-  for (let n = 1; n <= 1500; n++) {
-    const labels = plot(windowDates(NONE, '2026-08-03', n), [], BOX).ticks.map((t) => t.label)
+  //
+  // **창을 한 번만 만들고 잘라 쓴다.** 창은 오늘에 붙어 있으므로 `N일 창`은 전체
+  // 배열의 마지막 N개와 같다 — 매번 다시 만들면 날짜 산술이 이 테스트 하나로 전체
+  // 스위트의 7할을 먹는다 (1.2s → 0.3s).
+  const SPAN = 1500
+  const full = windowDates(NONE, '2026-08-03', SPAN)
+  // 자른 것과 다시 만든 것이 같다는 전제를 몇 자리에서 실제로 확인한다.
+  for (const n of [1, 2, 7, 28, 365, SPAN]) {
+    assert.deepEqual(full.slice(-n), windowDates(NONE, '2026-08-03', n), `${n}일`)
+  }
+
+  for (let n = 1; n <= SPAN; n++) {
+    const labels = plot(full.slice(-n), [], BOX).ticks.map((t) => t.label)
     assert.equal(new Set(labels).size, labels.length, `${n}일: ${labels.join(',')}`)
     assert.ok(labels.length >= 1 && labels.length <= 9, `${n}일: 라벨 ${labels.length}개`)
     if (n >= 30) assert.ok(labels.length >= 2, `${n}일: 눈금이 ${labels.length}개뿐이다`)

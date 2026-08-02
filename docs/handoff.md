@@ -6,9 +6,10 @@
 
 `charness:impl` — **폰 확인 뒤 결정.** S2는 구현·리뷰·배포가 끝났다. 다음은
 사용자가 폰에서 보고 오는 `P-6`·`AC-19`·`AC-12`이고, 그 답에 따라 창 기본값을
-손본다.
+손본다. **창이 30일에서 4주로 바뀌었으니 옛 화면 기준의 답을 그대로 받지 말 것.**
 
 먼저 아래 `Next Session` 1번(사람만 할 수 있는 확인)을 사용자에게 상기시킬 것.
+**그리고 배포가 아직 안 됐다** — 그래프 눈금 변경이 로컬에만 있다.
 
 ## Continuation Capability
 
@@ -21,6 +22,16 @@
 **S1·S2 배포됨 — https://journal.stdy.blog** (Cloudflare Access, 허용 이메일 하나).
 S2 배포는 2026-07-26. 배포 직후 `AC-9` 재확인함
 (인증 없이 `/api/pull` → Access가 302).
+
+**2026-08-03: 오픈소스 공개 준비를 했고 미결이 셋 남았다.**
+
+- **`wrangler secret put ALLOWED_EMAIL`을 아직 안 넣었다.** `vars`에서 뺐으므로
+  **이걸 넣기 전에 배포하면 전 요청이 401이다** (`no-allowlist` 가드). 다음 배포의
+  선행 단계다 — [운영자 인수](./operator-acceptance.md) `## 3`
+- **그래프 눈금 변경(4주·1·4·7·10·7일 눈금)이 배포되지 않았다.** 폰 확인은 배포 후에
+  의미가 있다
+- **리포는 아직 private이다.** 공개 전환은 사용자가 판단한다 — **에이전트가 먼저
+  뒤집지 않는다.** 준비(라이선스·기여 문서·문서 자기완결화)는 끝났다
 
 - 게이트 확인: **`npm run gate`** (= `test` 86개 · `lint` · `check` · `build`).
   `lint`는 eslint와 마크다운 링크 검사를 둘 다 돈다
@@ -84,4 +95,4 @@ S2 배포는 2026-07-26. 배포 직후 `AC-9` 재확인함
 - [operator-acceptance.md](./operator-acceptance.md) — 사람이 하는 확인. `## 1`에
   **로컬 개발에는 API가 없다**는 제약이 있다(동기화는 배포본에서 본다)
 - [2026-07-26-concept-ideation.md](../charness-artifacts/ideation/2026-07-26-concept-ideation.md)
-  — 결정 `D1`~`D20`의 근거
+  — 결정의 근거

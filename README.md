@@ -100,5 +100,5 @@ npm run deploy       # 빌드 + Cloudflare 업로드
 | [docs/roadmap.md](./docs/roadmap.md) | 우선순위와 순서 |
 | [docs/handoff.md](./docs/handoff.md) | 다음 세션이 먼저 읽을 것 |
 | [docs/operator-acceptance.md](./docs/operator-acceptance.md) | 운영자 인수 + 수용 확인 |
-| [아이데이션 기록](./charness-artifacts/ideation/2026-07-26-concept-ideation.md) | 결정 `D1`~`D20`과 그 근거 |
+| [아이데이션 기록](./charness-artifacts/ideation/2026-07-26-concept-ideation.md) | 결정 `D1` 이후 전부와 그 근거 |
 | [CONTRIBUTING.md](./CONTRIBUTING.md) | 무엇을 받고 무엇을 안 받는지 |

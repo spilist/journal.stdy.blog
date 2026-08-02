@@ -325,6 +325,9 @@ export class Journal {
     clearTimeout(this.#timers[key])
     this.#timers[key] = setTimeout(() => {
       delete this.#timers[key]
+      // 커밋했으면 **대기값도 지운다.** 남겨두면 `#hasPendingEdit`이 영원히 참이라
+      // pull이 그 키의 원격 갱신을 계속 미루고, `toggleScore`가 옛 이유를 되살린다.
+      delete this.#pending[key]
       const prev = this.#at(key, kind, { text: '' })
       this.#commit(prev, nextText(prev, text, Date.now()))
     }, SAVE_DELAY_MS)
@@ -348,7 +351,10 @@ export class Journal {
     this.#pending = Object.create(null)
   }
 
-  /** @type {Record<string, string>} 디바운스 중인 마지막 입력값 */
+  /**
+   * @type {Record<string, string>} 아직 저장되지 않은 마지막 입력값. 커밋되거나
+   * `flush()`가 지나가면 사라진다 — `#hasPendingEdit`이 이 사실에 기대고 있다.
+   */
   #pending = Object.create(null)
 
   /**
@@ -426,6 +432,7 @@ export class Journal {
     clearTimeout(this.#timers[key])
     this.#timers[key] = setTimeout(() => {
       delete this.#timers[key]
+      delete this.#pending[key]
       // `this.energy(dim)`이 아니라 **입력 시점에 잡은 키**로 읽는다. 지금은 날짜
       // 이동이 항상 flush를 먼저 하지만, 그러지 않는 호출자가 하나만 생겨도
       // 디바운스 중이던 이유가 엉뚱한 날짜에 저장된다.
@@ -508,12 +515,6 @@ export class Journal {
     /** @type {string[]} */
     const skipped = []
 
-    /**
-     * @param {string} key
-     * @param {string} kind
-     * @param {Record<string, any>} data
-     * @param {string} label
-     */
     /** @param {string} kind @param {Record<string, any>} data */
     const isEmpty = (kind, data) => !hasContent({ kind, data })
 
@@ -673,6 +674,11 @@ export class Journal {
       } catch (err) {
         // **로컬 쓰기 실패는 '오프라인'이 아니다** (`F-6`, 불변식 1). 네트워크는 멀쩡한데
         // 오프라인이라고 말하면 사용자는 로컬이 깨진 걸 모른다.
+        //
+        // 그리고 **표시를 반드시 풀어야 한다.** 여기서 그냥 나가면 `syncState`가
+        // 'syncing'에 얼어붙어, 도는 요청이 하나도 없는데 헤더가 「동기화 중…」을
+        // 계속 띄운다 — 위 500 경로가 이미 막아둔 것과 같은 실패다.
+        this.syncState = 'error'
         this.storageError = `저장 실패 — 이 화면의 글자를 다른 곳에 복사해 두세요 (${err})`
         return
       }
@@ -765,6 +771,8 @@ export class Journal {
       } catch (err) {
         // **로컬 쓰기 실패는 '오프라인'이 아니다** (`F-6`). 서버엔 이미 써졌는데
         // 네트워크 탓이라고 말하면, 사용자는 영구 더티가 된 이유를 못 본다.
+        // 표시도 같이 푼다 — 안 그러면 「동기화 중…」이 영원히 돈다.
+        this.syncState = 'error'
         this.storageError = `저장 실패 — 이 화면의 글자를 다른 곳에 복사해 두세요 (${err})`
         return
       }

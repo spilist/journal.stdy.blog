@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 기여의 경계
+    url: https://github.com/spilist/journal.stdy.blog/blob/main/CONTRIBUTING.md
+    about: 무엇을 받고 무엇을 안 받는지 먼저 읽어주세요. 범위 밖 제안은 헛수고가 됩니다.

@@ -4,7 +4,7 @@ Date: 2026-07-26
 
 **결정의 단일 출처는
 [아이데이션 정본](../charness-artifacts/ideation/2026-07-26-concept-ideation.md)의
-`## Decisions`(`D1`~`D20`)다.** 구현 계약의 단일 출처는
+`## Decisions`다.** 구현 계약의 단일 출처는
 [docs/spec-first-slice.md](./spec-first-slice.md)다. 이 문서는 **순서와 우선순위만**
 말한다 — 여기서 결정을 재선언하지 않는다. 어긋나면 위 두 문서가 맞다.
 

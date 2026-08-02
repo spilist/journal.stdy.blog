@@ -20,7 +20,7 @@ Repo mode: NORMALIZE (진입 시 PARTIAL / targeted_missing_surface)
 
 ## 왜 그렇게 했나
 
-- **로드맵은 결정을 재선언하지 않는다.** 결정의 단일 출처는 아이데이션 `D1`~`D20`,
+- **로드맵은 결정을 재선언하지 않는다.** 결정의 단일 출처는 아이데이션 `## Decisions`,
   구현 계약의 단일 출처는 [스펙](../../docs/spec-first-slice.md)이다. 로드맵이 상태를
   다시 나열하면 곧 어긋난다 — cmanki 로드맵이 같은 실수를 한 적이 있어 명시로 막았다.
 - **critique 어댑터를 기본값 그대로 두지 않았다.** 스켈레톤이

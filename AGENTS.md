@@ -151,7 +151,7 @@ journal.stdy.blog에서 에이전트가 지켜야 할 운영 계약.
 | [docs/roadmap.md](./docs/roadmap.md) | 우선순위와 순서. 결정을 재선언하지 않는다 |
 | [docs/operator-acceptance.md](./docs/operator-acceptance.md) | 운영자 인수. **사람만 할 수 있는 수용 확인이 여기 있다** |
 | [charness-artifacts/ideation/](./charness-artifacts/ideation/) | 결정·전제의 **정본**. 설계 얘기 전에 읽을 것 |
-| [2026-07-26-concept-ideation.md](./charness-artifacts/ideation/2026-07-26-concept-ideation.md) | 현재 개념 모델과 결정 `D1`~`D20` |
+| [2026-07-26-concept-ideation.md](./charness-artifacts/ideation/2026-07-26-concept-ideation.md) | 현재 개념 모델과 결정 `D1` 이후 전부. **범위를 여기 다시 적지 않는다** — 결정이 늘면 이 표가 먼저 낡는다 |
 | [references/sample.md](./references/sample.md) | **정본 형식의 단일 출처.** 파서·export 계약이 여기서 나온다. 지어낸 예시다 |
 | [CONTRIBUTING.md](./CONTRIBUTING.md) | 외부 기여의 경계. 무엇을 받고 무엇을 안 받는지 |
 
