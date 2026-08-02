@@ -7,7 +7,7 @@
   // 슬라이더(`input[type=range]`)를 쓰지 않은 이유는 `P-1` 참조.
 
   import { autogrow } from './autogrow.js'
-  import { kstTime } from './date.js'
+  import { kstDate, kstTime } from './date.js'
   import Conflicts from './Conflicts.svelte'
   import Graph from './Graph.svelte'
 
@@ -152,7 +152,14 @@
              것도 수정이다. `scoredAt`은 계속 저장되지만(`D15`) 화면 규칙은 어제·오늘·
              고정 블록과 같다 — 블록마다 시각의 뜻이 다르면 읽는 사람이 매번 헷갈린다. -->
         {#if rec.updatedAt}
-          <span class="at" title="마지막으로 손댄 시각">{kstTime(rec.updatedAt)}</span>
+          <!-- 보고 있는 날짜와 다르면 날짜를 앞에 붙인다 — 어제·오늘 블록과 **같은
+               규칙이다.** 시각만 띄우면 7/20을 보면서 오늘 매긴 점수가 「7/20 14:32」로
+               읽힌다. -->
+          <span class="at" title="마지막으로 손댄 시각">
+            {kstDate(rec.updatedAt) === journal.date
+              ? ''
+              : `${kstDate(rec.updatedAt)} `}{kstTime(rec.updatedAt)}
+          </span>
         {/if}
       </div>
 

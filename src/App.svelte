@@ -23,10 +23,16 @@
     // 로드 때 한 번만 pull하면 그 탭은 영영 낡은 채로 남는다.
     const flush = () => journal.flush()
     const onVisibility = () => {
-      if (document.visibilityState === 'hidden') flush()
-      else journal.pullNow({ auto: true })
+      if (document.visibilityState === 'hidden') {
+        flush()
+        return
+      }
+      // **날짜부터 다시 읽는다.** 자정을 넘겨 돌아오면 여기가 아니면 갱신될 자리가
+      // 없어서, 그 화면에서 쓴 「오늘」이 전날에 저장된다.
+      journal.refreshToday()
+      journal.pullNow({ auto: true })
     }
-    // 오프라인에서 돌아왔을 때. 이게 없으면 `syncState`가 'offline'에 갇혀 있다가
+    // 오프라인에서 돌아왔을 때. 이게 없이는 `syncState`가 'offline'에 갇혀 있다가
     // 새로고침해야 풀린다.
     const onOnline = () => journal.pullNow({ auto: true })
     document.addEventListener('visibilitychange', onVisibility)
@@ -303,6 +309,9 @@
     margin-bottom: calc(3rem + env(safe-area-inset-bottom));
   }
   .toast {
+    /* 토스트는 알림이지 조작면이 아니다. 이게 없으면 「전체 내려받기」 버튼 위에
+       겹쳐 앉아 탭을 먹는다 — 복사 직후 곧바로 내려받는 흐름에서 실제로 걸린다. */
+    pointer-events: none;
     position: fixed;
     left: 50%;
     /* 홈 인디케이터(~34px)와 겹치지 않게. */

@@ -44,20 +44,34 @@ writeFileSync(
 // '/' 는 넣지 않는다 — Access 로그인 리다이렉트 하나로 install 전체가 깨진다.
 const ASSETS = ${JSON.stringify(assets)}
 
+// 이번 캐시가 **전부** 채워졌는가. 부분만 채워졌으면 옛 캐시를 지우지 않는다 —
+// 지우면 오프라인에서 백지가 된다 (불변식 1).
+let complete = false
+
 self.addEventListener('install', (e) => {
   e.waitUntil(
     caches.open(CACHE)
       // 하나가 실패해도 나머지는 남긴다. addAll 의 원자성이 여기서는 손해다.
       .then((c) => Promise.allSettled(ASSETS.map((a) => c.add(a))))
-      .then(() => self.skipWaiting()),
+      .then((rs) => {
+        complete = rs.every((r) => r.status === 'fulfilled')
+        return self.skipWaiting()
+      }),
   )
 })
 
 self.addEventListener('activate', (e) => {
   e.waitUntil(
-    caches.keys()
-      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
-      .then(() => self.clients.claim()),
+    (complete
+      ? caches.keys().then((keys) =>
+          Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))),
+        )
+      : // **부분 캐시로 옛 캐시를 지우면 오프라인에서 백지가 된다.** 약전계나 Access
+        // 세션 만료(자산 요청이 로그인으로 리다이렉트되고 캐시 저장이 거절된다)에서
+        // 실제로 일어난다. 옛 캐시를 남겨두면 최소한 옛 판으로는 열린다 — 다음 배포에
+        // 다시 시도한다.
+        Promise.resolve()
+    ).then(() => self.clients.claim()),
   )
 })
 

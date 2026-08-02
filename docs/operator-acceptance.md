@@ -56,14 +56,22 @@ Zero Trust → Access → Applications → **Add an application** → *Self-host
 ## 3. 배포 — **완료 (2026-07-26). S2도 배포됨 (같은 날)**
 
 ```bash
-wrangler secret put ALLOWED_EMAIL   # 최초 1회 — 아래를 먼저 읽을 것
 npm run deploy
+wrangler secret put ALLOWED_EMAIL   # 최초 1회
 ```
 
-**시크릿이 선행 단계다.** `wrangler deploy`는 시크릿을 주입하지 않는다 —
-`vars`와 달리 계정에 한 번 올려두는 값이다. 안 올리면 Worker가 허용 목록을 모르므로
-**모든 요청이 401**이 되고, 앱에서는 「로그인이 만료됐습니다」로만 보인다
-([worker/access.js](../worker/access.js)의 `no-allowlist` 가드).
+**`wrangler deploy`는 시크릿을 주입하지 않는다.** `vars`와 달리 계정에 한 번 올려두는
+값이다. 없으면 Worker가 허용 목록을 모르므로 **모든 요청이 401**이 되고, 앱에서는
+「로그인이 만료됐습니다」로만 보인다 ([worker/access.js](../worker/access.js)의
+`no-allowlist` 가드).
+
+**순서가 위와 같은 이유 (2026-08-03에 실제로 부딪혔다):** `ALLOWED_EMAIL`이 한때
+`vars`에 있었으므로, 배포된 Worker에 같은 이름의 var 바인딩이 남아 있다. 그 상태에서
+`secret put`을 먼저 부르면 **`Binding name 'ALLOWED_EMAIL' already in use` (code 10053)**
+로 거절된다. `vars`에서 뺀 판을 **먼저 배포해야** 이름이 비고, 그 다음 시크릿이 들어간다.
+그 사이 수 초간 동기화가 401이다 — 로컬 편집은 영향받지 않는다(불변식 1).
+
+**새 계정·새 Worker라면 순서는 상관없다.** 위 함정은 var → secret 마이그레이션에만 있다.
 
 값은 Access 정책의 Include에 넣은 것과 **같은 이메일**이다. 계정을 옮기거나 Worker를
 다시 만들면 이 명령을 다시 부른다.

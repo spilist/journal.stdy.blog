@@ -91,7 +91,19 @@ export function parse(raw) {
     if (date === null) {
       // 날짜가 아닌 H1 = 「잊지 않을 것」. 제목을 앱이 해석하지 않으므로 통째로 둔다 (`D10`).
       // 제목 다음 빈 줄도 사용자 글자이므로 선행 개행을 걷어내지 않는다.
-      pinnedParts.push(`# ${section.heading}\n${section.body}`.replace(/\n+$/, ''))
+      const block = `# ${section.heading}\n${section.body}`.replace(/\n+$/, '')
+      // **단, 날짜가 한 번이라도 나온 뒤라면 고정 블록이 아니다.** 사용자가 로그 본문에
+      // 쓴 `# 제목` 한 줄이다 — `## `가 이미 받는 것과 같은 처리를 여기서도 한다.
+      // 그러지 않으면 그 문단이 고정 블록으로 이동하고, 로컬 고정 블록이 차 있으면
+      // 「건너뜀」 한 줄로 통째로 사라진다 (불변식 3).
+      //
+      // **경계가 "날짜 이후"인 이유**: 앱이 만드는 파일은 고정 블록이 늘 맨 위다
+      // (`assemble`). 그래서 이 규칙은 자기 export를 다시 읽는 왕복을 깨지 않는다.
+      const lastDay = days[days.length - 1]
+      const lastLog = lastDay?.logs[lastDay.logs.length - 1]
+      if (lastLog) lastLog.text += `\n${block}`
+      else if (days.length) unparsed.push({ line: block, where: '날짜 뒤의 제목' })
+      else pinnedParts.push(block)
       continue
     }
 

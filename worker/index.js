@@ -213,10 +213,25 @@ export default {
     const url = new URL(request.url)
     if (!url.pathname.startsWith('/api/')) return new Response('not found', { status: 404 })
 
-    const auth = await verifyAccess(request, env)
-    if (!auth.ok) return json({ error: 'unauthenticated', reason: auth.reason }, 401)
-
     try {
+      // **검증을 try 안에 둔다.** JWKS fetch 실패(콜드 아이솔레이트에서 certs가 5xx)나
+      // 망가진 base64가 여기서 던지는데, 밖이면 Workers의 HTML 1101 페이지가 나가고
+      // 클라이언트는 비-JSON을 재로그인으로 읽는다 (`F-4`) — 새로고침해도 안 풀린다.
+      // 실패는 언제나 JSON이어야 한다는 게 `access.js`가 선언한 계약이다.
+      const auth = await verifyAccess(request, env)
+      if (!auth.ok) return json({ error: 'unauthenticated', reason: auth.reason }, 401)
+
+      // **쓰기는 출처를 본다.** Access 쿠키는 site(eTLD+1) 단위라 형제 `*.stdy.blog`
+      // 자산에서 오는 POST에도 붙는다. 그쪽 하나가 뚫리면 남의 스크립트가 큰
+      // `updatedAt`으로 저널을 덮을 수 있고, 그건 pull에서 충돌 사본도 없이 수락된다.
+      // 읽기(GET)는 막지 않는다 — 부작용이 없고 브라우저 탐색을 깨뜨린다.
+      if (request.method !== 'GET') {
+        const origin = request.headers.get('Origin')
+        if (origin !== null && origin !== url.origin) {
+          return json({ error: 'bad-origin' }, 403)
+        }
+      }
+
       if (url.pathname === '/api/pull' && request.method === 'GET') {
         const since = Number(url.searchParams.get('since') ?? 0) || 0
         // 커서는 **질의 전** 시각에서 여유를 두고 물러선다. push는 판정을 다 낸 뒤

@@ -443,14 +443,43 @@ export class Journal {
 
   // ── 이동 ────────────────────────────────────────────────────────────────
 
-  /** @param {number} days */
-  shiftDate(days) {
-    this.flush()
-    this.date = addDays(this.date, days)
+  /**
+   * 앱으로 돌아올 때 **날짜를 다시 읽는다.**
+   *
+   * PWA를 열어둔 채 자정을 넘기면 `today`가 어제에 얼어붙는다. 그러면 헤더는 어제를
+   * 「오늘」이라 부르고, 그 화면에서 쓴 「오늘」이 **전날 레코드에 저장된다.**
+   * 「오늘로」 버튼도 `date !== today`가 거짓이라 안 떠서 탈출구가 안 보인다.
+   *
+   * **보고 있는 날짜가 옛 오늘이었으면 같이 옮긴다** — 사용자는 "오늘을 보고 있다"고
+   * 믿고 있었으므로, 날짜만 갱신하고 화면을 어제에 두면 그게 더 놀랍다. 과거를
+   * 일부러 열어둔 상태라면 건드리지 않는다.
+   *
+   * @returns {boolean} 날짜가 바뀌었으면 true
+   */
+  refreshToday() {
+    const now = kstDate()
+    if (now === this.today) return false
+    const wasOnToday = this.date === this.today
+    this.today = now
+    if (wasOnToday) this.goTo(now)
+    return true
   }
 
-  /** @param {string} date */
+  /** @param {number} days */
+  shiftDate(days) {
+    this.goTo(addDays(this.date, days))
+  }
+
+  /**
+   * **빈 문자열을 막는다.** `input[type=date]`의 지우기 버튼이 `''`를 준다. 그대로
+   * 받으면 `energy::인지` 같은 키가 만들어져 IndexedDB와 서버에 커밋되는데, 그 키는
+   * 날짜 정규식에 안 걸려 **그래프에도 내려받기에도 안 나온다** — 인출 통로가 아예
+   * 없는 저장이다 (설계 취향 15항). `shiftDate`도 이 문을 지난다.
+   *
+   * @param {string} date
+   */
   goTo(date) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return
     this.flush()
     this.date = date
   }
@@ -525,6 +554,14 @@ export class Journal {
      * @param {string} label
      */
     const stage = (key, kind, data, label) => {
+      // **이미 이번 가져오기에서 쓴 키면 앞엣것이 정본이다.** 한 파일에 같은 날의
+      // `## 오늘`이 두 번 있으면(손으로 이어붙인 파일에서 흔하다) 뒤엣것이 앞엣것을
+      // 조용히 덮어썼다 — 미리보기는 개수만 보여주므로 화면에 드러나지도 않는다.
+      // 여기서 막고 「건너뜀」으로 보이게 한다.
+      if (writes.some((w) => w.key === key)) {
+        skipped.push(`${label} (파일에 두 번 나옴)`)
+        return
+      }
       const existing = this.records[key]
       const filled = existing && !isEmpty(kind, existing.data)
       const same =

@@ -167,3 +167,31 @@ test('로그가 시작되기 전의 모르는 섹션은 여전히 unparsed로 �
   assert.equal(unparsed.length, 1)
   assert.ok(unparsed[0].line.startsWith('## 낙서'))
 })
+
+test('날짜 뒤의 `# 제목`은 고정 블록이 아니라 그 로그의 일부다 (불변식 3)', () => {
+  // 로그 본문에 쓴 제목 한 줄이 고정 블록으로 이동하면, 로컬 고정 블록이 차 있을 때
+  // 「건너뜀」 한 줄로 그 문단이 통째로 사라진다.
+  const p = parse('# 26-07-26\n\n## 오늘\n지어낸 첫 줄.\n\n# 제목처럼 쓴 줄\n그 아래 문장.\n')
+  assert.equal(p.pinned, '')
+  assert.equal(p.unparsed.length, 0)
+  assert.equal(
+    p.days[0].logs.find((l) => l.kind === '오늘')?.text,
+    '지어낸 첫 줄.\n# 제목처럼 쓴 줄\n그 아래 문장.',
+  )
+})
+
+test('첫 날짜 앞의 비-날짜 H1은 여전히 고정 블록이다 — 왕복이 깨지면 안 된다', () => {
+  // `assemble`은 고정 블록을 늘 맨 위에 둔다. 위 규칙의 경계가 "날짜 이후"인 이유다.
+  const raw = '# 잊지 않을 것\n지어낸 다짐.\n\n# 26-07-26\n\n## 오늘\n지어낸 줄.\n'
+  const p = parse(raw)
+  assert.equal(p.pinned, '# 잊지 않을 것\n지어낸 다짐.')
+  assert.equal(p.days[0].logs.find((l) => l.kind === '오늘')?.text, '지어낸 줄.')
+  assert.equal(assemble(p).replace(/\n+$/, ''), raw.replace(/\n+$/, ''))
+})
+
+test('날짜는 있는데 로그가 없으면 뒤따르는 H1을 버리지 않고 unparsed로 남긴다', () => {
+  const p = parse('# 26-07-26\n\n## 에너지\n- 인지: 7. 지어낸 이유.\n\n# 붙일 자리 없는 제목\n본문.\n')
+  assert.equal(p.pinned, '')
+  assert.equal(p.unparsed.length, 1)
+  assert.match(p.unparsed[0].line, /붙일 자리 없는 제목/)
+})
