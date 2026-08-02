@@ -39,34 +39,57 @@
 
 ## 현재 상태
 
-**S1 배포됨 (2026-07-26) — https://journal.stdy.blog**
+**S1·S2 배포됨 (2026-07-26) — https://journal.stdy.blog**
 
-허용 이메일 하나만 Cloudflare Access를 통과한다. 남은 일은 **사람만 할 수 있는
-수용 확인**([운영자 인수](./docs/operator-acceptance.md))과 **S2 에너지 그래프**다 —
-순서는 [로드맵](./docs/roadmap.md)에 있다.
+허용 이메일 하나만 Cloudflare Access를 통과한다. 남은 일은 **사람만 할 수 있는 수용
+확인**([운영자 인수](./docs/operator-acceptance.md))이다 — 순서는
+[로드맵](./docs/roadmap.md)에 있다.
 
 | 있는 것 | 없는 것 |
 |---|---|
-| 날짜 화면 네 블록 · 날짜 이동 | **에너지 그래프 (S2)** |
-| 로컬 자동저장 · 오프라인 PWA | 주·월 회고 화면 |
+| 날짜 화면 네 블록 · 날짜 이동 | 주·월 회고 화면 |
+| 에너지 그래프 (S2) · 로컬 자동저장 · 오프라인 PWA | 앱 밖 알림 |
 | 「잊지 않을 것」 + 하루 1개 변경 내역 | CLI |
 | 하루치 복사 · 전체 내려받기 · 가져오기 | 앱 내 LLM (**영구적으로 없음**) |
 | D1 동기화 (pull 자동, push 버튼) + 충돌 사본 | 멀티유저 · 회원가입 |
 | Cloudflare Access + Worker JWT 검증 | |
 
-## 개발
+## 로컬에서 돌리기
 
 ```bash
 npm install
-npm run dev          # 로컬. --host
-npm run gate         # 커밋 전 표준 게이트 — 아래 넷을 순서대로
-npm test             # 순수 함수 70개 — 파서·조립·날짜·병합·그래프·문서 링크
+npm run dev          # http://localhost:5173 — vite만 뜬다
+```
+
+**Cloudflare 계정 없이 앱과 게이트 전부가 돈다.** 로컬 저장소(IndexedDB)가 작업 정본이고
+D1은 동기화 대상이라, 서버가 없어도 쓰기·읽기·내려받기가 전부 로컬에서 끝난다.
+
+| | 계정 없이 | 필요한 것 |
+|---|---|---|
+| 날짜 화면 네 블록 · 날짜 이동 · 자동저장 | **된다** | — |
+| 에너지 점수·이유 · 그래프 | **된다** | — |
+| 하루치 복사 · 전체 내려받기 · 가져오기 | **된다** | — |
+| `npm run gate` (`test`·`lint`·`check`·`build`) | **된다** | — |
+| 「올리기」 · 자동 pull (`/api/*`) | **안 된다** | 배포본 |
+| `npm run deploy` · `npm run db:schema` | 안 된다 | Cloudflare 계정 · D1 · `.env` |
+
+개발 서버에는 `/api/*`가 없어서 [sync.js](./src/lib/sync.js)가 응답을 로그인 리다이렉트로
+읽고 **「로그인이 만료됐습니다」 배너**를 띄운다. **로컬 개발의 정상 상태이고, 배너가 떠
+있어도 편집·저장·내보내기는 그대로 동작한다.** 동기화·Worker·D1은 배포본에서 확인한다 —
+Worker가 Cloudflare Access의 JWT를 검증하므로 로컬에서는 인증 경로를 재현할 수 없고, 그래서
+`wrangler dev`·로컬 D1 스크립트를 **일부러 두지 않았다**.
+
+```bash
+npm run gate         # test → lint → check → build. && 사슬이라 앞이 실패하면 뒤는 안 돈다
 npm run check        # svelte-check (jsconfig checkJs + JSDoc) + tsc(worker)
 npm run lint         # eslint + eslint-plugin-svelte, 그리고 마크다운 링크 검사
 npm run deploy       # 빌드 + Cloudflare 업로드
 ```
 
 **런타임 의존성 0개.** 에너지 그래프도 SVG로 직접 그렸다 (S2).
+
+기여의 경계는 [CONTRIBUTING.md](./CONTRIBUTING.md)에 있다. 라이선스는
+[MIT](./LICENSE)다.
 
 ## 문서
 
@@ -78,3 +101,4 @@ npm run deploy       # 빌드 + Cloudflare 업로드
 | [docs/handoff.md](./docs/handoff.md) | 다음 세션이 먼저 읽을 것 |
 | [docs/operator-acceptance.md](./docs/operator-acceptance.md) | 운영자 인수 + 수용 확인 |
 | [아이데이션 기록](./charness-artifacts/ideation/2026-07-26-concept-ideation.md) | 결정 `D1`~`D20`과 그 근거 |
+| [CONTRIBUTING.md](./CONTRIBUTING.md) | 무엇을 받고 무엇을 안 받는지 |

@@ -114,7 +114,7 @@ export function scanLinks(text, lookup) {
       const path = target.split('#')[0]
       if (!path) continue
       const found = lookup(path)
-      // `null` = 리포 밖. 형제 체크아웃(`../cmanki`)이 없다고 게이트가 빨개지면,
+      // `null` = 리포 밖. 형제 체크아웃(`../sibling-repo`)이 없다고 게이트가 빨개지면,
       // 링크 규약과 무관한 이유로 커밋이 막힌다.
       if (found === false) {
         problems.push({ line: i + 1, message: `링크가 가리키는 파일이 없다 — (${target})` })

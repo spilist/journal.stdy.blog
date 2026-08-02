@@ -17,7 +17,7 @@ const scan = (text, lookup = anything) => scanLinks(text, lookup).map((p) => p.m
 test('맨 상대 링크를 잡는다', () => {
   assert.equal(scan('[로드맵](roadmap.md)').length, 1)
   assert.equal(scan('[로드맵](./roadmap.md)').length, 0)
-  assert.equal(scan('[상위](../cmanki/AGENTS.md)').length, 0)
+  assert.equal(scan('[상위](../sibling-repo/AGENTS.md)').length, 0)
 })
 
 test('스킴·앵커·절대경로는 상대 링크가 아니다', () => {
@@ -31,7 +31,7 @@ test('없는 파일을 잡는다', () => {
 })
 
 test('리포 밖은 묻지 않는다 — 형제 체크아웃이 없다고 게이트가 빨개지면 안 된다', () => {
-  assert.deepEqual(scan('[a](../cmanki/AGENTS.md)', () => null), [])
+  assert.deepEqual(scan('[a](../sibling-repo/AGENTS.md)', () => null), [])
 })
 
 test('링크 텍스트의 대괄호가 검사를 스킵시키지 않는다', () => {
@@ -72,7 +72,7 @@ test('실제 문서 모양에서 오탐이 없다', () => {
     '# 제목',
     '',
     '계약은 [spec](./spec-first-slice.md) `## S2` 절이다.',
-    '- [cmanki AGENTS.md](../cmanki/AGENTS.md)의 15항',
+    '- [형제 리포 AGENTS.md](../sibling-repo/AGENTS.md)의 15항',
     '- [아이데이션](./charness-artifacts/ideation/)',
     '',
     '```js',

@@ -101,6 +101,12 @@ export async function verifyAccess(request, env) {
 
   // 허용 이메일 하나. 정책이 Access 쪽에도 있지만 여기서 한 번 더 본다 —
   // 정책 실수 하나로 저널이 열리면 안 된다.
+  //
+  // **시크릿이라 없을 수 있다.** `vars`와 달리 `wrangler deploy`가 주입하지 않으므로
+  // `wrangler secret put ALLOWED_EMAIL`을 잊으면 여기가 `undefined`다. 가드가 없으면
+  // `TypeError`가 500으로 새어 `F-4`(비-JSON이면 재로그인)에도 안 걸리고 "동기화가 왜
+  // 안 되지"로만 보인다. **못 정하면 닫는다** — 열어두면 저널이 열린다.
+  if (!env.ALLOWED_EMAIL) return { ok: false, reason: 'no-allowlist' }
   const email = (payload.email ?? '').toLowerCase()
   if (email !== env.ALLOWED_EMAIL.toLowerCase()) return { ok: false, reason: 'email' }
 
