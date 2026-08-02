@@ -9,7 +9,7 @@
 손본다. **창이 30일에서 4주로 바뀌었으니 옛 화면 기준의 답을 그대로 받지 말 것.**
 
 먼저 아래 `Next Session` 1번(사람만 할 수 있는 확인)을 사용자에게 상기시킬 것.
-**그리고 배포가 아직 안 됐다** — 그래프 눈금 변경이 로컬에만 있다.
+**배포는 끝났다** (2026-08-03) — 폰에서 바로 볼 수 있다.
 
 ## Continuation Capability
 
@@ -33,13 +33,15 @@ S2 배포는 2026-07-26. 배포 직후 `AC-9` 재확인함
   의미가 있다**
 - **리포는 아직 private이다.** 공개 전환은 사용자가 판단한다 — **에이전트가 먼저
   뒤집지 않는다.** 준비(라이선스·기여 문서·문서 자기완결화)는 끝났다
-- **미해결 이슈 둘이 불변식 3에 닿아 있다** — [#2](https://github.com/spilist/journal.stdy.blog/issues/2)
-  (로컬이 이기면 서버 판본이 사본 없이 사라진다) · [#3](https://github.com/spilist/journal.stdy.blog/issues/3)
-  (충돌 사본이 내려받기에 없다). 둘 다 프로토콜/형식 결정이 필요해 이번에 안 고쳤다.
-  **#3의 형식은 "첫 날짜 이후의 비-날짜 H1은 직전 로그에 붙인다"는 새 파서 규칙과
-  충돌하므로 먼저 정해야 한다**
+- ~~미해결 이슈 둘~~ **둘 다 닫혔다 (2026-08-03, 사용자와 논의).**
+  [#2](https://github.com/spilist/journal.stdy.blog/issues/2)는 고쳤다 — push가 이겨도
+  못 본 값을 덮었으면 사본을 남긴다(`SC-6`).
+  [#3](https://github.com/spilist/journal.stdy.blog/issues/3)은 **결정을 유지**하기로
+  했다 — 충돌 사본은 로컬 전용이고 export 형식은 안 바꾼다. 대신 미해소 사본이 있으면
+  내려받기 토스트가 그 개수를 말한다
+- **`AC-11`의 새 방향은 사람이 확인한 적이 없다** — 아래 `Next Session` 참조
 
-- 게이트 확인: **`npm run gate`** (= `test` 86개 · `lint` · `check` · `build`).
+- 게이트 확인: **`npm run gate`** (= `test` 97개 · `lint` · `check` · `build`).
   `lint`는 eslint와 마크다운 링크 검사를 둘 다 돈다
 - **S2에서 새로 생긴 것** — 계약은
   [spec-first-slice.md](./spec-first-slice.md) `## S2 — 에너지 그래프`

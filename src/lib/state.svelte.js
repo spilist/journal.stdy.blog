@@ -779,22 +779,40 @@ export class Journal {
         const local = this.records[verdict.key]
         if (!outbound || !local) continue
 
+        // **이겼어도 못 본 값을 덮었으면 덮인 쪽을 사본으로 남긴다** (`SC-6`).
+        // 거절 경로의 거울이다 — 저쪽은 진 내 글자를, 이쪽은 진 서버 글자를 남긴다.
+        //
+        // **raced보다 먼저 낸다.** 판정도 사본도 **보낸 판본에 대한 것**이라 그 사이
+        // 로컬이 또 바뀐 것과 무관하다. 아래 `continue` 뒤로 두면 그 왕복에서 덮인
+        // 남의 글자가 통째로 사라진다.
+        // 사본은 한 곳에서 센다 — 토스트의 「충돌 N개」가 어느 방향이든 같은 뜻이다.
+        if (verdict.applied && verdict.server) {
+          const kept = preserveOverwritten(outbound, verdict.server)
+          if (kept) newConflicts.push(kept)
+        }
+
         // 왕복 중에 사용자가 그 블록을 또 고쳤다면 판정은 **보낸 판본에 대한 것**이라
         // 지금 값에 적용하면 안 된다. 더티로 남겨 다음 올리기에서 다시 보낸다.
         if (local.updatedAt !== outbound.updatedAt) {
           raced += 1
+          // **그래도 `syncedAt`은 보낸 판본까지 올린다.** 서버는 그걸 받았다는 게
+          // 사실인데, 로컬에 안 남기면 다음 push가 **내가 방금 올린 내 글자**를
+          // 「못 본 값」으로 오해해 사본을 만든다 — `merge.js`가 피하려던 「편집 한 번에
+          // 배지 하나」가 정확히 여기서 난다. 같은 이유로 `isDiverged`도 내 메아리를
+          // 분기로 세어 거짓 배너를 띄운다.
+          // **더티는 그대로다** — 지금 값이 더 새로우므로 다음 올리기에서 다시 간다.
+          if (verdict.applied) {
+            updates.push({
+              ...local,
+              syncedAt: Math.max(local.syncedAt ?? 0, outbound.updatedAt),
+            })
+          }
           continue
         }
 
         if (verdict.applied) {
           applied += 1
           updates.push({ ...outbound, syncedAt: outbound.updatedAt })
-          // **이겼어도 못 본 값을 덮었으면 덮인 쪽을 사본으로 남긴다** (`SC-6`).
-          // 거절 경로의 거울이다 — 저쪽은 진 내 글자를, 이쪽은 진 서버 글자를 남긴다.
-          // 워커가 판정해서 필요할 때만 `server`를 보내므로 여기서는 그냥 받는다.
-          // 사본은 한 곳에서 센다 — 토스트의 「충돌 N개」가 어느 방향이든 같은 뜻이다.
-          const kept = verdict.server && preserveOverwritten(outbound, verdict.server)
-          if (kept) newConflicts.push(kept)
         } else if (!verdict.server) {
           // 서버가 거절하면서 자기 값도 안 준 경우 — 아무것도 안 쓴 것이다. 로컬은
           // 더티로 남는데, 여기서 안 세면 **`0개 올림`만 뜨고 신호가 사라진다.**

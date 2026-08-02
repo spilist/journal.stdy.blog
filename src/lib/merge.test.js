@@ -235,3 +235,37 @@ test('거절 경로와 이긴 경로가 서로의 거울이다 — 어느 쪽이
   const older = log({ data: { text: '저쪽이 쓴 지어낸 문단' }, updatedAt: 100, syncedAt: 100 })
   assert.equal(preserveOverwritten(mine, older)?.text, '저쪽이 쓴 지어낸 문단')
 })
+
+test('올린 판본까지 syncedAt이 올라가면 내 글자가 사본이 되지 않는다 (raced 회귀)', () => {
+  // 올리기 왕복 중에 계속 타이핑하면 raced가 된다. 그때 syncedAt을 그대로 두면
+  // 다음 push가 **내가 방금 올린 내 글자**를 「못 본 값」으로 오해한다 —
+  // merge.js가 피하려던 「편집 한 번에 배지 하나」가 정확히 여기서 난다.
+  const serverGotMine = log({ data: { text: '내가 방금 올린 B' }, updatedAt: 2000, syncedAt: 2000 })
+  const stale = log({ data: { text: '그 뒤 계속 친 C' }, updatedAt: 3000, syncedAt: 1000 })
+  assert.equal(overwritesUnseen(stale, serverGotMine), true, '고치기 전이면 사본이 생긴다')
+
+  const bumped = { ...stale, syncedAt: Math.max(stale.syncedAt ?? 0, 2000) }
+  assert.equal(overwritesUnseen(bumped, serverGotMine), false)
+  assert.equal(preserveOverwritten(bumped, serverGotMine), null)
+  // 더티는 유지된다 — 지금 값이 더 새로우므로 다음 올리기에서 다시 간다.
+  assert.equal(isDirty(bumped), true)
+  // 같은 수정이 거짓 분기 배너도 닫는다 — 내 메아리를 분기로 세지 않는다.
+  assert.equal(isDiverged(bumped, serverGotMine), false)
+})
+
+test('syncedAt을 올려도 남이 쓴 못 본 값은 여전히 사본이 된다 (SC-6 유지)', () => {
+  const theirs = log({ data: { text: '다른 기기가 쓴 A' }, updatedAt: 2500, syncedAt: 2500 })
+  const mine = log({ data: { text: '내가 쓴 C' }, updatedAt: 3000, syncedAt: 2000 })
+  assert.equal(overwritesUnseen(mine, theirs), true)
+  assert.equal(preserveOverwritten(mine, theirs)?.text, '다른 기기가 쓴 A')
+})
+
+test('전선 형태(syncedAt 없음)로는 판정할 수 없다 — 그래서 워커가 아니라 클라이언트가 한다', () => {
+  // sync.js가 syncedAt을 벗겨 보내므로 서버 쪽 판정은 항상 참이 된다. 이 성질을
+  // 못 박아두지 않으면 "워커에서 걸러 페이로드를 아낀다"는 잘못된 최적화가 다시 들어온다.
+  const wire = { key: 'log:2026-03-01:오늘', kind: 'log', data: { text: 'C' }, updatedAt: 3000 }
+  const server = log({ data: { text: 'B' }, updatedAt: 2000, syncedAt: 2000 })
+  assert.equal(overwritesUnseen(/** @type {any} */ (wire), server), true, '전선에서는 항상 참')
+  // 같은 상황이라도 syncedAt을 아는 클라이언트는 정확히 판정한다.
+  assert.equal(overwritesUnseen({ ...wire, syncedAt: 2000 }, server), false)
+})
