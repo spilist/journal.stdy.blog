@@ -4,7 +4,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { scanLinks } from './check-docs.mjs'
+import { scanAcIds, scanLinks } from './check-docs.mjs'
 
 /** 전부 있는 것으로 친다 — 규약 위반만 보는 케이스에 쓴다. */
 const anything = () => true
@@ -80,4 +80,41 @@ test('실제 문서 모양에서 오탐이 없다', () => {
     '```',
   ].join('\n')
   assert.deepEqual(scan(doc, (t) => (t.startsWith('../') ? null : true)), [])
+})
+
+// ── 수용 기준 ID 네임스페이스 ────────────────────────────────────────────────
+
+test('같은 AC 번호가 두 문서에서 다른 유형으로 선언되면 잡는다', () => {
+  // 2026-08-03에 실제로 났다. 핸드오프가 「AC-22가 가장 중요하다」고 가리키는데
+  // 구현 정본의 AC-22는 이미 통과하는 unit 기준이라, 사람만 할 수 있는 확인이
+  // 「이미 닫혔다」로 읽히고 조용히 건너뛰어진다.
+  const problems = scanAcIds([
+    { file: 'docs/spec.md', text: '| ID | 유형 |\n| **AC-22** | `unit` | 점수 없는 날의 이유가 읽힌다 |' },
+    { file: 'docs/ops.md', text: '| **AC-22** | `manual` | 두 기기로 사본 방향을 확인한다 |' },
+  ])
+  assert.equal(problems.length, 1)
+  assert.match(problems[0], /AC-22/)
+  assert.match(problems[0], /docs\/spec\.md:2\(unit\)/)
+  assert.match(problems[0], /docs\/ops\.md:1\(manual\)/)
+})
+
+test('본문에서 AC 번호를 인용하는 건 선언이 아니다', () => {
+  // 표 행만 선언이다. 인용까지 세면 핸드오프가 가리킬 때마다 빨간불이 난다.
+  assert.deepEqual(
+    scanAcIds([
+      { file: 'docs/spec.md', text: '| **AC-22** | `unit` | 어떤 기준 |' },
+      { file: 'docs/handoff.md', text: '`AC-22`가 가장 중요하다. AC-22 를 먼저 볼 것.' },
+    ]),
+    [],
+  )
+})
+
+test('번호가 서로 다르면 통과한다', () => {
+  assert.deepEqual(
+    scanAcIds([
+      { file: 'docs/spec.md', text: '| **AC-22** | `unit` | 어떤 기준 |' },
+      { file: 'docs/ops.md', text: '| **AC-23** | `manual` | 다른 기준 |' },
+    ]),
+    [],
+  )
 })

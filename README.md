@@ -69,7 +69,7 @@ D1은 동기화 대상이라, 서버가 없어도 쓰기·읽기·내려받기�
 | 날짜 화면 네 블록 · 날짜 이동 · 자동저장 | **된다** | — |
 | 에너지 점수·이유 · 그래프 | **된다** | — |
 | 하루치 복사 · 전체 내려받기 · 가져오기 | **된다** | — |
-| `npm run gate` (`test`·`lint`·`check`·`build`) | **된다** | — |
+| `npm run gate` (`test`·`reach`·`lint`·`check`·`build`) | **된다** | — |
 | 「올리기」 · 자동 pull (`/api/*`) | **안 된다** | 배포본 |
 | `npm run deploy` · `npm run db:schema` | 안 된다 | Cloudflare 계정 · D1 · `.env` |
 
@@ -80,7 +80,7 @@ Worker가 Cloudflare Access의 JWT를 검증하므로 로컬에서는 인증 경
 `wrangler dev`·로컬 D1 스크립트를 **일부러 두지 않았다**.
 
 ```bash
-npm run gate         # test → lint → check → build. && 사슬이라 앞이 실패하면 뒤는 안 돈다
+npm run gate         # test → reach → lint → check → build. && 사슬이라 앞이 실패하면 뒤는 안 돈다
 npm run check        # svelte-check (jsconfig checkJs + JSDoc) + tsc(worker)
 npm run lint         # eslint + eslint-plugin-svelte, 그리고 마크다운 링크 검사
 npm run deploy       # 빌드 + Cloudflare 업로드

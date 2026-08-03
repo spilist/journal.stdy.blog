@@ -1,10 +1,16 @@
-// 마크다운 링크 검사. AGENTS.md `마크다운 링크 규약`이 "lint 실패다"라고 선언한 걸
-// 실제로 실패하게 만든다 — 선언만 있고 강제가 없으면 규약이 아니라 희망이다.
+// 문서 검사. AGENTS.md `마크다운 링크 규약`이 "lint 실패다"라고 선언한 걸 실제로
+// 실패하게 만든다 — 선언만 있고 강제가 없으면 규약이 아니라 희망이다.
 //
-// **markdownlint을 넣지 않는 이유** (설계 취향 9항): 여기서 필요한 규칙은 둘이다.
+// **markdownlint을 넣지 않는 이유** (설계 취향 9항): 여기서 필요한 규칙은 셋이다.
 // 라이브러리는 나머지 수십 개 규칙과 설정 파일과 예외 목록을 함께 들고 온다 —
 // 린터가 취향을 다투기 시작하면 신호가 잡음에 묻힌다. **대신 이 파일이 200줄로
 // 자라면 그 근거가 사라진다**: 새 규칙을 넣기 전에 그걸 먼저 볼 것.
+//
+// **2026-08-03에 그 트립와이어를 실제로 밟았고, 근거는 그대로 두기로 했다.**
+// 셋째 규칙(`scanAcIds`)은 마크다운 문법 규칙이 아니라 **이 리포의 계약 ID
+// 네임스페이스**에 대한 것이라 markdownlint이 대신할 수 있는 종류가 아니다.
+// 트립와이어가 겨냥한 건 "마크다운 문체 규칙이 쌓이는 것"이고 그건 여전히 0건이다.
+// **다음에 또 밟으면 그때는 이 근거를 다시 세울 것.**
 //
 // **하지 않는 것**: 백틱 토큰 규약(AGENTS.md 두 번째 줄). 실측 44건 중 대부분이
 // `.js`·`.gitignore`처럼 정당한 개념 토큰이라 기계화하면 잡음만 남는다.
@@ -125,6 +131,50 @@ export function scanLinks(text, lookup) {
   return problems
 }
 
+/**
+ * 수용 기준 ID 선언. 표의 `| **AC-7** | `unit` | …` 행만 센다 — 본문에서 `AC-7`을
+ * **인용**하는 건 선언이 아니다.
+ */
+const AC_ROW = /^\|\s*\*{0,2}(AC-\d+)\*{0,2}\s*\|\s*`?(unit|manual)`?\s*\|/
+
+/**
+ * **같은 `AC-<n>`이 두 문서에서 서로 다른 기준으로 선언되면 실패한다.**
+ *
+ * 2026-08-03에 실제로 났다: 구현 정본이 `AC-22`를 `unit`으로 쓰고 있는데 운영자 인수
+ * 문서가 같은 번호로 전혀 다른 `manual` 기준을 새로 정의했다. 핸드오프는 「`AC-22`가
+ * 가장 중요하다」고 가리키는데, 그걸 읽고 구현 정본을 찾아간 사람은 **이미 통과하는
+ * 단위 테스트**를 보고 「닫혔다」고 판정한다 — 사람만 할 수 있는 유일한 미검증
+ * 확인이 조용히 건너뛰어진다. 두 문서는 [운영자 인수](../docs/operator-acceptance.md)가
+ * 스스로 선언하듯 **같은 네임스페이스를 공유한다.**
+ *
+ * 사람의 기억으로 지킬 수 없고 규칙이 한 줄이라 여기서 강제한다.
+ *
+ * @param {{file: string, text: string}[]} docs
+ * @returns {string[]}
+ */
+export function scanAcIds(docs) {
+  /** @type {Map<string, {file: string, line: number, type: string}[]>} */
+  const seen = new Map()
+  for (const { file, text } of docs) {
+    text.split('\n').forEach((line, i) => {
+      const m = AC_ROW.exec(line)
+      if (!m) return
+      const list = seen.get(m[1]) ?? []
+      list.push({ file, line: i + 1, type: m[2] })
+      seen.set(m[1], list)
+    })
+  }
+  const problems = []
+  for (const [id, sites] of seen) {
+    if (sites.length < 2) continue
+    problems.push(
+      `${id} 가 ${sites.length}곳에서 선언됐다 — ` +
+        sites.map((s) => `${s.file}:${s.line}(${s.type})`).join(' · '),
+    )
+  }
+  return problems
+}
+
 /** @param {string} p */
 function decode(p) {
   // `%`가 인코딩이 아닌 경우(`50%-off.md`)에 URIError로 죽지 않게 한다.
@@ -153,6 +203,8 @@ async function main() {
   const files = [...tracked].filter((f) => f.endsWith('.md'))
   /** @type {string[]} */
   const problems = []
+  /** @type {{file: string, text: string}[]} */
+  const docs = []
 
   for (const file of files) {
     /** @param {string} target */
@@ -164,17 +216,20 @@ async function main() {
       // 링크가 로컬에서만 통과하고 커밋된 리포에서는 깨진다.
       return tracked.has(rel) || dirs.has(rel) || (rel === '' && existsSync(abs))
     }
-    for (const p of scanLinks(await readFile(file, 'utf8'), lookup)) {
+    const text = await readFile(file, 'utf8')
+    docs.push({ file, text })
+    for (const p of scanLinks(text, lookup)) {
       problems.push(`${file}:${p.line}  ${p.message}`)
     }
   }
+  problems.push(...scanAcIds(docs))
 
   if (problems.length) {
-    console.error(`마크다운 링크 ${problems.length}건:`)
+    console.error(`문서 검사 ${problems.length}건:`)
     for (const p of problems) console.error(`  ${p}`)
     process.exit(1)
   }
-  console.log(`마크다운 링크 확인 — ${files.length}개 파일, 문제 없음`)
+  console.log(`문서 확인 — ${files.length}개 파일, 링크와 수용 기준 ID 문제 없음`)
 }
 
 // 테스트가 import 할 때는 돌지 않는다.
