@@ -27,6 +27,24 @@ import { pull, push } from './sync.js'
 const SAVE_DELAY_MS = 1000
 
 /**
+ * 한 번의 push에 담는 레코드 수.
+ *
+ * **워커는 레코드마다 D1 쿼리를 둘 낸다** — 읽기(`readOne`) 하나와 쓰기 하나. 그런데
+ * D1은 **Worker 호출 하나당 쿼리 1000개(유료)·50개(무료)**가 상한이다. 쪼개지 않으면
+ * 더티가 그 절반을 넘는 순간 push가 **결정적으로** 500이 된다.
+ *
+ * **그 경로가 하필 첫 사용이다**: 기존 저널 마크다운을 통째로 가져오면 전부 더티가
+ * 되고(하루 5레코드 × 200일 = 1000개), 「올리기」가 영영 안 된다.
+ *
+ * 200이면 왕복당 쿼리 ~400으로 유료 상한의 절반 아래다. 무료 플랜은 이 값으로도
+ * 넘치지만, 이 앱은 D1 유료 계정에 배포돼 있다.
+ *
+ * **쪼개면 실패 모드도 좋아진다** — 앞 묶음은 이미 저장됐고, 다시 누르면 남은 더티만
+ * 간다. 통짜 요청은 999개가 성공해도 전부 없던 일이 됐다.
+ */
+const PUSH_CHUNK = 200
+
+/**
  * 자동 pull의 최소 간격. **모바일 `visibilitychange`는 앱을 오갈 때마다 연달아 뜬다** —
  * 간격이 없으면 탭 전환을 반복하는 것만으로 왕복이 쌓인다. 사람이 부른 pull은 이
  * 간격을 무시한다.
@@ -733,8 +751,8 @@ export class Journal {
   /** 사람이 버튼을 눌렀을 때만 (`D3`, 불변식 2). */
   async pushNow() {
     this.flush()
-    const sent = Object.values(this.records).filter(isDirty).map((r) => $state.snapshot(r))
-    if (!sent.length) {
+    const all = Object.values(this.records).filter(isDirty).map((r) => $state.snapshot(r))
+    if (!all.length) {
       // 더티가 없으면 분기도 없다. 배너를 남겨두면 "「올리기」를 누르면 정해집니다"가
       // 통하지 않는 막다른 골목이 된다.
       this.diverged = 0
@@ -744,11 +762,21 @@ export class Journal {
       return
     }
     this.syncState = 'syncing'
-    /** @type {Record<string, Rec>} */
-    const sentByKey = Object.create(null)
-    for (const rec of sent) sentByKey[rec.key] = rec
+
+    let applied = 0
+    let rejected = 0
+    let stuck = 0
+    let raced = 0
+    let conflicted = 0
 
     try {
+      // **묶음마다 따로 보내고 따로 저장한다.** 이유는 `PUSH_CHUNK` 주석에 있다.
+      for (let at = 0; at < all.length; at += PUSH_CHUNK) {
+      const sent = all.slice(at, at + PUSH_CHUNK)
+      /** @type {Record<string, Rec>} */
+      const sentByKey = Object.create(null)
+      for (const rec of sent) sentByKey[rec.key] = rec
+
       const res = await push(sent)
       if (res.relogin) {
         this.syncState = 'relogin'
@@ -766,13 +794,9 @@ export class Journal {
       const updates = []
       /** @type {import('./store.js').Conflict[]} */
       const newConflicts = []
-      let raced = 0
       // **거절은 올린 게 아니다.** 예전엔 둘을 합쳐 세서 "N개 올림"이 서버 값을
       // 받아온 건까지 포함했다. 진 쪽이 비어 사본도 안 남는 경우(`F-8`)에는
       // 그 토스트가 유일한 신호인데, 그게 거짓말이면 사용자는 올라간 줄 안다.
-      let applied = 0
-      let rejected = 0
-      let stuck = 0
 
       for (const verdict of res.verdicts) {
         const outbound = sentByKey[verdict.key]
@@ -802,10 +826,12 @@ export class Journal {
           // 분기로 세어 거짓 배너를 띄운다.
           // **더티는 그대로다** — 지금 값이 더 새로우므로 다음 올리기에서 다시 간다.
           if (verdict.applied) {
-            updates.push({
-              ...local,
-              syncedAt: Math.max(local.syncedAt ?? 0, outbound.updatedAt),
-            })
+            // **`$state.snapshot`이 필수다.** `{...local}`은 얕은 전개라 `data`가
+            // 프록시로 남고, IndexedDB의 `put`은 `structuredClone`이라 `DataCloneError`로
+            // 던진다 — 이 묶음 전체가 안 써지고 「저장 실패」가 뜬다.
+            // 저장소로 넘어가는 다른 네 곳은 전부 이미 이걸 쓴다.
+            const snap = $state.snapshot(local)
+            updates.push({ ...snap, syncedAt: Math.max(snap.syncedAt ?? 0, outbound.updatedAt) })
           }
           continue
         }
@@ -840,8 +866,10 @@ export class Journal {
       }
       for (const rec of updates) this.records[rec.key] = rec
       if (newConflicts.length) this.conflicts = await db.allConflicts()
+      conflicted += newConflicts.length
       // **`lastPulledAt`을 여기서 옮기지 않는다.** push 응답은 내가 보낸 키의 판정만
       // 담고 있어서, 커서를 밀면 그 사이 서버에 생긴 다른 기기의 변경을 영영 건너뛴다.
+      }
 
       // 보낸 것은 판정을 받았으므로(적용됐거나 사본이 됐다) 분기는 여기서 닫힌다.
       // **단 `raced`는 아직 더티다** — 그 분기는 해소되지 않았는데 배너를 내리면
@@ -852,7 +880,7 @@ export class Journal {
       this.#say(
         `${applied}개 올림` +
           (rejected ? `, ${rejected}개는 서버가 더 새로워 받아옴` : '') +
-          (newConflicts.length ? `, 충돌 ${newConflicts.length}개` : '') +
+          (conflicted ? `, 충돌 ${conflicted}개` : '') +
           (raced ? `, ${raced}개는 편집 중이라 다음에` : '') +
           (stuck ? `, ${stuck}개는 서버가 받지 않았습니다` : ''),
       )

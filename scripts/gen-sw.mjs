@@ -83,12 +83,18 @@ self.addEventListener('fetch', (e) => {
 
   // 화면 이동은 네트워크 먼저, 끊겼으면 앱 셸로. 쿼리가 붙은 진입(?x=1)도 같은 셸이다.
   if (e.request.mode === 'navigate') {
-    e.respondWith(fetch(e.request).catch(() => caches.match('/index.html')))
+    e.respondWith(fetch(e.request).catch(() => caches.match('/index.html', { cacheName: CACHE })))
     return
   }
 
+  // **반드시 이번 캐시에서만 찾는다.** 이름 없이 부르면 CacheStorage가 **생성 순**으로
+  // 훑어 옛 캐시가 먼저 잡힌다 — 부분 캐시일 때 옛 캐시를 남기게 되면서 생긴 구멍이다.
+  // 해시가 없는 /index.html·매니페스트가 영영 옛 판으로 고정되는데, 그건 이 파일이
+  // 피하려는 바로 그 실패다. 못 찾으면 네트워크로 간다.
   e.respondWith(
-    caches.match(e.request, { ignoreSearch: true }).then((hit) => hit ?? fetch(e.request)),
+    caches
+      .match(e.request, { ignoreSearch: true, cacheName: CACHE })
+      .then((hit) => hit ?? fetch(e.request)),
   )
 })
 `,

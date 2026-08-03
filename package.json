@@ -8,7 +8,7 @@
     "dev": "vite --host",
     "build": "vite build && node scripts/gen-sw.mjs",
     "preview": "vite preview --host",
-    "test": "node --test src/lib/*.test.js scripts/*.test.js",
+    "test": "node --test",
     "gate": "npm test && npm run lint && npm run check && npm run build",
     "check": "svelte-check --tsconfig ./jsconfig.json && npm run check:worker",
     "lint": "eslint . && node scripts/check-docs.mjs",

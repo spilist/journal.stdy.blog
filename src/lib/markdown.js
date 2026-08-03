@@ -207,22 +207,3 @@ export function assemble({ pinned = '', days }) {
   return parts.join('\n\n') + '\n'
 }
 
-/**
- * 화면이 쓰기 편하도록 하루를 정규화한다 — 세 차원과 두 블록이 늘 있는 모양.
- * **파싱 결과에는 적용하지 않는다** (없던 줄을 만들어내면 왕복이 깨진다).
- *
- * @param {string} date
- * @param {Partial<DayEntry>} [seed]
- * @returns {DayEntry}
- */
-export function blankDay(date, seed) {
-  const energy = DIMS.map((dim) => {
-    const found = seed?.energy?.find((e) => e.dim === dim)
-    return found ?? { dim, score: null, reason: '' }
-  })
-  const logs = LOG_KINDS.map((kind) => {
-    const found = seed?.logs?.find((l) => l.kind === kind)
-    return found ?? { kind, text: '' }
-  })
-  return { date, energy, logs }
-}

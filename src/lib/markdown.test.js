@@ -8,7 +8,6 @@ import {
   assemble,
   assembleDay,
   assembleEnergyLine,
-  blankDay,
   parse,
   parseEnergyLine,
 } from './markdown.js'
@@ -129,18 +128,6 @@ test('하루치 조립에는 고정 블록이 빠진다 (D13)', () => {
   assert.ok(out.includes('## 어제'))
 })
 
-test('blankDay는 세 차원과 두 블록을 채운다', () => {
-  const day = blankDay('2026-03-05')
-  assert.deepEqual(
-    day.energy.map((e) => e.dim),
-    ['인지', '정서', '육체'],
-  )
-  assert.deepEqual(
-    day.logs.map((l) => l.kind),
-    ['어제', '오늘'],
-  )
-  assert.equal(assembleDay(day), '# 26-03-05\n\n## 에너지\n- 인지:\n- 정서:\n- 육체:\n\n## 어제\n\n\n## 오늘\n')
-})
 
 test('빈 입력이 터지지 않는다', () => {
   assert.deepEqual(parse(''), { pinned: '', days: [], unparsed: [] })
