@@ -1,0 +1,13 @@
+src/App.svelte
+src/lib/Conflicts.svelte
+src/lib/Energy.svelte
+src/lib/Graph.svelte
+src/lib/ImportPanel.svelte
+src/lib/LogBlock.svelte
+src/lib/Pinned.svelte
+src/lib/autogrow.js
+src/lib/store.js
+src/lib/sync.js
+src/main.js
+worker/access.js
+worker/index.js

@@ -17,6 +17,8 @@
 import { createHash } from 'node:crypto'
 import { readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs'
 import { join, relative } from 'node:path'
+import { argv } from 'node:process'
+import { fileURLToPath } from 'node:url'
 
 const DIST = 'dist'
 
@@ -28,19 +30,18 @@ function walk(dir) {
   })
 }
 
-const files = walk(DIST).filter((p) => !p.endsWith('sw.js'))
-const assets = files.map((p) => '/' + relative(DIST, p).split(/[\\/]/).join('/'))
-
-// 이름이 아니라 **내용**으로 버전을 만든다. 해시 안 붙는 파일만 바뀌어도 버전이 움직인다.
-const digest = createHash('sha256')
-for (const [i, file] of files.entries()) {
-  digest.update(assets[i]).update(readFileSync(file))
-}
-const version = 'v' + digest.digest('base64url').slice(0, 16)
-
-writeFileSync(
-  join(DIST, 'sw.js'),
-  `const CACHE = ${JSON.stringify(version)}
+/**
+ * 서비스워커 소스. **파일 시스템을 안 만지는 순수 함수라 테스트가 돌릴 수 있다** —
+ * 여기 있는 규칙 둘(옛 셸에 갇히지 않기·오프라인 백지 안 되기)이 서로를 상쇄한 적이
+ * 있어서, 문자열을 검사하는 게 아니라 **실제로 실행해** 확인한다
+ * ([gen-sw.test.js](./gen-sw.test.js)).
+ *
+ * @param {string} version 캐시 이름
+ * @param {string[]} assets 캐시할 경로
+ * @returns {string}
+ */
+export function serviceWorkerSource(version, assets) {
+  return `const CACHE = ${JSON.stringify(version)}
 // '/' 는 넣지 않는다 — Access 로그인 리다이렉트 하나로 install 전체가 깨진다.
 const ASSETS = ${JSON.stringify(assets)}
 
@@ -114,7 +115,19 @@ self.addEventListener('fetch', (e) => {
       .then((res) => res ?? Response.error()),
   )
 })
-`,
-)
+`
+}
 
-console.log(`sw.js ${version} — ${assets.length} assets`)
+// 직접 실행할 때만 dist 를 읽고 쓴다. import 는 위 함수만 가져간다.
+if (argv[1] && fileURLToPath(import.meta.url) === argv[1]) {
+  const files = walk(DIST).filter((p) => !p.endsWith('sw.js'))
+  const assets = files.map((p) => '/' + relative(DIST, p).split(/[\\/]/).join('/'))
+  // 이름이 아니라 **내용**으로 버전을 만든다. 해시 안 붙는 파일만 바뀌어도 버전이 움직인다.
+  const digest = createHash('sha256')
+  for (const [i, file] of files.entries()) {
+    digest.update(assets[i]).update(readFileSync(file))
+  }
+  const version = 'v' + digest.digest('base64url').slice(0, 16)
+  writeFileSync(join(DIST, 'sw.js'), serviceWorkerSource(version, assets))
+  console.log(`sw.js ${version} — ${assets.length} assets`)
+}

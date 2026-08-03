@@ -29,6 +29,7 @@ npm run gate    # 보내기 전에
 | [merge.js](./src/lib/merge.js) | 동기화 병합 규칙. 블록 단위 LWW + 진 쪽을 `conflict` 사본으로 |
 | [series.js](./src/lib/series.js) | 그래프 좌표 계산. 결측일에 선을 끊는다 |
 | [date.js](./src/lib/date.js) | KST 캘린더 날짜. 날짜와 순간을 섞지 않는다 |
+| [state.svelte.js](./src/lib/state.svelte.js) | 화면 상태와 동기화. 룬을 쓰지만 [하네스](./src/lib/state.harness.js)로 Node에서 돈다 |
 
 그 밖에:
 
@@ -61,7 +62,11 @@ npm run gate    # 보내기 전에
 
 ## 보내기 전에
 
-- **`npm run gate`를 통과시킬 것** (`test` → `lint` → `check` → `build`). 계정 없이 돈다.
+- **`npm run gate`를 통과시킬 것** (`test` → `reach` → `lint` → `check` → `build`).
+  계정 없이 돈다.
+- **새 프로덕션 파일에는 테스트가 붙어야 한다.** `reach`가 「테스트가 로드하지 않는
+  파일」 목록이 늘어나면 실패시킨다. 순수 함수는 그냥 붙이면 되고, `state.svelte.js`처럼
+  룬을 쓰는 파일은 [하네스](./src/lib/state.harness.js)가 이미 있다.
 - **테스트를 붙일 것.** 순수 함수를 고쳤으면 같은 이름의 `*.test.js`에 케이스를 더한다.
   **픽스처는 지어낸 문장을 쓴다** — 실제 저널을 복사하지 않는다.
 - **커밋을 좁게.** 한 커밋이 한 가지를 한다.

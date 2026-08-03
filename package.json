@@ -9,12 +9,13 @@
     "build": "vite build && node scripts/gen-sw.mjs",
     "preview": "vite preview --host",
     "test": "node --test",
-    "gate": "npm test && npm run lint && npm run check && npm run build",
+    "gate": "npm test && npm run reach && npm run lint && npm run check && npm run build",
     "check": "svelte-check --tsconfig ./jsconfig.json && npm run check:worker",
     "lint": "eslint . && node scripts/check-docs.mjs",
     "deploy": "npm run build && wrangler deploy",
     "db:schema": "wrangler d1 execute journal-db --remote --file=worker/schema.sql",
-    "check:worker": "tsc -p worker/jsconfig.json"
+    "check:worker": "tsc -p worker/jsconfig.json",
+    "reach": "node scripts/check-reach.mjs"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260724.1",

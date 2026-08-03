@@ -138,6 +138,11 @@ export class Journal {
     this.#messageTimer = setTimeout(() => {
       if (this.syncMessage === message) this.syncMessage = ''
     }, 4000)
+    // Node에서는 이 타이머가 프로세스를 4초 붙잡아 테스트가 그만큼 느려진다.
+    // 브라우저의 타이머 핸들에는 `unref`가 없으므로 `?.()`가 그냥 지나간다.
+    // **`(`로 시작하는 줄을 쓰지 않는다** — 세미콜론이 없는 코드라 앞 줄의 호출이 된다.
+    const handle = /** @type {{unref?: () => void}} */ (this.#messageTimer)
+    handle.unref?.()
   }
 
   async load() {
