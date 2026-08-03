@@ -5,6 +5,7 @@ import { addDays, kstDate } from './date.js'
 import { DIMS, LOG_KINDS, assemble, assembleDay, parse } from './markdown.js'
 import {
   countDirty,
+  describe,
   hasContent,
   isDirty,
   isDiverged,
@@ -60,6 +61,37 @@ const AUTO_PULL_MIN_MS = 30_000
 function blank(key, kind, data) {
   // updatedAt 0 = 한 번도 손대지 않음. 더티가 아니므로 push 대상도 아니다.
   return { key, kind, data, updatedAt: 0, syncedAt: 0 }
+}
+
+/**
+ * 가져오기 판정용 내용 비교. 점수와 이유는 한 레코드를 공유하므로 둘 다 봐야 한다.
+ *
+ * @param {string} kind
+ * @param {Record<string, any>} a
+ * @param {Record<string, any>} b
+ * @returns {boolean}
+ */
+function sameImportData(kind, a, b) {
+  return kind === 'energy' ? a.score === b.score && a.reason === b.reason : a.text === b.text
+}
+
+/**
+ * 이 가져오기 항목이 **이미 있는 다른 글자를 덮는가.**
+ *
+ * **미리보기와 저장, 두 시점에서 같은 규칙으로 묻는다.** 가져오기 패널은 모달이
+ * 아니라 본문 블록 아래에 그대로 열려 있어서(`App.svelte`), 미리보기를 낸 뒤 위로
+ * 올라가 「오늘」에 한 줄 쓰는 게 정상 경로다. 앱을 잠깐 나갔다 오면 자동 pull이 그
+ * 키를 채우기도 한다. 미리보기 시점의 판정을 저장 때 그대로 쓰면 그 글자가 파일
+ * 내용으로 대체되는데, **여기엔 충돌 사본도 되돌리기도 없다** (불변식 3).
+ *
+ * @param {Rec | undefined} existing
+ * @param {string} kind
+ * @param {Record<string, any>} data
+ * @returns {boolean}
+ */
+function importCollides(existing, kind, data) {
+  if (!existing || !hasContent(existing)) return false
+  return !sameImportData(kind, existing.data, data)
 }
 
 export class Journal {
@@ -145,12 +177,20 @@ export class Journal {
     handle.unref?.()
   }
 
+  /**
+   * 로컬을 못 읽었는가. **`records`가 비어 있는 것과 "레코드가 없는 것"은 다르다** —
+   * 구별하지 않으면 pull이 전부 `new`로 수락해 디스크의 미동기화 판본을 덮는다.
+   * 반응형 상태가 아니다.
+   */
+  #loadFailed = false
+
   async load() {
     try {
       await this.#load()
     } catch (err) {
       // 여기서 조용히 실패하면 `loaded`가 false로 남아 에너지·어제·오늘 블록이
       // 통째로 안 뜬다. 사용자는 "앱이 반쯤 비어 있다"만 본다.
+      this.#loadFailed = true
       this.storageError = `로컬 저장소를 열지 못했습니다 (${err}). 프라이빗 모드이거나 저장 공간이 부족할 수 있습니다.`
       this.loaded = true
     }
@@ -172,6 +212,68 @@ export class Journal {
     this.conflicts = conflicts
     this.loaded = true
     db.requestPersistence()
+  }
+
+  /**
+   * 디스크를 다시 읽어 메모리와 합친다.
+   *
+   * **같은 브라우저의 다른 탭이 쓴 판본은 이 경로가 아니면 절대 안 들어온다.** pull은
+   * 서버만 읽고 `#load`는 마운트에 한 번뿐이다. 그래서 탭 둘을 열어두면 나중에 커밋한
+   * 탭이 앞 탭의 글자를 **사본도 신호도 없이** 덮었다 — 로컬-로컬 덮어쓰기라 push 쪽
+   * 사본 경로(`resolveRejected`·`preserveOverwritten`)가 닿지 않는 자리다 (불변식 3).
+   *
+   * 규칙은 병합과 같다: `updatedAt`이 큰 쪽이 살고 **진 쪽에 다른 글자가 있으면 사본을
+   * 남긴다.** 새 인출 통로를 만들지 않는다 — 사본은 이미 블록 아래에 붙어 있다
+   * (`Conflicts.svelte`, 설계 취향 1항).
+   *
+   * 디바운스 중인 입력이 있는 키는 건드리지 않는다. 아직 커밋 안 된 글자를 디스크
+   * 판본으로 밀면 화면에서 글자가 사라진다 — `pullNow`의 `#hasPendingEdit`과 같은 이유다.
+   */
+  async reload() {
+    if (!this.loaded || this.#loadFailed) return
+    /** @type {Rec[]} */
+    let disk
+    try {
+      disk = await db.allRecords()
+    } catch (err) {
+      this.storageError = `로컬 저장소를 읽지 못했습니다 (${err})`
+      return
+    }
+
+    /** @type {import('./store.js').Conflict[]} */
+    const kept = []
+    /** @type {Rec[]} */
+    const writeBack = []
+    for (const other of disk) {
+      const mine = this.records[other.key]
+      if (!mine) {
+        this.records[other.key] = other
+        continue
+      }
+      if (this.#hasPendingEdit(other.key)) continue
+      if (other.updatedAt === mine.updatedAt) continue
+      const otherWins = other.updatedAt > mine.updatedAt
+      const loser = otherWins ? mine : other
+      const winner = otherWins ? other : mine
+      // 개정 스냅샷은 자동 밀봉본이라 사본을 만들지 않는다 (`D11`) — `merge.js`의
+      // 두 사본 경로와 같은 예외다.
+      if (loser.kind !== 'revision' && hasContent(loser) && describe(loser) !== describe(winner)) {
+        kept.push({ target: loser.key, text: describe(loser), at: loser.updatedAt })
+      }
+      if (otherWins) this.records[other.key] = other
+      else writeBack.push($state.snapshot(mine))
+    }
+
+    if (!kept.length && !writeBack.length) return
+    try {
+      // 사본이 먼저다 — `#push`와 같은 순서, 같은 이유다.
+      await db.addConflicts(kept)
+      await db.putRecords(writeBack)
+    } catch (err) {
+      this.storageError = `저장 실패 — 이 화면의 글자를 다른 곳에 복사해 두세요 (${err})`
+      return
+    }
+    if (kept.length) this.conflicts = await db.allConflicts()
   }
 
   // ── 읽기 ────────────────────────────────────────────────────────────────
@@ -500,10 +602,20 @@ export class Journal {
    * 날짜 정규식에 안 걸려 **그래프에도 내려받기에도 안 나온다** — 인출 통로가 아예
    * 없는 저장이다 (설계 취향 15항). `shiftDate`도 이 문을 지난다.
    *
+   * **연도는 `20xx`만 받는다.** 정본 마크다운의 H1이 두 자리 연도라 `fromH1`이 `20`을
+   * 무조건 앞에 붙인다 (`references/sample.md`) — 즉 **2000~2099 밖 날짜는 export
+   * 형식으로 표현할 수 없다.** 데스크톱 `input[type=date]`의 연 칸에 `0226`을 치면
+   * 모양 가드만으로는 통과해서, 그날에 쓴 글이 「전체 내려받기」에서 진짜 `2026`년
+   * 그날과 **같은 `# 26-08-03` 두 개**로 나가고, 다시 가져올 때 하나가 「파일에 두 번
+   * 나옴」으로 건너뛰어진다. 그 파일만 들고 복원하면 하루치가 사라진다 (불변식 3).
+   *
+   * 같은 가드가 그래프도 지킨다 — `series.js`의 전체 스팬은 earliest→today를 하루씩
+   * 걷는 루프라, 연도 하나가 어긋나면 그 루프가 65만 회가 된다.
+   *
    * @param {string} date
    */
   goTo(date) {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return
+    if (!/^20\d{2}-\d{2}-\d{2}$/.test(date)) return
     this.flush()
     this.date = date
   }
@@ -571,6 +683,16 @@ export class Journal {
     /** @param {string} kind @param {Record<string, any>} data */
     const isEmpty = (kind, data) => !hasContent({ kind, data })
 
+    // **선형 탐색이 아니다.** 예전엔 `writes.some(...)`로 매번 배열을 훑어서, 5년치
+    // (하루 5레코드 × 1825일) 가져오기에 비교가 4천만 번 났다 — 폰에서 미리보기
+    // 버튼이 몇 초간 먹통이 되고, 반응이 없어 두 번 누르게 된다.
+    //
+    // `Set`이 아니라 널 프로토타입 객체다. 이 파일의 `#timers`·`#pending`과 같은
+    // 관용이고, 룬 파일에서 `Set`을 쓰면 린터가 `SvelteSet`을 요구한다 — 반응형이
+    // 아니어야 할 지역 변수에 반응형 자료구조를 들이는 건 반대 방향이다.
+    /** @type {Record<string, true>} */
+    const staged = Object.create(null)
+
     /**
      * @param {string} key
      * @param {string} kind
@@ -582,24 +704,20 @@ export class Journal {
       // `## 오늘`이 두 번 있으면(손으로 이어붙인 파일에서 흔하다) 뒤엣것이 앞엣것을
       // 조용히 덮어썼다 — 미리보기는 개수만 보여주므로 화면에 드러나지도 않는다.
       // 여기서 막고 「건너뜀」으로 보이게 한다.
-      if (writes.some((w) => w.key === key)) {
+      if (staged[key]) {
         skipped.push(`${label} (파일에 두 번 나옴)`)
         return
       }
       const existing = this.records[key]
-      const filled = existing && !isEmpty(kind, existing.data)
-      const same =
-        kind === 'energy'
-          ? existing?.data.score === data.score && existing?.data.reason === data.reason
-          : existing?.data.text === data.text
-      if (filled && !same) {
+      if (importCollides(existing, kind, data)) {
         skipped.push(label)
         return
       }
-      if (same) return
+      if (existing && sameImportData(kind, existing.data, data)) return
       // **빈 값을 새 레코드로 쓰지 않는다.** `- 인지:` 같은 빈 줄이 지금 시각으로
       // 더티가 되면, 다른 기기가 이미 올려둔 점수를 올리기 한 번에 NULL로 덮는다.
       if (isEmpty(kind, data)) return
+      staged[key] = true
       writes.push({ key, kind, data, updatedAt: now, syncedAt: 0 })
     }
 
@@ -627,14 +745,19 @@ export class Journal {
 
   /**
    * @param {Rec[]} writes
+   * @returns {Promise<{written: number, skipped: number}>}
    */
   async applyImport(writes) {
     // 이 배열은 화면의 `$state`를 거쳐 오므로 **깊은 프록시**다. 프록시는
     // structured clone이 안 돼서 IndexedDB `put`이 `DataCloneError`로 터진다.
     // 저장소 경계를 넘기 전에 항상 벗긴다.
     const plain = writes.map((rec) => $state.snapshot(rec))
-    await db.putRecords(plain)
-    for (const rec of plain) this.records[rec.key] = rec
+    // **미리보기 시점의 판정을 그대로 믿지 않는다.** 사이에 그 블록을 썼거나 자동
+    // pull이 채웠으면 지금은 덮으면 안 되는 자리다 — 이유는 `importCollides`에 있다.
+    const fresh = plain.filter((rec) => !importCollides(this.records[rec.key], rec.kind, rec.data))
+    await db.putRecords(fresh)
+    for (const rec of fresh) this.records[rec.key] = rec
+    return { written: fresh.length, skipped: plain.length - fresh.length }
   }
 
   // ── 동기화 ──────────────────────────────────────────────────────────────
@@ -660,6 +783,11 @@ export class Journal {
    */
   async pullNow({ auto = false } = {}) {
     if (this.#pulling) return
+    // **로컬을 못 읽었으면 받은 것을 쓰지 않는다.** `records`가 비어 있어서 모든 원격
+    // 키가 `new`로 수락되는데, 디스크에는 아직 안 올린 로컬 판본이 그대로 남아 있다 —
+    // 그대로 쓰면 그 글자가 서버의 **옛** 판본으로 덮인다. 배너는 뜨지만 글자는 이미
+    // 사라진 뒤다 (불변식 3). `storageError`가 화면에 남아 있으므로 조용하지 않다.
+    if (this.#loadFailed) return
     // **재로그인 안내를 자동 pull이 지우면 안 된다.** 지우고 나면 실패는 '오프라인'으로
     // 표시되고, 사용자는 새로고침해야 한다는 걸 모른 채 계속 쓴다.
     if (auto && this.syncState === 'relogin') return

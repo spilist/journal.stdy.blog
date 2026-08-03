@@ -5,6 +5,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
 import {
+  DIMS,
   assemble,
   assembleDay,
   assembleEnergyLine,
@@ -181,4 +182,28 @@ test('날짜는 있는데 로그가 없으면 뒤따르는 H1을 버리지 않�
   assert.equal(p.pinned, '')
   assert.equal(p.unparsed.length, 1)
   assert.match(p.unparsed[0].line, /붙일 자리 없는 제목/)
+})
+
+test('NFD 한글 차원 이름은 NFC 키로 정규화된다 — 안 하면 인출 통로가 없는 레코드가 된다', () => {
+  // macOS에서 온 파일은 한글이 자모 분해(NFD)로 들어온다. 그대로 키를 만들면
+  // `energy:2026-08-03:인지(NFD)` 가 되어 화면·그래프·내려받기 어디에도 안 나오는데,
+  // 더티로는 세어져 서버까지 올라간다 — 사용자는 가져왔다고 믿고 원본을 지운다.
+  const nfd = '인지'.normalize('NFD')
+  assert.notEqual(nfd, '인지', '전제 확인 — NFD와 NFC는 다른 문자열이다')
+
+  const entry = parseEnergyLine(`- ${nfd}: 8. 지어낸 이유`)
+  assert.equal(entry?.dim, '인지', '키는 NFC로 맞춘다')
+  assert.ok(DIMS.includes(/** @type {any} */ (entry?.dim)), '알려진 차원으로 읽힌다')
+
+  // 이유는 사용자 글자라 정규화하지 않는다.
+  const kept = '카페'.normalize('NFD')
+  assert.equal(parseEnergyLine(`- 정서: 5. ${kept}`)?.reason, kept)
+})
+
+test('NFD 섹션 이름도 키라 정규화된다', () => {
+  const raw = `# 26-08-03\n\n## ${'에너지'.normalize('NFD')}\n- 인지: 8. 지어낸 이유\n\n## ${'오늘'.normalize('NFD')}\n지어낸 문단\n`
+  const out = parse(raw)
+  assert.equal(out.unparsed.length, 0, '통째로 해석 못 한 줄이 되면 안 된다')
+  assert.equal(out.days[0].energy[0].score, 8)
+  assert.deepEqual(out.days[0].logs, [{ kind: '오늘', text: '지어낸 문단' }])
 })

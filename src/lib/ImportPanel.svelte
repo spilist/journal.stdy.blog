@@ -39,10 +39,15 @@
     if (!preview) return
     busy = true
     error = ''
-    const count = preview.writes.length
     try {
-      await journal.applyImport(preview.writes)
-      onclose(`${count}개를 저장했습니다. 「↑ 올리기」를 눌러야 서버로 갑니다`)
+      // **저장 시점에 다시 판정한다.** 미리보기 뒤에 그 블록을 썼거나 자동 pull이
+      // 채웠으면 그 항목은 빠진다 — 개수를 그때 세야 사실을 말한다.
+      const { written, skipped } = await journal.applyImport(preview.writes)
+      onclose(
+        `${written}개를 저장했습니다` +
+          (skipped ? `, ${skipped}개는 그새 내용이 생겨 건너뛰었습니다` : '') +
+          '. 「↑ 올리기」를 눌러야 서버로 갑니다',
+      )
     } catch (err) {
       // 실패를 삼키면 「쓰는 중…」으로 굳고 몇 개가 쓰였는지 알 수 없다.
       // `putRecords`는 트랜잭션이라 실제로는 전부 무산이다.

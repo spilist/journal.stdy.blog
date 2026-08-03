@@ -30,7 +30,9 @@
       // **날짜부터 다시 읽는다.** 자정을 넘겨 돌아오면 여기가 아니면 갱신될 자리가
       // 없어서, 그 화면에서 쓴 「오늘」이 전날에 저장된다.
       journal.refreshToday()
-      journal.pullNow({ auto: true })
+      // **로컬을 서버보다 먼저 다시 읽는다.** 같은 브라우저의 다른 탭이 쓴 판본은
+      // 이 경로가 아니면 안 들어오고, 모르는 채로 커밋하면 그 탭의 글자를 덮는다.
+      journal.reload().then(() => journal.pullNow({ auto: true }))
     }
     // 오프라인에서 돌아왔을 때. 이게 없이는 `syncState`가 'offline'에 갇혀 있다가
     // 새로고침해야 풀린다.

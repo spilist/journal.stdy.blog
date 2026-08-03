@@ -96,6 +96,26 @@ test('커서는 synced_at 으로만 긁는다 (F-9)', async () => {
   assert.equal((await pullSince(db, written.synced_at)).length, 0, 'synced_at 이 커서다')
 })
 
+test('판정~커밋 창에 끼어든 오래된 판본이 최신을 덮지 않는다 (불변식 3)', async () => {
+  // `readOne` 루프는 `db.batch` 밖에서 돈다. 폰과 PC가 그 창 안에서 각각 올리면 둘 다
+  // 같은 옛 값을 읽고 둘 다 `applied`를 받는다 — 예전엔 나중에 커밋한 쪽이 **더 오래된
+  // 판본이어도** 최신을 덮었다. 그러면 이긴 기기는 비-더티가 되고 이후 pull이 `stale`로
+  // 떨궈 그 문장이 영영 전파되지 않으며, 응답의 `server`는 덮이기 전 값이라 `SC-6` 사본도
+  // 안 생긴다. 신호가 하나도 없다.
+  const db = createD1()
+  await applyPush(db, [log('2026-08-03', '오늘', '서버에 있던 지어낸 문단', 500)])
+
+  // 두 요청이 겹친다: 둘 다 500을 읽고, 폰(1000)이 먼저 커밋한 뒤 PC(900)가 커밋한다.
+  const phone = applyPush(db, [log('2026-08-03', '오늘', '폰에서 쓴 지어낸 문단', 1000)])
+  const pc = applyPush(db, [log('2026-08-03', '오늘', 'PC에서 쓴 지어낸 문단', 900)])
+  const [phoneVerdicts, pcVerdicts] = await Promise.all([phone, pc])
+
+  assert.equal(phoneVerdicts[0].applied, true)
+  assert.equal(pcVerdicts[0].applied, true, '둘 다 같은 옛 값을 읽었으므로 판정은 둘 다 통과다')
+  assert.equal(db._rows.log[0].text, '폰에서 쓴 지어낸 문단', '더 새로운 판본이 서버에 남는다')
+  assert.equal(db._rows.log[0].updated_at, 1000)
+})
+
 test('안 쓴 레코드에 applied 를 주지 않는다', () => {
   // 주면 클라이언트가 syncedAt 을 붙여 영원히 비-더티로 만든다 — 서버엔 행이 없는데
   // 로컬은 올렸다고 믿는다.

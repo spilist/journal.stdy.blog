@@ -17,11 +17,24 @@ export let conflicts = []
 export let meta = Object.create(null)
 
 let failPut = false
+let failRead = false
 let delayMs = 0
 
 /** 저장을 실패시킨다 (저장 공간 부족·프라이빗 모드). @param {boolean} on */
 export function failWrites(on) {
   failPut = on
+}
+
+/**
+ * **레코드 읽기만** 실패시킨다. 저장소가 통째로 죽은 경우는 이미 안전하다 — `open()`이
+ * 거부를 캐시해서 `getMeta`도 같이 던지고 pull이 'offline'으로 빠진다. 위험한 건
+ * **부분 실패**다(`records`는 못 읽는데 `meta`는 멀쩡한 경우). 그 창을 열려면 하나만
+ * 실패시킬 수 있어야 한다.
+ *
+ * @param {boolean} on
+ */
+export function failReads(on) {
+  failRead = on
 }
 
 /** 쓰기를 느리게 만든다 — 왕복 중 편집이 끼어드는 창을 열려면 필요하다. @param {number} ms */
@@ -34,6 +47,7 @@ export function reset() {
   conflicts = []
   meta = Object.create(null)
   failPut = false
+  failRead = false
   delayMs = 0
 }
 
@@ -41,6 +55,7 @@ export function reset() {
 const wait = (ms) => new Promise((r) => setTimeout(r, ms))
 
 export async function allRecords() {
+  if (failRead) throw new Error('records 스토어를 열지 못했습니다')
   return [...records.values()]
 }
 

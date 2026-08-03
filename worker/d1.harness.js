@@ -66,6 +66,13 @@ export function createD1() {
       }
       // `DO NOTHING` 은 먼저 쓴 쪽이 남는다 (`D11`).
       if (/DO NOTHING/i.test(stmt.sql)) return { results: [], meta: { changes: 0 } }
+      // `DO UPDATE ... WHERE excluded.updated_at > <table>.updated_at` — 판정~커밋
+      // 창에서 남이 먼저 더 새 판본을 썼으면 이 쓰기는 없던 일이 된다.
+      if (new RegExp(`WHERE excluded\\.updated_at > ${name}\\.updated_at`).test(stmt.sql)) {
+        if (Number(row.updated_at) <= Number(list[at].updated_at)) {
+          return { results: [], meta: { changes: 0 } }
+        }
+      }
       list[at] = row
       return { results: [], meta: { changes: 1 } }
     }

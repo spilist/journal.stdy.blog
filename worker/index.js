@@ -86,6 +86,23 @@ export async function readOne(db, key) {
 }
 
 /**
+ * **UPSERT는 `updated_at`이 앞설 때만 덮는다.**
+ *
+ * `applyPush`의 읽기-판정-쓰기는 원자적이지 않다 — `readOne` 루프는 `db.batch` 밖에서
+ * 돌고, 그 창은 레코드 수만큼 길다(아래 `now` 주석이 "레코드가 많으면 초 단위"라고
+ * 스스로 적는다). 폰과 PC가 그 창 안에서 각각 올리면 둘 다 같은 옛 값을 읽고 둘 다
+ * `applied`를 받아, **나중에 커밋한 쪽이 더 오래된 판본이어도 최신을 덮었다.** 그러면
+ * (1) 이긴 기기는 `syncedAt`을 찍어 비-더티가 되고 이후 pull은 `stale`로 떨궈 그
+ * 문장이 영영 전파되지 않으며, (2) 응답의 `server`는 덮이기 전 값이라
+ * `preserveOverwritten`이 사본을 만들지 못해 `SC-6`가 깨진다. 신호가 하나도 없다.
+ *
+ * 판정을 원자화하는 대신 **쓰기를 조건부로 만든다.** 진 쪽은 `syncedAt`을 붙여 비-더티가
+ * 되지만, 다음 pull에서 서버의 더 새 판본을 `newer`로 받아 수렴한다 — 어느 쪽도 글자를
+ * 잃지 않는다 (불변식 3). `revision`은 원래 `DO NOTHING`이라 이미 안전하다.
+ */
+const LWW = 'WHERE excluded.updated_at > '
+
+/**
  * @param {D1Database} db
  * @param {Rec} rec
  * @param {number} now 서버 시각. `synced_at`에 박힌다 (`F-9`)
@@ -99,7 +116,8 @@ export function writeStatement(db, rec, now) {
          ON CONFLICT(date, dim) DO UPDATE SET
            score = excluded.score, reason = excluded.reason,
            scored_at = excluded.scored_at, updated_at = excluded.updated_at,
-           synced_at = excluded.synced_at`,
+           synced_at = excluded.synced_at
+         ${LWW}energy.updated_at`,
       )
       .bind(
         rest[0],
@@ -116,7 +134,8 @@ export function writeStatement(db, rec, now) {
       .prepare(
         `INSERT INTO log (date, kind, text, updated_at, synced_at) VALUES (?, ?, ?, ?, ?)
          ON CONFLICT(date, kind) DO UPDATE SET
-           text = excluded.text, updated_at = excluded.updated_at, synced_at = excluded.synced_at`,
+           text = excluded.text, updated_at = excluded.updated_at, synced_at = excluded.synced_at
+         ${LWW}log.updated_at`,
       )
       .bind(rest[0], rest[1], rec.data.text ?? '', rec.updatedAt, now)
   }
@@ -125,7 +144,8 @@ export function writeStatement(db, rec, now) {
       .prepare(
         `INSERT INTO pinned (id, text, updated_at, synced_at) VALUES (1, ?, ?, ?)
          ON CONFLICT(id) DO UPDATE SET
-           text = excluded.text, updated_at = excluded.updated_at, synced_at = excluded.synced_at`,
+           text = excluded.text, updated_at = excluded.updated_at, synced_at = excluded.synced_at
+         ${LWW}pinned.updated_at`,
       )
       .bind(rec.data.text ?? '', rec.updatedAt, now)
   }

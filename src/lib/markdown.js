@@ -118,7 +118,9 @@ export function parse(raw) {
         if (stray) unparsed.push({ line: stray, where: `${section.heading} 머리말` })
         continue
       }
-      const name = block.heading.trim()
+      // 섹션 이름도 키다 — `dim`과 같은 이유로 NFC로 맞춘다 (`parseEnergyLine` 주석).
+      // 본문(`block.body`)과 모르는 섹션의 원문은 그대로 둔다.
+      const name = block.heading.trim().normalize('NFC')
       if (name === ENERGY) {
         for (const line of trimSectionBody(block.body).split('\n')) {
           if (!line.trim()) continue
@@ -157,7 +159,14 @@ export function parse(raw) {
 export function parseEnergyLine(line) {
   const m = ENERGY_LINE.exec(line)
   if (!m) return null
-  const dim = m[1].trim()
+  // **차원 이름은 NFC로 정규화한다.** macOS에서 온 파일은 한글이 NFD(자모 분해)로
+  // 들어오는데, 그러면 `energy:2026-08-03:인지(NFD)` 라는 **화면에도 그래프에도
+  // 내려받기에도 안 나오는** 키가 만들어진다 — 저장은 되고 더티로 세어져 서버까지
+  // 올라가지만 인출 통로가 없다 (설계 취향 15항). 사용자는 가져왔다고 믿고 원본을 지운다.
+  //
+  // **이건 사용자 글자를 정규화하는 게 아니다** — 이유·본문은 그대로 둔다. `dim`은
+  // 내용이 아니라 **키**라서, 같은 이름이 두 판본으로 갈라지면 안 되는 자리다.
+  const dim = m[1].trim().normalize('NFC')
   if (!dim) return null
   const rest = m[2]
   const scored = SCORE_PREFIX.exec(rest)
