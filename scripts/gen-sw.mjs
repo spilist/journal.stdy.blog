@@ -75,6 +75,19 @@ self.addEventListener('activate', (e) => {
   )
 })
 
+// **이번 캐시가 이기고, 옛 캐시는 그물이다.** 순서가 이 파일의 요점 둘을 동시에 지킨다:
+// 이름 없는 \`caches.match\`는 CacheStorage를 **생성 순**으로 훑어 옛 셸이 이기므로
+// (= 예전 화면에 갇힌다) 이번 캐시를 먼저 보고, 그래도 못 찾았을 때만 옛 캐시를 본다
+// (= 부분 설치로 오프라인 백지가 되지 않는다).
+//
+// **둘 중 하나만 하면 서로를 상쇄한다** — 실제로 한 번 그렇게 짰다: 옛 캐시를 남겨두는
+// 조치와 이번 캐시로만 조회하는 조치를 같이 넣어서, 남긴 옛 캐시가 어디서도 안 쓰였다.
+function cached(req) {
+  return caches
+    .match(req, { ignoreSearch: true, cacheName: CACHE })
+    .then((hit) => hit ?? caches.match(req, { ignoreSearch: true }))
+}
+
 self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url)
   if (e.request.method !== 'GET') return
@@ -83,18 +96,22 @@ self.addEventListener('fetch', (e) => {
 
   // 화면 이동은 네트워크 먼저, 끊겼으면 앱 셸로. 쿼리가 붙은 진입(?x=1)도 같은 셸이다.
   if (e.request.mode === 'navigate') {
-    e.respondWith(fetch(e.request).catch(() => caches.match('/index.html', { cacheName: CACHE })))
+    e.respondWith(
+      fetch(e.request).catch(() =>
+        // **절대 undefined 를 돌려주지 않는다** — respondWith(undefined) 는 TypeError 라
+        // 오프라인에서 브라우저 오류 페이지가 뜬다. 캐시가 비었으면 그냥 네트워크 오류다.
+        cached('/index.html').then((hit) => hit ?? Response.error()),
+      ),
+    )
     return
   }
 
-  // **반드시 이번 캐시에서만 찾는다.** 이름 없이 부르면 CacheStorage가 **생성 순**으로
-  // 훑어 옛 캐시가 먼저 잡힌다 — 부분 캐시일 때 옛 캐시를 남기게 되면서 생긴 구멍이다.
-  // 해시가 없는 /index.html·매니페스트가 영영 옛 판으로 고정되는데, 그건 이 파일이
-  // 피하려는 바로 그 실패다. 못 찾으면 네트워크로 간다.
   e.respondWith(
     caches
       .match(e.request, { ignoreSearch: true, cacheName: CACHE })
-      .then((hit) => hit ?? fetch(e.request)),
+      // 이번 캐시에 없으면 네트워크. 네트워크도 없으면 옛 캐시라도 준다.
+      .then((hit) => hit ?? fetch(e.request).catch(() => cached(e.request)))
+      .then((res) => res ?? Response.error()),
   )
 })
 `,

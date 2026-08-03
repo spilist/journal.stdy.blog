@@ -738,7 +738,12 @@ export class Journal {
         this.storageError = `저장 실패 — 이 화면의 글자를 다른 곳에 복사해 두세요 (${err})`
         return
       }
-      for (const rec of accepted) this.records[rec.key] = rec
+      // push 쪽과 같은 가드다 — `putRecords`를 기다리는 동안 커밋된 더 새로운 값을
+      // 원격 판본으로 덮지 않는다.
+      for (const rec of accepted) {
+        if ((this.records[rec.key]?.updatedAt ?? 0) > rec.updatedAt) continue
+        this.records[rec.key] = rec
+      }
       this.diverged = diverged
       this.syncState = 'idle'
       this.#stampSync()
@@ -748,8 +753,28 @@ export class Journal {
     }
   }
 
-  /** 사람이 버튼을 눌렀을 때만 (`D3`, 불변식 2). */
+  /**
+   * 사람이 버튼을 눌렀을 때만 (`D3`, 불변식 2).
+   *
+   * **겹쳐 돌면 안 된다.** 두 실행이 같은 키를 각자 보내면, 먼저 도착한 쪽이 서버에
+   * 써지고 나중 쪽은 그걸 「이 기기가 못 본 값」으로 읽어 **200ms 전에 내가 올린 내
+   * 글자를 충돌 사본으로 만든다.** 청킹으로 왕복이 길어지면서 손가락이 두 번 닿기
+   * 쉬워졌다. `pullNow`의 `#pulling`과 같은 형태다.
+   */
   async pushNow() {
+    if (this.#pushing) return
+    this.#pushing = true
+    try {
+      await this.#push()
+    } finally {
+      this.#pushing = false
+    }
+  }
+
+  /** 겹침 방지용. 반응형 상태가 아니다. */
+  #pushing = false
+
+  async #push() {
     this.flush()
     const all = Object.values(this.records).filter(isDirty).map((r) => $state.snapshot(r))
     if (!all.length) {
@@ -854,8 +879,12 @@ export class Journal {
       }
 
       try {
-        await db.putRecords(updates)
+        // **사본을 먼저 쓴다.** 뒤에 두면 `putRecords`가 던졌을 때 사본이 통째로
+        // 사라지는데, 그 사본은 **남은 유일한 판본**이라 되살릴 길이 없다 — 서버엔
+        // 이미 내 값이 써졌고, 재시도하면 `resolveRejected`가 내용이 같다고 판단해
+        // 사본을 안 만든다. 순서를 뒤집으면 최악이 「지울 수 있는 잉여 배지 하나」다.
         await db.addConflicts(newConflicts)
+        await db.putRecords(updates)
       } catch (err) {
         // **로컬 쓰기 실패는 '오프라인'이 아니다** (`F-6`). 서버엔 이미 써졌는데
         // 네트워크 탓이라고 말하면, 사용자는 영구 더티가 된 이유를 못 본다.
@@ -864,7 +893,13 @@ export class Journal {
         this.storageError = `저장 실패 — 이 화면의 글자를 다른 곳에 복사해 두세요 (${err})`
         return
       }
-      for (const rec of updates) this.records[rec.key] = rec
+      // **왕복과 저장 사이에 사용자가 또 쳤으면 그쪽이 최신이다.** 두 `await`가 지나는
+      // 동안 디바운스 타이머가 커밋할 수 있는데, 그대로 대입하면 방금 친 문장이
+      // 화면에서 사라지고 더티 표시까지 꺼진다 — 사용자는 신호 없이 잃는다.
+      for (const rec of updates) {
+        if ((this.records[rec.key]?.updatedAt ?? 0) > rec.updatedAt) continue
+        this.records[rec.key] = rec
+      }
       if (newConflicts.length) this.conflicts = await db.allConflicts()
       conflicted += newConflicts.length
       // **`lastPulledAt`을 여기서 옮기지 않는다.** push 응답은 내가 보낸 키의 판정만
