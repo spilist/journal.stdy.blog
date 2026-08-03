@@ -30,6 +30,8 @@ npm run gate    # 보내기 전에
 | [series.js](./src/lib/series.js) | 그래프 좌표 계산. 결측일에 선을 끊는다 |
 | [date.js](./src/lib/date.js) | KST 캘린더 날짜. 날짜와 순간을 섞지 않는다 |
 | [state.svelte.js](./src/lib/state.svelte.js) | 화면 상태와 동기화. 룬을 쓰지만 [하네스](./src/lib/state.harness.js)로 Node에서 돈다 |
+| [worker/access.js](./worker/access.js) | Access JWT 검증. **유일한 인증 경계다.** Node의 진짜 WebCrypto로 검증한다 |
+| [worker/index.js](./worker/index.js) | D1 경계. [메모리 대역](./worker/d1.harness.js)이 실제로 쓰는 문장만 알아듣는다 |
 
 그 밖에:
 

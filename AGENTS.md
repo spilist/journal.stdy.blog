@@ -232,6 +232,11 @@ The SessionStart hook may inject this context when installed; this block is the 
 **`&&` 사슬이라 앞이 실패하면 뒤는 안 돈다.** 리팩터 뒤처럼 여러 게이트가 같이
 깨졌을 법하면 넷을 따로 부른다. 실패해도 계속 도는 러너를 새로 만들지 않는다 (9항).
 
+**워커 테스트는 타입 검사에서 빠져 있다** ([worker/jsconfig.json](./worker/jsconfig.json)의
+`exclude`). 그 설정은 Workers 타입만 보는데 테스트는 Node에서 돌아 `node:test`·`Buffer`를
+쓴다. 둘을 같이 넣으면 `@types/node`가 node_modules의 JS까지 끌고 와 검사가 리포 밖에서
+터진다. **잃는 것은 그 파일들의 타입 검사뿐이고** eslint와 `npm test`는 그대로 본다.
+
 **`reach`는 커버리지 퍼센트가 아니라 도달 가능성을 잰다** ([check-reach.mjs](./scripts/check-reach.mjs)).
 테스트가 **로드조차 하지 않는** 프로덕션 파일 목록이 [기준선](./scripts/reach-baseline.txt)보다
 늘면 실패하고, 줄었는데 기준선을 안 조여도 실패한다 — **줄어드는 방향으로만 움직인다.**

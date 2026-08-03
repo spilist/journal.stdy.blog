@@ -41,7 +41,7 @@ S2 배포는 2026-07-26. 배포 직후 `AC-9` 재확인함
   내려받기 토스트가 그 개수를 말한다
 - **`AC-11`의 새 방향은 사람이 확인한 적이 없다** — 아래 `Next Session` 참조
 
-- 게이트 확인: **`npm run gate`** (= `test` 115개 · **`reach`** · `lint` · `check` · `build`).
+- 게이트 확인: **`npm run gate`** (= `test` 135개 · **`reach`** · `lint` · `check` · `build`).
   `lint`는 eslint와 마크다운 링크 검사를 둘 다 돈다
 - **S2에서 새로 생긴 것** — 계약은
   [spec-first-slice.md](./spec-first-slice.md) `## S2 — 에너지 그래프`

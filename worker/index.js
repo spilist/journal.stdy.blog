@@ -61,7 +61,7 @@ const revisionRec = (row) => ({
  * @param {string} key
  * @returns {Promise<Rec | undefined>}
  */
-async function readOne(db, key) {
+export async function readOne(db, key) {
   const [kind, ...rest] = key.split(':')
   if (kind === 'energy') {
     const row = await db
@@ -90,7 +90,7 @@ async function readOne(db, key) {
  * @param {Rec} rec
  * @param {number} now 서버 시각. `synced_at`에 박힌다 (`F-9`)
  */
-function writeStatement(db, rec, now) {
+export function writeStatement(db, rec, now) {
   const [kind, ...rest] = rec.key.split(':')
   if (kind === 'energy') {
     return db
@@ -146,7 +146,7 @@ function writeStatement(db, rec, now) {
  * @param {D1Database} db
  * @param {number} since
  */
-async function pullSince(db, since) {
+export async function pullSince(db, since) {
   // **커서는 `synced_at`(서버가 쓴 시각)으로만 긁는다** (`F-9`). `updated_at`은
   // 클라이언트가 글자를 고친 시각이라, 오프라인에서 어제 쓰고 오늘 올린 행은
   // 이미 커서보다 뒤에 있어 **다른 기기에 영영 안 간다.**
@@ -168,7 +168,7 @@ async function pullSince(db, since) {
  * @param {D1Database} db
  * @param {Rec[]} incoming
  */
-async function applyPush(db, incoming) {
+export async function applyPush(db, incoming) {
   /** @type {{key: string, applied: boolean, server?: Rec}[]} */
   const verdicts = []
   /** @type {{rec: Rec, server: Rec | undefined}[]} */

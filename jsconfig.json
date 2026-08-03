@@ -15,6 +15,12 @@
     "resolveJsonModule": true,
     "skipLibCheck": true
   },
-  "include": ["src/**/*.js", "src/**/*.svelte", "scripts/**/*.mjs", "*.js"],
+  "include": [
+    "src/**/*.js",
+    "src/**/*.svelte",
+    "scripts/**/*.mjs",
+    "scripts/**/*.js",
+    "*.js"
+  ],
   "exclude": ["node_modules", "dist"]
 }

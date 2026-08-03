@@ -13,5 +13,10 @@
     "noEmit": true,
     "skipLibCheck": true
   },
-  "include": ["**/*.js", "../src/lib/merge.js"]
+  "include": ["**/*.js", "../src/lib/merge.js"],
+  // **테스트·하네스는 타입 검사에서 뺀다.** 이 설정은 Workers 타입만 보는데 그 둘은
+  // Node에서 돌아 `node:test`·`Buffer`를 쓴다. 둘을 같이 넣으면 `@types/node`가
+  // node_modules 의 JS까지 끌고 와 검사가 리포 밖에서 터진다.
+  // **잃는 것**: 워커 테스트 파일의 타입 검사. eslint 와 `npm test` 는 그대로 본다.
+  "exclude": ["**/*.test.js", "**/*.harness.js"]
 }

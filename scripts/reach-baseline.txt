@@ -9,5 +9,3 @@ src/lib/autogrow.js
 src/lib/store.js
 src/lib/sync.js
 src/main.js
-worker/access.js
-worker/index.js
