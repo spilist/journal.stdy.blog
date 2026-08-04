@@ -92,7 +92,11 @@ function cached(req) {
 // 부분 설치 뒤 온라인에서 되찾은 자산은 이번 캐시에 남겨야 한다. 그렇지 않으면
 // 첫 온라인 요청은 성공해도, 곧바로 오프라인이 되면 같은 자산이 다시 사라진다.
 function cacheResponse(req, res) {
-  if (!res?.ok || typeof res.clone !== 'function') return { response: res, cache: Promise.resolve() }
+  // An expired Access session can redirect static asset requests to login HTML. Caching
+  // that response as the shell would open the login page instead of the app offline.
+  if (!res?.ok || res.redirected || typeof res.clone !== 'function') {
+    return { response: res, cache: Promise.resolve() }
+  }
   const copy = res.clone()
   const cache = caches
     .open(CACHE)

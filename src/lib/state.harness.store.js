@@ -18,7 +18,9 @@ export let meta = Object.create(null)
 
 let failPut = false
 let failRead = false
+let failMetaRead = false
 let delayMs = 0
+let readDelayMs = 0
 
 /** 저장을 실패시킨다 (저장 공간 부족·프라이빗 모드). @param {boolean} on */
 export function failWrites(on) {
@@ -37,9 +39,19 @@ export function failReads(on) {
   failRead = on
 }
 
+/** Fail only the meta store to distinguish it from a network error. @param {boolean} on */
+export function failMetaReads(on) {
+  failMetaRead = on
+}
+
 /** 쓰기를 느리게 만든다 — 왕복 중 편집이 끼어드는 창을 열려면 필요하다. @param {number} ms */
 export function writeDelay(ms) {
   delayMs = ms
+}
+
+/** Delay record reads to open the load-time input race. @param {number} ms */
+export function readDelay(ms) {
+  readDelayMs = ms
 }
 
 export function reset() {
@@ -48,13 +60,16 @@ export function reset() {
   meta = Object.create(null)
   failPut = false
   failRead = false
+  failMetaRead = false
   delayMs = 0
+  readDelayMs = 0
 }
 
 /** @param {number} ms */
 const wait = (ms) => new Promise((r) => setTimeout(r, ms))
 
 export async function allRecords() {
+  if (readDelayMs) await wait(readDelayMs)
   if (failRead) throw new Error('records 스토어를 열지 못했습니다')
   return [...records.values()]
 }
@@ -109,6 +124,7 @@ export async function dropConflict(id) {
 
 /** @param {string} key */
 export async function getMeta(key) {
+  if (failMetaRead) throw new Error('meta 스토어를 열지 못했습니다')
   return meta[key] ?? null
 }
 

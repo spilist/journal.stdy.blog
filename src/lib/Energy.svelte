@@ -8,6 +8,7 @@
 
   import { autogrow } from './autogrow.js'
   import { kstDate, kstTime } from './date.js'
+  import { moveScore } from './merge.js'
   import Conflicts from './Conflicts.svelte'
   import Graph from './Graph.svelte'
 
@@ -84,10 +85,12 @@
     const current = journal.energy(dim).data.score
     if (e.key === 'ArrowRight' || e.key === 'ArrowUp') {
       e.preventDefault()
-      journal.toggleScore(dim, Math.min(10, (current ?? 0) + 1))
+      const next = moveScore(current, 1)
+      if (next !== current) journal.toggleScore(dim, /** @type {number} */ (next))
     } else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') {
       e.preventDefault()
-      if (current !== null && current > 1) journal.toggleScore(dim, current - 1)
+      const next = moveScore(current, -1)
+      if (next !== current) journal.toggleScore(dim, /** @type {number} */ (next))
     } else if ((e.key === 'Backspace' || e.key === 'Delete') && current !== null) {
       e.preventDefault()
       journal.toggleScore(dim, current)

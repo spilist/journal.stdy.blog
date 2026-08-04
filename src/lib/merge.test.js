@@ -7,6 +7,7 @@ import {
   isDirty,
   isDiverged,
   needsSnapshot,
+  moveScore,
   nextEnergy,
   nextPullCursor,
   nextText,
@@ -167,6 +168,14 @@ test('이유만 고치면 scoredAt이 안 움직인다 (AC-7, D15)', () => {
 
 test('에너지 연속 입력도 같은 밀리초를 정렬한다', () => {
   assert.equal(nextEnergy(energy(), { score: 8 }, 1000).updatedAt, 1001)
+})
+
+test('키보드 점수 이동은 10점에서 토글하지 않는다', () => {
+  assert.equal(moveScore(null, 1), 1)
+  assert.equal(moveScore(9, 1), 10)
+  assert.equal(moveScore(10, 1), 10)
+  assert.equal(moveScore(1, -1), 1)
+  assert.equal(moveScore(null, -1), null)
 })
 
 test('점수가 바뀌면 scoredAt이 움직인다', () => {

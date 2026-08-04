@@ -206,12 +206,14 @@ export class Journal {
     /** @type {Record<string, Rec>} */
     const map = {}
     for (const rec of records) map[rec.key] = rec
-    // 로드가 끝나기 전에 이미 편집된 게 있으면 그쪽이 최신이다. 통째로 갈아끼우면
-    // 콜드 스타트에서 친 글자가 사라진다.
+    // Keep edits made before load completed. Replacing the map wholesale would lose
+    // cold-start input. Debounced input is not in records yet, so the read methods overlay it.
     this.records = { ...map, ...this.records }
     this.conflicts = conflicts
     this.loaded = true
-    db.requestPersistence()
+    // Persistence denial is a permission policy result, not a current storage failure.
+    // Still handle the promise so the browser does not report an unhandled rejection.
+    void db.requestPersistence().catch(() => {})
   }
 
   /**
@@ -255,7 +257,18 @@ export class Journal {
       // 다른 탭이 기록한 디스크 판본을 받으면 원복 상태와 `#revertedText`가 함께
       // 사라져, 늦게 온 push 응답이 원복을 다시 더티로 살릴 근거를 잃는다.
       if (this.#pushingKeys[other.key] && this.#revertedText[other.key]) continue
-      if (other.updatedAt === mine.updatedAt) continue
+      if (other.updatedAt === mine.updatedAt) {
+        // Two tabs can share the same millisecond timestamp. Reflect the disk version
+        // while preserving distinct in-memory text as a conflict copy.
+        if (describe(other) === describe(mine)) continue
+        if (mine.kind !== 'revision' && hasContent(mine)) {
+          kept.push({ target: mine.key, text: describe(mine), at: mine.updatedAt })
+        }
+        this.records[other.key] = other
+        delete this.#textSessions[other.key]
+        delete this.#revertedText[other.key]
+        continue
+      }
       const otherWins = other.updatedAt > mine.updatedAt
       const loser = otherWins ? mine : other
       const winner = otherWins ? other : mine
@@ -296,9 +309,27 @@ export class Journal {
     return this.records[key] ?? blank(key, kind, data)
   }
 
+  /**
+   * View value. Input first goes to `#pending` because persistence is debounced; this keeps
+   * an async load from replacing it with the newly rendered disk value. Write paths keep
+   * using `#at` so pending input is committed as a real record.
+   *
+   * @param {string} key
+   * @param {string} kind
+   * @param {Record<string, any>} data
+   * @returns {Rec}
+   */
+  #view(key, kind, data) {
+    const rec = this.#at(key, kind, data)
+    const pending = this.#pending[key]
+    if (pending === undefined) return rec
+    const nextData = kind === 'energy' ? { ...rec.data, reason: pending } : { ...rec.data, text: pending }
+    return { ...rec, data: nextData }
+  }
+
   /** @param {string} dim */
   energy(dim) {
-    return this.#at(recordKey('energy', this.date, dim), 'energy', {
+    return this.#view(recordKey('energy', this.date, dim), 'energy', {
       score: null,
       reason: '',
       scoredAt: null,
@@ -307,11 +338,11 @@ export class Journal {
 
   /** @param {string} kind */
   log(kind) {
-    return this.#at(recordKey('log', this.date, kind), 'log', { text: '' })
+    return this.#view(recordKey('log', this.date, kind), 'log', { text: '' })
   }
 
   pinned() {
-    return this.#at('pinned', 'pinned', { text: '' })
+    return this.#view('pinned', 'pinned', { text: '' })
   }
 
   /** 「어제」를 쓸 때 위에 띄우는 전날의「오늘」 (`D8`). */
@@ -744,6 +775,27 @@ export class Journal {
         })
       }
     }
+    // `dim` is open in the schema while the UI draws three fixed dimensions (`D20`).
+    // Dropping unknown dimensions here would make imported text disappear from export.
+    // Keep them out of the UI and include them only in export: presentation and preservation
+    // are separate boundaries.
+    const prefix = `energy:${date}:`
+    const extraEnergy = Object.values(this.records)
+      .filter(
+        (rec) =>
+          rec.kind === 'energy' &&
+          rec.key.startsWith(prefix) &&
+          !DIMS.includes(/** @type {any} */ (rec.key.slice(prefix.length))) &&
+          hasContent(rec),
+      )
+      .sort((a, b) => a.key.localeCompare(b.key))
+    for (const rec of extraEnergy) {
+      day.energy.push({
+        dim: rec.key.slice(prefix.length),
+        score: rec.data.score ?? null,
+        reason: rec.data.reason ?? '',
+      })
+    }
     for (const kind of LOG_KINDS) {
       day.logs.push({ kind, text: this.records[recordKey('log', date, kind)]?.data.text ?? '' })
     }
@@ -932,6 +984,14 @@ export class Journal {
     let since
     try {
       since = (await db.getMeta('lastPulledAt')) ?? 0
+    } catch {
+      this.syncState = 'error'
+      this.storageError = '로컬 동기화 위치를 읽지 못했습니다. 이 화면의 글자를 다른 곳에 복사해 두세요.'
+      this.#lastPullAt = 0
+      this.#pulling = false
+      return
+    }
+    try {
       res = await pull(since)
     } catch {
       this.syncState = 'offline'

@@ -228,6 +228,27 @@ test('온라인에서 되찾은 navigation 셸을 이번 캐시에 보관한다'
   assert.equal((/** @type {any} */ (await offlineWorker.fetchEvent('/', 'navigate'))).body, '온라인에서 받은 지어낸 셸')
 })
 
+test('Access 로그인 redirect 응답은 앱 셸로 캐시하지 않는다', async () => {
+  const caches = fakeCaches()
+  caches._store.set('v-old', new Map([['/index.html', 'v-old:/index.html']]))
+  const login = async () => ({
+    ok: true,
+    redirected: true,
+    body: '지어낸 로그인 HTML',
+    clone() {
+      return { ok: true, redirected: true, body: this.body, clone: this.clone }
+    },
+  })
+  const sw = runWorker({ caches, fetch: login, failAdd: (p) => p === '/index.html' })
+  await sw.install()
+
+  assert.equal((/** @type {any} */ (await sw.fetchEvent('/', 'navigate'))).body, '지어낸 로그인 HTML')
+  assert.equal(await caches.match('/index.html', { cacheName: 'v-test' }), undefined)
+
+  const offlineWorker = runWorker({ caches, fetch: netFail })
+  assert.equal(await offlineWorker.fetchEvent('/', 'navigate'), 'v-old:/index.html')
+})
+
 test('`/api/*`는 절대 캐시하지 않는다 — 낡은 동기화 응답이 정본 행세를 한다', async () => {
   const caches = fakeCaches()
   const sw = runWorker({ caches, fetch: netFail })

@@ -29,6 +29,28 @@ test('하네스가 실제 Journal 을 돌린다', async () => {
   assert.equal(journal.dirtyCount(), 0)
 })
 
+test('로드 중 입력은 늦게 온 디스크 값으로 화면에서 사라지지 않는다', async () => {
+  const { journal, store } = await freshJournal()
+  journal.loaded = false
+  store.records.set('pinned', {
+    key: 'pinned',
+    kind: 'pinned',
+    data: { text: '# 지어낸 디스크 노트' },
+    updatedAt: 100,
+    syncedAt: 100,
+  })
+  store.readDelay(30)
+
+  const loading = journal.load()
+  await new Promise((resolve) => setTimeout(resolve, 1))
+  journal.setPinned('# 지어낸 로드 중 입력')
+  await loading
+
+  assert.equal(journal.pinned().data.text, '# 지어낸 로드 중 입력')
+  journal.flush()
+  assert.equal(store.records.get('pinned')?.data.text, '# 지어낸 로드 중 입력')
+})
+
 test('「올리기」를 두 번 눌러도 한 번만 간다 — 겹치면 내 글자가 충돌 사본이 된다', async () => {
   // 겹쳐 돌면 먼저 도착한 쪽이 서버에 써지고, 나중 쪽이 그걸 「이 기기가 못 본 값」으로
   // 읽어 **방금 내가 올린 내 글자**를 사본으로 만든다.
@@ -191,6 +213,17 @@ test('다른 탭이 쓴 판본을 덮지 않는다 — 진 쪽은 사본으로 �
   assert.equal(journal.conflicts.length, 1, '화면에도 바로 붙는다')
 })
 
+test('다른 탭과 같은 밀리초에 쓴 판본도 조용히 버리지 않는다', async () => {
+  const { journal, store } = await freshJournal()
+  store.records.set(KEY, rec('디스크의 지어낸 문장', 300, 0))
+  journal.records[KEY] = rec('메모리의 지어낸 문장', 300, 0)
+
+  await journal.reload()
+
+  assert.equal(journal.records[KEY].data.text, '디스크의 지어낸 문장')
+  assert.deepEqual(store.conflicts.map((c) => c.text), ['메모리의 지어낸 문장'])
+})
+
 test('다시 읽기가 디바운스 중인 입력을 디스크 판본으로 밀지 않는다', async () => {
   // 아직 커밋 안 된 글자를 디스크 판본으로 덮으면 화면에서 글자가 사라진다.
   const { journal, store } = await freshJournal()
@@ -308,6 +341,20 @@ test('월 복사는 선택한 달의 pinned와 날짜 기록만 조립한다', a
   assert.ok(!out.includes('26-07-31'))
   assert.ok(!out.includes('지어낸 이전 이력'))
   assert.ok(!out.includes('# 26-08-01\n\n## 에너지'), '에너지 없는 날짜에 빈 섹션을 만들지 않는다')
+})
+
+test('UI가 모르는 에너지 차원도 export에서 보존한다', async () => {
+  const { journal } = await freshJournal()
+  const preview = journal.previewImport('# 26-08-15\n\n## 에너지\n- 사회: 8. 지어낸 추가 차원\n')
+  assert.equal(preview.writes.length, 1)
+  await journal.applyImport(preview.writes)
+
+  const out = journal.exportAll()
+
+  assert.ok(out.includes('- 사회: 8. 지어낸 추가 차원'))
+  assert.deepEqual(journal.dayFor('2026-08-15', false).energy, [
+    { dim: '사회', score: 8, reason: '지어낸 추가 차원' },
+  ])
 })
 
 test('올리는 중 원복한 텍스트는 서버 판본에 덮이지 않게 다시 더티가 된다', async () => {
@@ -498,4 +545,15 @@ test('로컬을 못 읽었으면 pull이 아무것도 쓰지 않는다 (불변�
     '아직 안 올린 지어낸 문장',
     '디스크의 미동기화 글자가 그대로 있다',
   )
+})
+
+test('메타 저장소를 못 읽으면 오프라인이 아니라 로컬 오류로 알린다', async () => {
+  const { journal, store, sync } = await freshJournal()
+  store.failMetaReads(true)
+
+  await journal.pullNow()
+
+  assert.equal(journal.syncState, 'error')
+  assert.match(journal.storageError, /로컬 동기화 위치/)
+  assert.equal(sync.calls.length, 0, '메타를 못 읽었으면 네트워크를 부르지 않는다')
 })

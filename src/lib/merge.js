@@ -244,6 +244,19 @@ export function nextEnergy(prev, patch, now) {
 }
 
 /**
+ * Move a score from keyboard input. Keep out-of-range input at the current value —
+ * passing the maximum (10) back to `toggleScore` would otherwise clear it.
+ *
+ * @param {number | null} current
+ * @param {number} delta
+ * @returns {number | null}
+ */
+export function moveScore(current, delta) {
+  if (current === null) return delta > 0 ? 1 : null
+  return Math.min(10, Math.max(1, current + delta))
+}
+
+/**
  * 개정 스냅샷은 하루에 1개다 (`D11`) — 키가 날짜라 제약이 스키마에 들어 있다.
  * 그날 처음 손대는 시점에 **직전 내용을** 밀봉한다.
  *
