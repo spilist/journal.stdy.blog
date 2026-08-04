@@ -11,6 +11,11 @@ preset_lineage:
   # 부트스트랩이 얹은 원 프리셋. 잘라낸 게 무엇에서 나온 것인지 알 수 있게 남긴다.
   - typescript-quality
 
+recommendation_defaults_version: issue-64
+adapter_review_sources: []
+acknowledged_recommendations: []
+gate_design_review_globs: []
+
 # 표준 게이트는 npm 스크립트 하나로 묶여 있다. 훅으로 자동화하지 않는다
 # (cmanki `자동화 금지`: 명령형 버튼만 허용).
 # **`&&` 사슬이라 첫 실패에서 멈춘다** — 스킬이 보는 것도 거기까지다.
