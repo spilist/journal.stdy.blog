@@ -19,8 +19,9 @@ readback → handoff 기록 순서로 닫는다.
   0 warning/error, worker `tsc`, Vite 130 modules/build 통과.
 - `npm audit --omit=optional --audit-level=high`: 0 vulnerabilities.
 - `git diff --check`: 통과.
-- 기준 배포: commit `cf53f3a`, Worker version `fa1eee2d-781f-486c-8247-650462b8e4d6`.
-  이번 서비스워커 수정은 현재 작업트리에서 검증 중이며 아직 이 version에는 없다.
+- 배포: commit `705849e047c2a976405ec153b737820c2fa760b7`, Worker version
+  `e5ba9779-dad7-42a9-9ac8-6d5fc5f14799`; 이전 version은
+  `fa1eee2d-781f-486c-8247-650462b8e4d6`이다.
 
 ## Runtime Signals
 
@@ -79,7 +80,7 @@ readback → handoff 기록 순서로 닫는다.
 
 - Act Before Ship: SPA fallback 자산 캐시 오염과 부분 설치본 즉시 활성화를 고쳤다 — evidence: command: `node --test scripts/gen-sw.test.js`.
   `scripts/gen-sw.mjs:46-61,94-149`에서 실행 테스트로 고정했다. malformed JWT·exp 경계·비정상 cursor·
-  API 오류 상세 노출도 이미 경계에서 닫혔지만 새 version 배포 전이다.
+  API 오류 상세 노출도 이미 경계에서 닫혔고 현재 version으로 배포했다.
 - Bundle Anyway: release readback과 handoff를 같은 기록 커밋으로 묶었다 — evidence: artifact: `../probe/2026-08-05-deploy-verification.json`.
 - Over-Worry: plugin release adapter/manifest를 이 웹 앱에 새로 만드는 것은 — evidence: command: `plan_release_run.py --repo-root . --detail`.
   `plan_release_run.py`가 plugin surface를 찾지 못한 사실을 뒤집지 못한다
@@ -103,9 +104,11 @@ readback → handoff 기록 순서로 닫는다.
 - `npm run gate`, `npm audit --omit=optional --audit-level=high`, focused worker/SW tests,
   quality inventories, `git diff --check`.
 - 첫 전체 gate는 새 관찰 아티팩트가 아직 git 추적 전이라 문서 링크 검사에서 멈췄고,
-  그 원인을 발견했다. 아티팩트를 추적한 뒤 gate를 다시 닫는다.
+  그 원인을 발견했다. 아티팩트를 추적한 뒤 gate를 재실행해 닫았다.
 - `npx wrangler whoami`, `npx wrangler secret list`, `npx wrangler deploy --dry-run`,
   `npm run deploy`, `npx wrangler deployments list`, unauthenticated curl readbacks.
+- 배포 후 `/`, `/api/pull?since=0`, `/sw.js`를 본문 없이 조회해 모두 Access 302와
+  no-store를 확인했다 (`artifact: ../probe/2026-08-05-deploy-verification.json`).
 
 ## Recommended Next Quality Moves
 

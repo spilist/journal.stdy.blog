@@ -4,8 +4,9 @@
   "target": "https://journal.stdy.blog",
   "deployment": {
     "worker": "journal-stdy-blog",
-    "git_commit": "cf53f3a64e5cd8a787d01dd8ed588d189efc142b",
-    "version_id": "fa1eee2d-781f-486c-8247-650462b8e4d6"
+    "git_commit": "705849e047c2a976405ec153b737820c2fa760b7",
+    "version_id": "e5ba9779-dad7-42a9-9ac8-6d5fc5f14799",
+    "previous_version_id": "fa1eee2d-781f-486c-8247-650462b8e4d6"
   },
   "observations": [
     {

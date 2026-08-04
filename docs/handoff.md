@@ -107,19 +107,21 @@ CI/훅 자동화 · TypeScript 이관 · Prettier · 차트 라이브러리 · �
 S2 배포는 2026-07-26. 배포 직후 `AC-9` 재확인함
 (인증 없이 `/api/pull` → Access가 302).
 
-**2026-08-05 3차 품질 라운드의 기준 배포가 끝났고, 서비스워커 후속 수정은 출하 대기다.**
-기준 배포 `cf53f3a`가 `origin/main`에 푸시됐고, 현재 작업트리는 테스트 177개와
-`test`·`reach`·`lint`·`check`·`build` 게이트를 통과했다. 잘못 인코딩된
+**2026-08-05 3차 품질 라운드와 서비스워커 후속 수정의 배포가 끝났다.**
+`705849e`가 `origin/main`에 푸시됐고, 테스트 177개와 `test`·`reach`·`lint`·`check`·
+`build` 게이트를 통과했다. 잘못 인코딩된
 JWT·만료 경계·비정상 pull cursor·API 오류 상세 노출·서비스워커 산출 순서를 각 경계에서
 고쳤다. 배포 Version ID는
-`fa1eee2d-781f-486c-8247-650462b8e4d6`이고, 비인증 `/`·`/api/pull`·`/sw.js`가 모두
+`e5ba9779-dad7-42a9-9ac8-6d5fc5f14799`이고, 비인증 `/`·`/api/pull`·`/sw.js`가 모두
 Access 302임을 [관찰 기록](../charness-artifacts/probe/2026-08-05-deploy-verification.json)으로
 남겼다. 인증 브라우저와 사람 수용 확인은 아직 남아 있다. Charness 부트스트랩이 기존
 어댑터를 덮어쓰는 문제는 상류 이슈 [#507](https://github.com/corca-ai/charness/issues/507)로
 올렸다.
 
-이번 출하는 SPA fallback 자산 캐시 오염과 부분 설치본 즉시 활성화를 서비스워커
-생성기와 실행 테스트에서 추가로 닫은 뒤 진행한다.
+이번 출하에서 SPA fallback 자산 캐시 오염과 부분 설치본 즉시 활성화를 서비스워커
+생성기와 실행 테스트에서 닫았다. 배포 Version ID는
+`e5ba9779-dad7-42a9-9ac8-6d5fc5f14799`이고 이전 version은
+`fa1eee2d-781f-486c-8247-650462b8e4d6`이다.
 
 ### 이번 3차 라운드의 운영 교훈
 
