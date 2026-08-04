@@ -1,0 +1,39 @@
+{
+  "kind": "deployment-observation",
+  "observed_at": "2026-08-05",
+  "target": "https://journal.stdy.blog",
+  "deployment": {
+    "worker": "journal-stdy-blog",
+    "git_commit": "cf53f3a64e5cd8a787d01dd8ed588d189efc142b",
+    "version_id": "fa1eee2d-781f-486c-8247-650462b8e4d6"
+  },
+  "observations": [
+    {
+      "method": "GET",
+      "path": "/",
+      "status": 302,
+      "cache_control": "private, max-age=0, no-store, no-cache, must-revalidate, post-check=0, pre-check=0",
+      "meaning": "비인증 요청이 Cloudflare Access로 리다이렉트됨"
+    },
+    {
+      "method": "GET",
+      "path": "/api/pull?since=0",
+      "status": 302,
+      "cache_control": "private, max-age=0, no-store, no-cache, must-revalidate, post-check=0, pre-check=0",
+      "meaning": "비인증 API 요청이 Cloudflare Access로 리다이렉트됨"
+    },
+    {
+      "method": "GET",
+      "path": "/sw.js",
+      "status": 302,
+      "cache_control": "private, max-age=0, no-store, no-cache, must-revalidate, post-check=0, pre-check=0",
+      "meaning": "서비스워커 자산도 Access 밖으로 노출되지 않음"
+    }
+  ],
+  "privacy": "인증하지 않았으며 저널 응답 본문을 읽거나 기록하지 않음",
+  "observer": "same-host HTTP readback from the publishing session",
+  "not_verified": [
+    "인증된 브라우저 UI 수용 확인",
+    "두 기기 동기화의 사람 수용 확인"
+  ]
+}

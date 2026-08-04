@@ -107,13 +107,29 @@ CI/훅 자동화 · TypeScript 이관 · Prettier · 차트 라이브러리 · �
 S2 배포는 2026-07-26. 배포 직후 `AC-9` 재확인함
 (인증 없이 `/api/pull` → Access가 302).
 
-**2026-08-05 전체 품질 라운드가 로컬 작업트리에서 끝났다(아직 미배포).** 테스트는
-174개로 늘었고 게이트는 `test`·`reach`·`lint`·`check`·`build` 모두 통과했다. 열린
-`dim`을 export에서 보존하고, 로드 중 입력·같은 밀리초 탭 경합·10점 키보드 입력·Access
-로그인 redirect 캐시·메타 저장소 오류 분류를 근본 경계에서 고쳤다. 영속화 거절의
-unhandled rejection도 닫았다. 실제 배포와 사람 수용 확인은 아직 남아 있다. Charness
-부트스트랩이 기존 어댑터를 덮어쓰는 문제는 상류 이슈
-[#507](https://github.com/corca-ai/charness/issues/507)로 올렸다.
+**2026-08-05 3차 품질 라운드의 기준 배포가 끝났고, 서비스워커 후속 수정은 출하 대기다.**
+기준 배포 `cf53f3a`가 `origin/main`에 푸시됐고, 현재 작업트리는 테스트 177개와
+`test`·`reach`·`lint`·`check`·`build` 게이트를 통과했다. 잘못 인코딩된
+JWT·만료 경계·비정상 pull cursor·API 오류 상세 노출·서비스워커 산출 순서를 각 경계에서
+고쳤다. 배포 Version ID는
+`fa1eee2d-781f-486c-8247-650462b8e4d6`이고, 비인증 `/`·`/api/pull`·`/sw.js`가 모두
+Access 302임을 [관찰 기록](../charness-artifacts/probe/2026-08-05-deploy-verification.json)으로
+남겼다. 인증 브라우저와 사람 수용 확인은 아직 남아 있다. Charness 부트스트랩이 기존
+어댑터를 덮어쓰는 문제는 상류 이슈 [#507](https://github.com/corca-ai/charness/issues/507)로
+올렸다.
+
+이번 출하는 SPA fallback 자산 캐시 오염과 부분 설치본 즉시 활성화를 서비스워커
+생성기와 실행 테스트에서 추가로 닫은 뒤 진행한다.
+
+### 이번 3차 라운드의 운영 교훈
+
+- 품질 어댑터는 먼저 `bootstrap_adapter.py --dry-run`으로 재직렬화·주석 손실을 확인하고,
+  실제 설정 변경 목적이 없으면 쓰기 모드로 부르지 않는다.
+- 사용자 위임이 기록돼도 parent spawn 결과와 전달 여부를 따로 기록한다. 이번 리뷰는
+  4개를 수락하고 3개 보고서를 받았으며 1개가 timeout이라 완전한 fresh-eye라고
+  과장하지 않았다.
+- 배포는 코드 커밋 → origin push → `npm run deploy` → Wrangler version/readback →
+  handoff 기록 순서로 닫는다. 인증 브라우저 수용을 자동 검증했다고 말하지 않는다.
 
 ### 이번 2차 품질 라운드의 운영 교훈
 

@@ -67,8 +67,16 @@ function runWorker(env) {
     addEventListener: (type, fn) => {
       on[type] = fn
     },
-    skipWaiting: async () => {},
-    clients: { claim: async () => {} },
+    skipWaiting: async () => {
+      self.skipWaitingCalls += 1
+    },
+    skipWaitingCalls: 0,
+    clients: {
+      claim: async () => {
+        self.claimCalls += 1
+      },
+    },
+    claimCalls: 0,
   }
   const open = env.caches.open.bind(env.caches)
   env.caches.open = async (/** @type {string} */ name) => {
@@ -114,6 +122,12 @@ function runWorker(env) {
       await Promise.all(waits)
       return response
     },
+    get skipWaitingCalls() {
+      return self.skipWaitingCalls
+    },
+    get claimCalls() {
+      return self.claimCalls
+    },
   }
 }
 
@@ -137,6 +151,8 @@ test('설치가 부분이면 옛 캐시를 남긴다 — 지우면 오프라인�
   await sw.install()
   await sw.activate()
   assert.ok((await caches.keys()).includes('v-old'), '옛 캐시가 남아야 한다')
+  assert.equal(sw.skipWaitingCalls, 0, '부분 설치본은 즉시 활성화하면 안 된다')
+  assert.equal(sw.claimCalls, 0, '부분 설치본은 기존 클라이언트를 차지하면 안 된다')
 })
 
 test('남긴 옛 캐시가 실제로 쓰인다 — 남기기만 하고 안 보면 상쇄된다', async () => {
@@ -168,6 +184,27 @@ test('옛 캐시 fallback을 이번 캐시에 승격하지 않는다 — 새 배
 
   assert.equal(await sw.fetchEvent('/assets/app-abc123.js'), 'v-old:/assets/app-abc123.js')
   assert.equal(await caches.match('/assets/app-abc123.js', { cacheName: 'v-test' }), undefined)
+})
+
+test('SPA fallback HTML을 존재하지 않는 자산 경로에 캐시하지 않는다', async () => {
+  const caches = fakeCaches()
+  const spaFallback = async () => ({
+    ok: true,
+    body: '지어낸 앱 셸 HTML',
+    clone() {
+      return { ok: true, body: this.body, clone: this.clone }
+    },
+  })
+  const sw = runWorker({ caches, fetch: spaFallback })
+  await sw.install()
+
+  const response = /** @type {any} */ (await sw.fetchEvent('/assets/missing.js'))
+  assert.equal(response.body, '지어낸 앱 셸 HTML')
+  assert.equal(
+    await caches.match('/assets/missing.js', { cacheName: 'v-test' }),
+    undefined,
+    'SPA fallback은 자산 캐시를 오염시키면 안 된다',
+  )
 })
 
 test('캐시가 비어도 undefined 를 돌려주지 않는다 — respondWith(undefined)는 TypeError다', async () => {

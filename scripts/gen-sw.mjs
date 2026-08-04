@@ -44,6 +44,7 @@ export function serviceWorkerSource(version, assets) {
   return `const CACHE = ${JSON.stringify(version)}
 // '/' 는 넣지 않는다 — Access 로그인 리다이렉트 하나로 install 전체가 깨진다.
 const ASSETS = ${JSON.stringify(assets)}
+const ASSET_PATHS = new Set(ASSETS)
 
 // 이번 캐시가 **전부** 채워졌는가. 부분만 채워졌으면 옛 캐시를 지우지 않는다 —
 // 지우면 오프라인에서 백지가 된다 (불변식 1).
@@ -56,7 +57,10 @@ self.addEventListener('install', (e) => {
       .then((c) => Promise.allSettled(ASSETS.map((a) => c.add(a))))
       .then((rs) => {
         complete = rs.every((r) => r.status === 'fulfilled')
-        return self.skipWaiting()
+        // 부분 설치본은 활성화하지 않는다. 활성화하면 새 셸이 옛 자산과 섞여
+        // 오프라인에서 실행 불가능한 판을 만들 수 있다. 다음 업데이트 주기에
+        // 브라우저가 온전한 스냅샷을 다시 설치한다.
+        return complete ? self.skipWaiting() : undefined
       }),
   )
 })
@@ -72,7 +76,7 @@ self.addEventListener('activate', (e) => {
         // 실제로 일어난다. 옛 캐시를 남겨두면 최소한 옛 판으로는 열린다 — 다음 배포에
         // 다시 시도한다.
         Promise.resolve()
-    ).then(() => self.clients.claim()),
+    ).then(() => (complete ? self.clients.claim() : undefined)),
   )
 })
 
@@ -91,10 +95,10 @@ function cached(req) {
 
 // 부분 설치 뒤 온라인에서 되찾은 자산은 이번 캐시에 남겨야 한다. 그렇지 않으면
 // 첫 온라인 요청은 성공해도, 곧바로 오프라인이 되면 같은 자산이 다시 사라진다.
-function cacheResponse(req, res) {
+function cacheResponse(req, res, cacheable = true) {
   // An expired Access session can redirect static asset requests to login HTML. Caching
   // that response as the shell would open the login page instead of the app offline.
-  if (!res?.ok || res.redirected || typeof res.clone !== 'function') {
+  if (!cacheable || !res?.ok || res.redirected || typeof res.clone !== 'function') {
     return { response: res, cache: Promise.resolve() }
   }
   const copy = res.clone()
@@ -141,7 +145,9 @@ self.addEventListener('fetch', (e) => {
           hit ??
           fetch(e.request)
             .then((res) => {
-              const cached = cacheResponse(e.request, res)
+              // Cloudflare's SPA fallback returns index.html with 200 for an unknown
+              // asset path. It must be served online but never stored as that asset.
+              const cached = cacheResponse(e.request, res, ASSET_PATHS.has(url.pathname))
               e.waitUntil(cached.cache)
               return cached.response
             })
