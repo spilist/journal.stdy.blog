@@ -80,7 +80,9 @@ textarea {
 }
 
 textarea:focus,
-button:focus-visible {
+button:focus-visible,
+.at:focus-visible,
+.state:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
 }
@@ -95,6 +97,27 @@ button {
   font: inherit;
   cursor: pointer;
   touch-action: manipulation;
+}
+
+@media (hover: hover) {
+  button:hover:not(:disabled) {
+    border-color: var(--dim);
+    background: var(--raised);
+  }
+
+  button.ghost:hover:not(:disabled) {
+    border-color: var(--line);
+    color: var(--fg);
+  }
+
+  button.primary:hover:not(:disabled) {
+    border-color: var(--fg);
+    filter: brightness(1.08);
+  }
+}
+
+button:active:not(:disabled) {
+  transform: translateY(1px);
 }
 
 button.ghost {

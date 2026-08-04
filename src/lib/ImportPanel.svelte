@@ -6,8 +6,8 @@
 
   import { autogrow } from './autogrow.js'
 
-  /** @type {{journal: import('./state.svelte.js').Journal, onclose: (message?: string) => void}} */
-  let { journal, onclose } = $props()
+  /** @type {{journal: import('./state.svelte.js').Journal, onclose: (message?: string) => void, id?: string}} */
+  let { journal, onclose, id = 'import-panel' } = $props()
 
   let text = $state('')
   /** @type {ReturnType<import('./state.svelte.js').Journal['previewImport']> | null} */
@@ -58,27 +58,33 @@
   }
 </script>
 
-<div class="panel" bind:this={root}>
+<div class="panel" id={id} bind:this={root}>
   <h2>가져오기</h2>
   <p class="note">
     마크다운을 붙여넣거나 파일을 고릅니다. <strong>미리 보고 확인해야 저장됩니다.</strong>
   </p>
 
-  <input type="file" accept=".md,text/markdown,text/plain" onchange={pickFile} />
+  <input type="file" aria-label="마크다운 파일 선택" accept=".md,text/markdown,text/plain" onchange={pickFile} />
 
   <textarea
     use:autogrow={text}
     rows="6"
+    aria-label="가져올 마크다운"
     placeholder={PLACEHOLDER}
     bind:value={text}
     oninput={() => (preview = null)}
   ></textarea>
 
   <div class="row">
-    <button type="button" onclick={() => (preview = journal.previewImport(text))} disabled={!text.trim()}>
+    <button
+      type="button"
+      title="가져올 내용을 미리 검사"
+      onclick={() => (preview = journal.previewImport(text))}
+      disabled={!text.trim()}
+    >
       미리보기
     </button>
-    <button type="button" class="ghost" onclick={() => onclose()}>닫기</button>
+    <button type="button" class="ghost" title="가져오기 닫기" onclick={() => onclose()}>닫기</button>
   </div>
 
   {#if preview}
@@ -105,7 +111,13 @@
         </details>
       {/if}
 
-      <button type="button" class="primary" onclick={apply} disabled={busy || !preview.writes.length}>
+      <button
+        type="button"
+        class="primary"
+        title="미리보기 내용을 로컬에 저장"
+        onclick={apply}
+        disabled={busy || !preview.writes.length}
+      >
         {busy ? '쓰는 중…' : `${preview.writes.length}개 저장`}
       </button>
       {#if error}<p class="error">{error}</p>{/if}

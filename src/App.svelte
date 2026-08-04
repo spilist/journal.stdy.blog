@@ -6,14 +6,61 @@
   import ImportPanel from './lib/ImportPanel.svelte'
   import LogBlock from './lib/LogBlock.svelte'
   import Pinned from './lib/Pinned.svelte'
-  import { dayLabel, kstDate, kstTime } from './lib/date.js'
+  import { addDays, dayLabel, isCalendarDate, kstDate, kstTime, kstTimestamp } from './lib/date.js'
   import { DIMS, LOG_KINDS } from './lib/markdown.js'
   import { Journal } from './lib/state.svelte.js'
 
   const journal = new Journal()
 
+  const DATE_PARAM = 'date'
+  const initialUrl = new URL(location.href)
+  const initialDate = initialUrl.searchParams.get(DATE_PARAM)
+  if (initialDate && isCalendarDate(initialDate)) journal.goTo(initialDate)
+  else if (initialDate) {
+    initialUrl.searchParams.delete(DATE_PARAM)
+    history.replaceState(null, '', initialUrl)
+  }
+
   let showImport = $state(false)
   let toast = $state('')
+
+  /** @param {string} date @param {'push' | 'replace'} mode */
+  function updateDateUrl(date, mode = 'push') {
+    const url = new URL(location.href)
+    if (mode === 'push' && url.searchParams.get(DATE_PARAM) === date) return
+    url.searchParams.set(DATE_PARAM, date)
+    if (mode === 'replace') history.replaceState(null, '', url)
+    else history.pushState(null, '', url)
+  }
+
+  /** @param {string} date */
+  function goTo(date) {
+    const before = journal.date
+    journal.goTo(date)
+    if (journal.date !== before) updateDateUrl(journal.date)
+  }
+
+  /** @param {number} days */
+  function shiftDate(days) {
+    goTo(addDays(journal.date, days))
+  }
+
+  function goToday() {
+    const before = journal.date
+    journal.goToday()
+    if (journal.date !== before) updateDateUrl(journal.date)
+  }
+
+  function restoreDateFromUrl() {
+    const url = new URL(location.href)
+    const value = url.searchParams.get(DATE_PARAM)
+    const date = value && isCalendarDate(value) ? value : journal.today
+    journal.goTo(date)
+    if (value && !isCalendarDate(value)) {
+      url.searchParams.delete(DATE_PARAM)
+      history.replaceState(null, '', url)
+    }
+  }
 
   $effect(() => {
     journal.load().then(() => journal.pullNow())
@@ -29,7 +76,9 @@
       }
       // **날짜부터 다시 읽는다.** 자정을 넘겨 돌아오면 여기가 아니면 갱신될 자리가
       // 없어서, 그 화면에서 쓴 「오늘」이 전날에 저장된다.
+      const before = journal.date
       journal.refreshToday()
+      if (journal.date !== before) updateDateUrl(journal.date, 'replace')
       // **로컬을 서버보다 먼저 다시 읽는다.** 같은 브라우저의 다른 탭이 쓴 판본은
       // 이 경로가 아니면 안 들어오고, 모르는 채로 커밋하면 그 탭의 글자를 덮는다.
       journal.reload().then(() => journal.pullNow({ auto: true }))
@@ -37,12 +86,15 @@
     // 오프라인에서 돌아왔을 때. 이게 없이는 `syncState`가 'offline'에 갇혀 있다가
     // 새로고침해야 풀린다.
     const onOnline = () => journal.pullNow({ auto: true })
+    const onPopState = () => restoreDateFromUrl()
     document.addEventListener('visibilitychange', onVisibility)
     window.addEventListener('online', onOnline)
+    window.addEventListener('popstate', onPopState)
     window.addEventListener('pagehide', flush)
     return () => {
       document.removeEventListener('visibilitychange', onVisibility)
       window.removeEventListener('online', onOnline)
+      window.removeEventListener('popstate', onPopState)
       window.removeEventListener('pagehide', flush)
       flush()
     }
@@ -58,6 +110,29 @@
     if (!journal.lastSyncAt) return '동기화 전'
     const day = kstDate(journal.lastSyncAt)
     return `↕ ${day === journal.today ? '' : `${day.slice(5)} `}${kstTime(journal.lastSyncAt)}`
+  })
+  let syncTitle = $derived.by(() => {
+    if (journal.syncState === 'syncing') return '동기화 중'
+    if (journal.syncState === 'offline') return journal.syncMessage || '오프라인'
+    if (journal.syncState === 'relogin') {
+      return journal.syncMessage || '로그인이 만료됨. 새로고침이 필요함'
+    }
+    if (journal.syncState === 'error') {
+      return journal.storageError || journal.syncMessage || '동기화 오류'
+    }
+    return journal.lastSyncAt ? `동기화 시각: ${kstTimestamp(journal.lastSyncAt)}` : '동기화 전'
+  })
+  let syncAriaLabel = $derived.by(() => {
+    if (journal.syncState === 'syncing') return '동기화 중'
+    if (journal.syncState === 'offline') {
+      return journal.syncMessage ? `오프라인: ${journal.syncMessage}` : '오프라인'
+    }
+    if (journal.syncState === 'relogin') return '로그인이 만료됨. 새로고침이 필요함'
+    if (journal.syncState === 'error') {
+      return journal.storageError || journal.syncMessage || '동기화 오류'
+    }
+    if (journal.syncMessage) return journal.syncMessage
+    return syncTitle
   })
 
   /**
@@ -105,21 +180,31 @@
         : '전체 마크다운을 내려받았습니다',
     )
   }
+
+  function copyMonth() {
+    copy(journal.exportMonth(), `${Number(journal.date.slice(5, 7))}월치를 복사했습니다`)
+  }
 </script>
 
 <header>
   <nav class="dates">
-    <button type="button" onclick={() => journal.shiftDate(-1)} aria-label="전날">‹</button>
+      <button type="button" onclick={() => shiftDate(-1)} aria-label="전날로 이동" title="전날로 이동">‹</button>
     <label class="current">
       <span class="label">{dayLabel(journal.date, journal.today)}</span>
-      <input type="date" value={journal.date} onchange={(e) => journal.goTo(e.currentTarget.value)} />
+      <input type="date" aria-label="날짜 선택" title="날짜 선택" value={journal.date} onchange={(e) => goTo(e.currentTarget.value)} />
     </label>
-    <button type="button" onclick={() => journal.shiftDate(1)} aria-label="다음날">›</button>
+      <button type="button" onclick={() => shiftDate(1)} aria-label="다음날로 이동" title="다음날로 이동">›</button>
   </nav>
 
   <div class="sync">
     <!-- 동기화는 사람이 누른다 (불변식 2). 미동기화를 보이게 하는 건 자동화가 아니다. -->
-    <button type="button" class:has={dirty > 0} onclick={() => journal.pushNow()}>
+    <button
+      type="button"
+      class:has={dirty > 0}
+      aria-label={dirty > 0 ? `미동기화 ${dirty}개 올리기` : '미동기화 내용 올리기'}
+      title={dirty > 0 ? `미동기화 ${dirty}개 올리기` : '미동기화 내용 올리기'}
+      onclick={() => journal.pushNow()}
+    >
       ↑ 올리기<!-- 개수는 고정폭 자리에 둔다. 라벨에 붙이면 0→1, 9→10에서 버튼이
                   넓어지며 옆 버튼을 밀어 오터치가 난다. -->
       <span class="count">{dirty > 0 ? dirty : ''}</span>
@@ -127,20 +212,24 @@
     <!-- 날짜 줄이 아니라 여기 산다. 날짜 줄에 두면 나타났다 사라질 때마다 `›` 가
          밀려 오터치가 났다. 여기서는 앞의 「올리기」가 자리를 지키므로 숨겨도 안 밀린다. -->
     {#if journal.date !== journal.today}
-      <button type="button" class="ghost today" onclick={() => journal.goToday()}>오늘로</button>
+      <button type="button" class="ghost today" onclick={goToday} title="오늘 날짜로 이동">오늘로</button>
     {/if}
     <span
       class="state"
       class:warn={journal.syncState === 'relogin' || journal.syncState === 'error'}
+      aria-label={syncAriaLabel}
+      aria-live="polite"
+      title={syncTitle}
     >
       {#if journal.syncState === 'syncing'}동기화 중…
       {:else if journal.syncState === 'offline'}오프라인{journal.syncMessage ? ` · ${journal.syncMessage}` : ''}
+      {:else if journal.syncState === 'error'}저장 오류
       {:else if journal.syncMessage}{journal.syncMessage}
       {:else}
         <!-- **늘 떠 있는 자리.** 토스트는 4초 뒤 사라지므로 그것만으로는 "언제
              마지막으로 맞췄더라"에 답이 없다 (설계 취향 15항). 자동화가 아니라
              사실을 보이게 하는 것이라 불변식 2와 충돌하지 않는다. -->
-        <span class="synced" title="마지막으로 서버와 통한 시각">{syncedLabel}</span>
+        <span class="synced">{syncedLabel}</span>
       {/if}
     </span>
   </div>
@@ -162,30 +251,44 @@
 
   {#each journal.offscreenConflicts() as c (c.date)}
     <!-- 다른 날짜의 충돌 사본으로 가는 통로. 새 기능이 아니라 날짜 이동의 조합이다. -->
-    <button type="button" class="banner jump" onclick={() => journal.goTo(c.date)}>
+    <button type="button" class="banner jump" onclick={() => goTo(c.date)} title={`${c.date}로 이동`}>
       ⚠ {c.date}에 충돌 사본 {c.count}개 — 보러 가기
     </button>
   {/each}
 
   {#if journal.syncState === 'relogin'}
-    <p class="relogin">로그인이 만료됐습니다. <a href={location.pathname}>새로고침</a>하면 다시 로그인합니다.</p>
+    <p class="relogin">
+      로그인이 만료됐습니다.
+      <a href={`${location.pathname}${location.search}`}>새로고침</a>하면 다시 로그인합니다.
+    </p>
   {/if}
 
   <Pinned {journal} />
 
   {#if journal.loaded}
-    <Energy {journal} dims={DIMS} />
+    <Energy {journal} dims={DIMS} ondate={goTo} />
     {#each LOG_KINDS as kind (kind)}
       <LogBlock {journal} {kind} />
     {/each}
   {/if}
 
   <footer>
-    <button type="button" onclick={() => copy(journal.exportDay(), '하루치를 복사했습니다')}>
+    <button type="button" onclick={() => copy(journal.exportDay(), '하루치를 복사했습니다')} title="현재 날짜의 하루치를 복사">
       하루치 복사
     </button>
-    <button type="button" class="ghost" onclick={download}>전체 내려받기</button>
-    <button type="button" class="ghost" class:open={showImport} onclick={() => (showImport = !showImport)}>
+    <button type="button" onclick={copyMonth} title={`${Number(journal.date.slice(5, 7))}월의 고정 노트와 기록을 복사`}>
+      {Number(journal.date.slice(5, 7))}월 복사
+    </button>
+    <button type="button" class="ghost" onclick={download} title="전체 저널을 마크다운 파일로 내려받기">전체 내려받기</button>
+    <button
+      type="button"
+      class="ghost"
+      class:open={showImport}
+      aria-expanded={showImport}
+      aria-controls="import-panel"
+      title={showImport ? '가져오기 닫기' : '마크다운 가져오기 열기'}
+      onclick={() => (showImport = !showImport)}
+    >
       {showImport ? '가져오기 닫기' : '가져오기'}
     </button>
   </footer>
@@ -195,6 +298,7 @@
          아무 반응이 없는 것처럼 보인다. -->
     <ImportPanel
       {journal}
+      id="import-panel"
       onclose={(message) => {
         showImport = false
         if (message) say(message)
@@ -204,7 +308,7 @@
 </main>
 
 {#if toast}
-  <div class="toast" role="status">{toast}</div>
+  <div class="toast" role="status" aria-live="polite">{toast}</div>
 {/if}
 
 <style>

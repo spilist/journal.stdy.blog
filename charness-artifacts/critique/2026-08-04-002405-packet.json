@@ -1,0 +1,52 @@
+{
+  "kind": "charness.critique_prepare_packet",
+  "version": 1,
+  "repo": "journal.stdy.blog",
+  "generated_at": "2026-08-04T00:24:05Z",
+  "prepared_for": "원복 필터·월 복사·접근성 개선 구현",
+  "changed_ref": null,
+  "adapter_path": ".agents/critique-adapter.yaml",
+  "sections": [],
+  "section_count": 0,
+  "ok": true,
+  "reviewer_tier_evidence": {
+    "requested_tier": "high-leverage",
+    "requested_spawn_fields": {
+      "model": "opus",
+      "reasoning_effort": "medium",
+      "fork_turns": "none"
+    },
+    "host_exposure_state": "pending-parent-spawn",
+    "application_state": "unverified-by-packet",
+    "instruction": "Review artifacts must record requested_fields_sent, metadata-hidden, host-defaulted, unsupported, or applied only when host-confirmed."
+  },
+  "reviewed_input_identity": {
+    "algorithm": "sha256-v2",
+    "status": "captured",
+    "mode": "working-tree",
+    "changed_ref": null,
+    "resolved_changed_ref": [],
+    "base_head": "f5730352133fbd192f28ff86de946ff553c0edff",
+    "base_head_role": "provenance-only",
+    "reviewed_paths": [
+      ".agents/impl-adapter.yaml"
+    ],
+    "reviewed_content": [
+      {
+        "path": ".agents/impl-adapter.yaml",
+        "content_sha256": "45dd6c2d828880fdc0ae39f7b8adc9062fe68ee1721ad415dcbe768ed14850af"
+      }
+    ],
+    "reviewed_patch_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "staged_patch_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "unstaged_patch_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "declared_untracked": [
+      {
+        "path": ".agents/impl-adapter.yaml",
+        "content_sha256": "45dd6c2d828880fdc0ae39f7b8adc9062fe68ee1721ad415dcbe768ed14850af"
+      }
+    ],
+    "auto_excluded_paths": [],
+    "identity_sha256": "b99aabef87f0651384ad9f911d1f379f1602fbe5e53bf5205a57c433d4f687e1"
+  }
+}

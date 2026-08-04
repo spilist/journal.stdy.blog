@@ -141,6 +141,11 @@ test('내용이 같으면 updatedAt이 안 움직인다 — 가짜 더티가 LWW
   assert.equal(nextText(prev, '달라짐', 9999).updatedAt, 9999)
 })
 
+test('연속 입력이 같은 밀리초여도 updatedAt은 앞으로 간다', () => {
+  const prev = log({ updatedAt: 9999 })
+  assert.equal(nextText(prev, '다음 문장', 9999).updatedAt, 10000)
+})
+
 /**
  * @param {Partial<import('./merge.js').Rec>} [over]
  * @returns {import('./merge.js').Rec}
@@ -158,6 +163,10 @@ test('이유만 고치면 scoredAt이 안 움직인다 (AC-7, D15)', () => {
   const next = nextEnergy(energy(), { reason: '괜찮았다고 본다' }, 9999)
   assert.equal(next.data.scoredAt, 1000)
   assert.equal(next.updatedAt, 9999)
+})
+
+test('에너지 연속 입력도 같은 밀리초를 정렬한다', () => {
+  assert.equal(nextEnergy(energy(), { score: 8 }, 1000).updatedAt, 1001)
 })
 
 test('점수가 바뀌면 scoredAt이 움직인다', () => {

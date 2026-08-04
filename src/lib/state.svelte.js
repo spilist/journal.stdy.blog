@@ -1,7 +1,7 @@
 // 화면이 쓰는 상태와 동작. 순수 규칙은 `merge.js`·`markdown.js`에 있고 여기는
 // 그것들을 IndexedDB와 화면에 잇는다.
 
-import { addDays, kstDate } from './date.js'
+import { addDays, isCalendarDate, kstDate } from './date.js'
 import { DIMS, LOG_KINDS, assemble, assembleDay, parse } from './markdown.js'
 import {
   countDirty,
@@ -251,6 +251,10 @@ export class Journal {
         continue
       }
       if (this.#hasPendingEdit(other.key)) continue
+      // 올리는 중 A→B를 A로 원복한 키는 push 응답이 올 때까지 잠근다. 그 사이
+      // 다른 탭이 기록한 디스크 판본을 받으면 원복 상태와 `#revertedText`가 함께
+      // 사라져, 늦게 온 push 응답이 원복을 다시 더티로 살릴 근거를 잃는다.
+      if (this.#pushingKeys[other.key] && this.#revertedText[other.key]) continue
       if (other.updatedAt === mine.updatedAt) continue
       const otherWins = other.updatedAt > mine.updatedAt
       const loser = otherWins ? mine : other
@@ -260,7 +264,11 @@ export class Journal {
       if (loser.kind !== 'revision' && hasContent(loser) && describe(loser) !== describe(winner)) {
         kept.push({ target: loser.key, text: describe(loser), at: loser.updatedAt })
       }
-      if (otherWins) this.records[other.key] = other
+      if (otherWins) {
+        this.records[other.key] = other
+        delete this.#textSessions[other.key]
+        delete this.#revertedText[other.key]
+      }
       else writeBack.push($state.snapshot(mine))
     }
 
@@ -379,7 +387,14 @@ export class Journal {
     if (next === prev) return
     // 개정 스냅샷은 **지우기 분기보다 먼저다.** 뒤에 두면 고정 블록을 통째로 지운
     // 순간에만 밀봉이 건너뛰어져, `D11`이 지키려던 되돌리기가 그 경우에만 사라진다.
-    if (next.key === 'pinned') this.#snapshotPinned(prev)
+    if (next.key === 'pinned') {
+      const revisionKey = this.#snapshotPinned(prev)
+      const session = this.#textSessions[next.key]
+      if (revisionKey && session) {
+        session.revisionKey = revisionKey
+        session.revisionUpdatedAt = this.records[revisionKey]?.updatedAt
+      }
+    }
     // **빈 값으로 되돌아왔고 한 번도 올린 적이 없으면 레코드를 지운다** (`F-8`).
     // 남겨두면 지울 것도 없는데 영원히 더티인 빈 레코드가 되어, 「올리기」가 그걸
     // 서버에 심는다. 그 빈 행은 **나중 타임스탬프로 다른 기기가 먼저 매긴 점수를
@@ -441,6 +456,78 @@ export class Journal {
   }
 
   /**
+   * 텍스트 편집의 시작값을 기억한다. 디바운스 하나 안에서만 A→B→A를 볼 수 있으면,
+   * 한 번 커밋된 시험 편집은 다시 더티로 남는다. 기준값은 push가 성공할 때까지 유지한다.
+   *
+   * @param {string} key
+   * @param {string} kind
+   */
+  #startTextSession(key, kind) {
+    if (this.#textSessions[key]) return
+    delete this.#revertedText[key]
+    const current = this.records[key] ?? blank(key, kind, { text: '' })
+    this.#textSessions[key] = { baseline: $state.snapshot(current) }
+  }
+
+  /**
+   * 편집 세션이 시작된 값으로 돌아왔을 때 본체와 그 세션이 만든 revision을 되돌린다.
+   * 원격 판본이 이미 들어온 경우에는 남의 값을 덮지 않도록 세션만 포기한다.
+   *
+   * @param {string} key
+   * @param {{baseline: Rec, revisionKey?: string, revisionUpdatedAt?: number}} session
+   */
+  #restoreTextSession(key, session) {
+    const current = this.records[key]
+    if (current && (current.syncedAt ?? 0) > (session.baseline.syncedAt ?? 0)) {
+      delete this.#textSessions[key]
+      return
+    }
+
+    const revision = session.revisionKey ? this.records[session.revisionKey] : undefined
+    if (
+      revision &&
+      revision.updatedAt === session.revisionUpdatedAt &&
+      revision.data.text === session.baseline.data.text
+    ) {
+      delete this.records[revision.key]
+      this.#persist(db.dropRecord(revision.key))
+    }
+
+    const baseline = session.baseline
+    // 올리는 중 원복은 서버에 이미 보낸 판본과의 관계가 끝나지 않았다. 원래
+    // 동기화 시각을 보존하되 새 사용자 판정으로 표시해야 pull이 그 사이 서버에
+    // 반영된 판본을 받아 원복을 지우지 않는다. 평소 원복은 기존 baseline을 그대로
+    // 복원해 A→B→A가 정말 clean이 되게 한다.
+    const protectedBaseline = this.#pushingKeys[key]
+      ? {
+          ...baseline,
+          updatedAt: Math.max(Date.now(), baseline.updatedAt + 1),
+          syncedAt: baseline.syncedAt ?? 0,
+        }
+      : baseline
+    if (!this.#pushingKeys[key] && this.loaded && !hasContent(baseline) && !(baseline.syncedAt ?? 0)) {
+      delete this.records[key]
+      this.#persist(db.dropRecord(key))
+    } else {
+      this.records[key] = protectedBaseline
+      this.#persist(db.putRecord($state.snapshot(protectedBaseline)))
+    }
+    this.#revertedText[key] = { baseline }
+    delete this.#textSessions[key]
+  }
+
+  /** @param {string} key @param {string} kind @param {string} text @param {number} now */
+  #commitText(key, kind, text, now) {
+    const session = this.#textSessions[key]
+    if (session && text === session.baseline.data.text) {
+      this.#restoreTextSession(key, session)
+      return
+    }
+    const prev = this.#at(key, kind, { text: '' })
+    this.#commit(prev, nextText(prev, text, now))
+  }
+
+  /**
    * 텍스트는 디바운스해서 쓴다. 화면에는 즉시 반영되고 저장만 미뤄진다.
    *
    * @param {string} key
@@ -448,14 +535,14 @@ export class Journal {
    * @param {string} text
    */
   #saveTextSoon(key, kind, text) {
+    this.#startTextSession(key, kind)
     clearTimeout(this.#timers[key])
     this.#timers[key] = setTimeout(() => {
       delete this.#timers[key]
       // 커밋했으면 **대기값도 지운다.** 남겨두면 `#hasPendingEdit`이 영원히 참이라
       // pull이 그 키의 원격 갱신을 계속 미루고, `toggleScore`가 옛 이유를 되살린다.
       delete this.#pending[key]
-      const prev = this.#at(key, kind, { text: '' })
-      this.#commit(prev, nextText(prev, text, Date.now()))
+      this.#commitText(key, kind, text, Date.now())
     }, SAVE_DELAY_MS)
   }
 
@@ -470,8 +557,8 @@ export class Journal {
         const prev = this.records[key] ?? blank(key, 'energy', { score: null, reason: '', scoredAt: null })
         this.#commit(prev, nextEnergy(prev, { reason: pending }, Date.now()))
       } else {
-        const prev = this.records[key] ?? blank(key, key === 'pinned' ? 'pinned' : 'log', { text: '' })
-        this.#commit(prev, nextText(prev, pending, Date.now()))
+        const kind = key === 'pinned' ? 'pinned' : 'log'
+        this.#commitText(key, kind, pending, Date.now())
       }
     }
     this.#pending = Object.create(null)
@@ -482,6 +569,19 @@ export class Journal {
    * `flush()`가 지나가면 사라진다 — `#hasPendingEdit`이 이 사실에 기대고 있다.
    */
   #pending = Object.create(null)
+
+  /**
+   * @type {Record<string, {baseline: Rec, revisionKey?: string, revisionUpdatedAt?: number}>}
+   */
+  #textSessions = Object.create(null)
+
+  /**
+   * 텍스트를 원복한 직후 올리기 왕복이 진행 중일 수 있다. 그때 보낸 판본이 서버에
+   * 적용되면, 원복값도 이제 서버와 달라졌으므로 다음 올리기의 입력으로 되살려야 한다.
+   * 맵의 수명은 다음 새 편집·pull·해당 push 응답까지다.
+   * @type {Record<string, {baseline: Rec}>}
+   */
+  #revertedText = Object.create(null)
 
   /**
    * @param {string} kind '어제' | '오늘'
@@ -508,13 +608,14 @@ export class Journal {
    * 하루 1개가 스키마로 강제된다.
    *
    * @param {Rec} previous 바뀌기 전의 pinned 레코드
+   * @returns {string | null} 이번 커밋에서 새로 만든 revision 키
    */
   #snapshotPinned(previous) {
     const today = kstDate()
     const last = this.revisions()[0]
     const lastDay = last ? last.key.slice('revision:'.length) : null
-    if (!needsSnapshot(lastDay, today)) return
-    if (!previous.data.text) return // 밀봉할 직전 내용이 없다
+    if (!needsSnapshot(lastDay, today)) return null
+    if (!previous.data.text) return null // 밀봉할 직전 내용이 없다
     const key = recordKey('revision', today)
     const rec = {
       key,
@@ -525,6 +626,7 @@ export class Journal {
     }
     this.records[key] = rec
     this.#persist(db.putRecord(rec))
+    return key
   }
 
   /**
@@ -615,7 +717,7 @@ export class Journal {
    * @param {string} date
    */
   goTo(date) {
-    if (!/^20\d{2}-\d{2}-\d{2}$/.test(date)) return
+    if (!isCalendarDate(date)) return
     this.flush()
     this.date = date
   }
@@ -627,17 +729,20 @@ export class Journal {
 
   // ── Export / Import ─────────────────────────────────────────────────────
 
-  /** @param {string} date */
-  dayFor(date) {
+  /** @param {string} date @param {boolean} [templateEnergy] */
+  dayFor(date, templateEnergy = true) {
     /** @type {import('./markdown.js').DayEntry} */
     const day = { date, energy: [], logs: [] }
-    for (const dim of DIMS) {
-      const rec = this.records[recordKey('energy', date, dim)]
-      day.energy.push({
-        dim,
-        score: rec?.data.score ?? null,
-        reason: rec?.data.reason ?? '',
-      })
+    const energyRecords = DIMS.map((dim) => this.records[recordKey('energy', date, dim)])
+    if (templateEnergy || energyRecords.some((rec) => rec && hasContent(rec))) {
+      for (const [i, dim] of DIMS.entries()) {
+        const rec = energyRecords[i]
+        day.energy.push({
+          dim,
+          score: rec?.data.score ?? null,
+          reason: rec?.data.reason ?? '',
+        })
+      }
     }
     for (const kind of LOG_KINDS) {
       day.logs.push({ kind, text: this.records[recordKey('log', date, kind)]?.data.text ?? '' })
@@ -651,6 +756,21 @@ export class Journal {
     return assembleDay(this.dayFor(this.date)) + '\n'
   }
 
+  /** 선택한 날짜가 속한 달. 고정 블록은 맨 위에 한 번만 들어간다. */
+  exportMonth() {
+    this.flush()
+    const month = this.date.slice(0, 7)
+    const days = datesInRange(
+      Object.values(this.records),
+      `${month}-01`,
+      `${month}-31`,
+    )
+    return assemble({
+      pinned: this.pinned().data.text,
+      days: days.map((d) => this.dayFor(d, false)),
+    })
+  }
+
   /**
    * 전체. 같은 조립 함수에 날짜 범위만 다르게 준 것이다 (`D13`).
    *
@@ -662,7 +782,7 @@ export class Journal {
     const days = datesInRange(Object.values(this.records), null, null)
     return assemble({
       pinned: this.pinned().data.text,
-      days: days.map((d) => this.dayFor(d)),
+      days: days.map((d) => this.dayFor(d, false)),
     })
   }
 
@@ -846,9 +966,13 @@ export class Journal {
         // 응답을 기다리는 동안 새로 시작된 입력도 로컬 편집이다.
         const pending = this.#hasPendingEdit(remote.key)
         const decision = pullDecision(local, remote)
-        if (!pending && decision.accept) {
+        // 올리는 중 원복한 키는 push 응답까지 보호한다. 서버가 이미 B를 반영했어도
+        // 그 응답이 오기 전에 자동 pull이 B를 받아들이면, A를 다시 더티로 만들
+        // `#revertedText`가 지워져 사용자의 명시적인 원복이 사라진다.
+        const revertedWhilePushing = this.#pushingKeys[remote.key] && this.#revertedText[remote.key]
+        if (!pending && !revertedWhilePushing && decision.accept) {
           accepted.push({ ...remote, syncedAt: remote.updatedAt })
-        } else if (pending || decision.reason === 'local-dirty') {
+        } else if (pending || revertedWhilePushing || decision.reason === 'local-dirty') {
           // `stale`은 붙잡지 않는다 — 이미 가진 판본이라 다시 받을 이유가 없고,
           // 붙잡으면 커서가 영영 안 나아간다.
           held.push(remote)
@@ -876,6 +1000,7 @@ export class Journal {
       for (const rec of accepted) {
         if ((this.records[rec.key]?.updatedAt ?? 0) > rec.updatedAt) continue
         this.records[rec.key] = rec
+        delete this.#revertedText[rec.key]
       }
       this.diverged = diverged
       this.syncState = 'idle'
@@ -900,6 +1025,7 @@ export class Journal {
     try {
       await this.#push()
     } finally {
+      this.#pushingKeys = Object.create(null)
       this.#pushing = false
     }
   }
@@ -907,9 +1033,13 @@ export class Journal {
   /** 겹침 방지용. 반응형 상태가 아니다. */
   #pushing = false
 
+  /** 현재 응답을 기다리는 push chunk의 키만 보호한다. */
+  #pushingKeys = Object.create(null)
+
   async #push() {
     this.flush()
     const all = Object.values(this.records).filter(isDirty).map((r) => $state.snapshot(r))
+    this.#pushingKeys = Object.create(null)
     if (!all.length) {
       // 더티가 없으면 분기도 없다. 배너를 남겨두면 "「올리기」를 누르면 정해집니다"가
       // 통하지 않는 막다른 골목이 된다.
@@ -931,12 +1061,16 @@ export class Journal {
       // **묶음마다 따로 보내고 따로 저장한다.** 이유는 `PUSH_CHUNK` 주석에 있다.
       for (let at = 0; at < all.length; at += PUSH_CHUNK) {
       const sent = all.slice(at, at + PUSH_CHUNK)
+      const pushingKeys = Object.create(null)
+      for (const rec of sent) pushingKeys[rec.key] = true
+      this.#pushingKeys = pushingKeys
       /** @type {Record<string, Rec>} */
       const sentByKey = Object.create(null)
       for (const rec of sent) sentByKey[rec.key] = rec
 
       const res = await push(sent)
       if (res.relogin) {
+        for (const rec of sent) delete this.#revertedText[rec.key]
         this.syncState = 'relogin'
         this.syncMessage = '로그인이 만료됐습니다. 새로고침하면 다시 로그인합니다.'
         return
@@ -944,6 +1078,7 @@ export class Journal {
       // **500을 '네트워크가 없습니다'로 말하지 않는다.** 아래 루프가 예외로 터지면
       // 바깥 catch가 오프라인이라고 알리고, 사용자는 안 올라간 이유를 못 본다.
       if (!Array.isArray(res.verdicts)) {
+        for (const rec of sent) delete this.#revertedText[rec.key]
         this.syncState = 'error'
         this.syncMessage = '서버가 올리기를 거절했습니다. 글자는 로컬에 그대로 있습니다.'
         return
@@ -959,7 +1094,25 @@ export class Journal {
       for (const verdict of res.verdicts) {
         const outbound = sentByKey[verdict.key]
         const local = this.records[verdict.key]
-        if (!outbound || !local) continue
+        const reverted = this.#revertedText[verdict.key]
+        if (!outbound || (!local && !reverted)) continue
+
+        // A→B를 올리는 동안 A로 원복하면 `#restoreTextSession`이 A를 원래 시각으로
+        // 되돌린다. 보낸 B가 서버에 적용된 뒤 A를 그대로 깨끗하다고 표시하면 다음
+        // pull이 B로 덮어써서, 사용자가 원복한 글자를 잃는다. A를 **새로운 사용자의
+        // 판정**으로 되살리되, 실제 본문과 기존 동기화 시각은 보존한다.
+        if (reverted) {
+          const kept = preserveOverwritten(outbound, verdict.server)
+          if (kept) newConflicts.push(kept)
+          if (verdict.applied || verdict.server) {
+            const baseline = reverted.baseline
+            const updatedAt = Math.max(Date.now(), outbound.updatedAt + 1)
+            updates.push({ ...baseline, updatedAt, syncedAt: baseline.syncedAt })
+            raced += 1
+          }
+          delete this.#revertedText[verdict.key]
+          continue
+        }
 
         // **이겼어도 못 본 값을 덮었으면 덮인 쪽을 사본으로 남긴다** (`SC-6`).
         // 거절 경로의 거울이다 — 저쪽은 진 내 글자를, 이쪽은 진 서버 글자를 남긴다.
@@ -1017,7 +1170,7 @@ export class Journal {
         // 이미 내 값이 써졌고, 재시도하면 `resolveRejected`가 내용이 같다고 판단해
         // 사본을 안 만든다. 순서를 뒤집으면 최악이 「지울 수 있는 잉여 배지 하나」다.
         await db.addConflicts(newConflicts)
-        await db.putRecords(updates)
+        await db.putRecordsIfNewer(updates)
       } catch (err) {
         // **로컬 쓰기 실패는 '오프라인'이 아니다** (`F-6`). 서버엔 이미 써졌는데
         // 네트워크 탓이라고 말하면, 사용자는 영구 더티가 된 이유를 못 본다.
@@ -1032,6 +1185,10 @@ export class Journal {
       for (const rec of updates) {
         if ((this.records[rec.key]?.updatedAt ?? 0) > rec.updatedAt) continue
         this.records[rec.key] = rec
+        if (rec.kind === 'pinned' || rec.kind === 'log') {
+          delete this.#textSessions[rec.key]
+          delete this.#revertedText[rec.key]
+        }
       }
       if (newConflicts.length) this.conflicts = await db.allConflicts()
       conflicted += newConflicts.length
@@ -1053,6 +1210,7 @@ export class Journal {
           (stuck ? `, ${stuck}개는 서버가 받지 않았습니다` : ''),
       )
     } catch {
+      for (const key of Object.keys(this.#pushingKeys)) delete this.#revertedText[key]
       this.syncState = 'offline'
       this.#say('네트워크가 없습니다')
     }

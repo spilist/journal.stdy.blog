@@ -70,14 +70,17 @@ test('올리는 동안 친 문장이 응답에 덮이지 않는다 (불변식 3)
   const { journal, store, sync } = await freshJournal()
   sync.roundTrip(60)
   store.writeDelay(60)
+  journal.date = KEY.split(':')[1]
   journal.records[KEY] = rec('지어낸 첫 문장', 100, 50)
 
   const pushing = journal.pushNow()
   await new Promise((r) => setTimeout(r, 80))
-  journal.records[KEY] = rec('지어낸 첫 문장\n올리는 중에 친 문장', 900, 50)
+  journal.setLog('오늘', '지어낸 첫 문장\n올리는 중에 친 문장')
+  journal.flush()
   await pushing
 
   assert.equal(journal.records[KEY].data.text, '지어낸 첫 문장\n올리는 중에 친 문장')
+  assert.equal(store.records.get(KEY)?.data.text, '지어낸 첫 문장\n올리는 중에 친 문장')
 })
 
 test('더티를 PUSH_CHUNK 씩 쪼개 보낸다 — D1 호출당 쿼리 상한 (첫 사용 경로)', async () => {
@@ -177,6 +180,7 @@ test('다른 탭이 쓴 판본을 덮지 않는다 — 진 쪽은 사본으로 �
 test('다시 읽기가 디바운스 중인 입력을 디스크 판본으로 밀지 않는다', async () => {
   // 아직 커밋 안 된 글자를 디스크 판본으로 덮으면 화면에서 글자가 사라진다.
   const { journal, store } = await freshJournal()
+  journal.date = KEY.split(':')[1]
   store.records.set(KEY, rec('디스크에 있던 지어낸 문단', 300, 0))
   journal.records[KEY] = rec('이 탭이 쓴 지어낸 문단', 200, 0)
   journal.setLog('오늘', '아직 커밋 안 된 지어낸 문장')
@@ -185,6 +189,248 @@ test('다시 읽기가 디바운스 중인 입력을 디스크 판본으로 밀�
 
   assert.equal(journal.records[KEY].data.text, '이 탭이 쓴 지어낸 문단', '입력 중인 키는 건드리지 않는다')
   assert.deepEqual(store.conflicts, [], '사본도 만들지 않는다')
+})
+
+test('텍스트를 고친 뒤 원복하면 본체와 새 revision이 더티로 남지 않는다', async () => {
+  const { journal, store } = await freshJournal()
+  const original = {
+    key: 'pinned',
+    kind: 'pinned',
+    data: { text: '# 지어낸 원본' },
+    updatedAt: 100,
+    syncedAt: 100,
+  }
+  journal.records.pinned = original
+
+  journal.setPinned('# 지어낸 변경')
+  journal.flush()
+  assert.equal(journal.revisions().length, 1, '실제 변경은 이력으로 남는다')
+  const revisionKey = journal.revisions()[0].key
+
+  journal.setPinned('# 지어낸 원본')
+  journal.flush()
+
+  assert.equal(journal.dirtyCount(), 0, '원복하면 올릴 것이 없다')
+  assert.deepEqual(Object.keys(journal.records), ['pinned'])
+  assert.equal(store.records.has(revisionKey), false, '새 이력도 함께 되돌린다')
+  assert.deepEqual(journal.records.pinned.data, original.data)
+  assert.equal(journal.records.pinned.updatedAt, original.updatedAt)
+  assert.equal(journal.records.pinned.syncedAt, original.syncedAt)
+})
+
+test('일반 로그의 텍스트 원복도 더티를 남기지 않는다', async () => {
+  const { journal } = await freshJournal()
+  const key = `log:${journal.date}:오늘`
+  journal.records[key] = {
+    key,
+    kind: 'log',
+    data: { text: '지어낸 원본 문장' },
+    updatedAt: 100,
+    syncedAt: 100,
+  }
+
+  journal.setLog('오늘', '지어낸 변경 문장')
+  journal.flush()
+  journal.setLog('오늘', '지어낸 원본 문장')
+  journal.flush()
+
+  assert.equal(journal.dirtyCount(), 0)
+  assert.equal(journal.records[key].updatedAt, 100)
+})
+
+test('월 복사는 선택한 달의 pinned와 날짜 기록만 조립한다', async () => {
+  const { journal } = await freshJournal()
+  journal.date = '2026-08-15'
+  journal.records = {
+    pinned: { key: 'pinned', kind: 'pinned', data: { text: '# 지어낸 고정 노트' }, updatedAt: 1, syncedAt: 1 },
+    'log:2026-08-01:오늘': {
+      key: 'log:2026-08-01:오늘',
+      kind: 'log',
+      data: { text: '8월의 지어낸 기록' },
+      updatedAt: 1,
+      syncedAt: 1,
+    },
+    'log:2026-08-31:오늘': {
+      key: 'log:2026-08-31:오늘',
+      kind: 'log',
+      data: { text: '8월 말의 지어낸 기록' },
+      updatedAt: 1,
+      syncedAt: 1,
+    },
+    'log:2026-07-31:오늘': {
+      key: 'log:2026-07-31:오늘',
+      kind: 'log',
+      data: { text: '7월의 지어낸 기록' },
+      updatedAt: 1,
+      syncedAt: 1,
+    },
+    'revision:2026-08-03': {
+      key: 'revision:2026-08-03',
+      kind: 'revision',
+      data: { text: '지어낸 이전 이력' },
+      updatedAt: 1,
+      syncedAt: 1,
+    },
+  }
+
+  const out = journal.exportMonth()
+  assert.ok(out.startsWith('# 지어낸 고정 노트'))
+  assert.ok(out.includes('# 26-08-01'))
+  assert.ok(out.includes('# 26-08-31'))
+  assert.ok(!out.includes('26-07-31'))
+  assert.ok(!out.includes('지어낸 이전 이력'))
+  assert.ok(!out.includes('# 26-08-01\n\n## 에너지'), '에너지 없는 날짜에 빈 섹션을 만들지 않는다')
+})
+
+test('올리는 중 원복한 텍스트는 서버 판본에 덮이지 않게 다시 더티가 된다', async () => {
+  const { journal, sync } = await freshJournal()
+  const original = {
+    key: 'pinned',
+    kind: 'pinned',
+    data: { text: '# 지어낸 원본' },
+    updatedAt: 100,
+    syncedAt: 100,
+  }
+  journal.records.pinned = original
+  sync.server.set('pinned', structuredClone(original))
+  sync.roundTrip(30)
+
+  journal.setPinned('# 지어낸 변경')
+  journal.flush()
+  const pushing = journal.pushNow()
+  await new Promise((resolve) => setTimeout(resolve, 5))
+  journal.setPinned('# 지어낸 원본')
+  journal.flush()
+  await pushing
+
+  assert.equal(journal.records.pinned.data.text, original.data.text)
+  assert.ok(journal.dirtyCount() > 0, '서버에는 변경 판본이므로 원복도 다시 올려야 한다')
+  assert.ok(journal.records.pinned.updatedAt > original.updatedAt)
+  assert.equal(sync.server.get('pinned')?.data.text, '# 지어낸 변경')
+})
+
+test('올리는 중 원복한 키는 응답 전 pull에도 보호된다', async () => {
+  const { journal, store, sync } = await freshJournal()
+  const original = {
+    key: 'pinned',
+    kind: 'pinned',
+    data: { text: '# 지어낸 원본' },
+    updatedAt: 100,
+    syncedAt: 100,
+  }
+  journal.records.pinned = original
+  store.records.set('pinned', structuredClone(original))
+  sync.server.set('pinned', structuredClone(original))
+  sync.responseDelay(50)
+
+  journal.setPinned('# 지어낸 변경')
+  journal.flush()
+  const pushing = journal.pushNow()
+  await new Promise((resolve) => setTimeout(resolve, 5))
+  journal.setPinned('# 지어낸 원본')
+  journal.flush()
+
+  await journal.pullNow()
+
+  assert.equal(journal.records.pinned.data.text, original.data.text)
+  assert.ok(journal.dirtyCount() > 0, '응답 전 pull이 원복을 clean으로 만들면 안 된다')
+  assert.equal(sync.server.get('pinned')?.data.text, '# 지어낸 변경')
+  await pushing
+})
+
+test('다른 키를 올리는 중 원복한 텍스트는 새 push의 보호 대상이 아니다', async () => {
+  const { journal, sync } = await freshJournal()
+  const logKey = `log:${journal.date}:오늘`
+  journal.records.pinned = {
+    key: 'pinned',
+    kind: 'pinned',
+    data: { text: '# 지어낸 고정 노트' },
+    updatedAt: 100,
+    syncedAt: 100,
+  }
+  journal.records[logKey] = {
+    key: logKey,
+    kind: 'log',
+    data: { text: '지어낸 로그 원본' },
+    updatedAt: 100,
+    syncedAt: 100,
+  }
+  sync.responseDelay(50)
+
+  journal.setPinned('# 지어낸 고정 노트 변경')
+  journal.flush()
+  const pushing = journal.pushNow()
+  await new Promise((resolve) => setTimeout(resolve, 5))
+
+  journal.setLog('오늘', '지어낸 로그 변경')
+  journal.flush()
+  journal.setLog('오늘', '지어낸 로그 원본')
+  journal.flush()
+  await pushing
+
+  assert.equal(journal.records[logKey].data.text, '지어낸 로그 원본')
+  assert.equal(journal.dirtyCount(), 0, '현재 전송하지 않은 키의 원복은 clean이어야 한다')
+})
+
+test('verdict 없는 push 실패 뒤 원복 메타데이터를 다음 정상 push로 넘기지 않는다', async () => {
+  const { journal, sync } = await freshJournal()
+  const original = {
+    key: 'pinned',
+    kind: 'pinned',
+    data: { text: '# 지어낸 원본' },
+    updatedAt: 100,
+    syncedAt: 100,
+  }
+  journal.records.pinned = original
+  sync.server.set('pinned', structuredClone(original))
+  sync.roundTrip(30)
+  sync.expireSession(true)
+
+  journal.setPinned('# 지어낸 변경')
+  journal.flush()
+  const failed = journal.pushNow()
+  await new Promise((resolve) => setTimeout(resolve, 5))
+  journal.setPinned('# 지어낸 원본')
+  journal.flush()
+  await failed
+
+  assert.ok(journal.dirtyCount() > 0, '응답이 없으면 원복은 다음 push 대상으로 남는다')
+  sync.expireSession(false)
+  await journal.pushNow()
+
+  assert.equal(journal.records.pinned.data.text, original.data.text)
+  assert.equal(journal.dirtyCount(), 0, '다음 push에서는 일반 레코드로 clean이 된다')
+  assert.equal(sync.server.get('pinned')?.data.text, original.data.text)
+})
+
+test('다른 탭 판본이 들어오면 이전 텍스트 세션이 그 판본을 원복으로 덮지 않는다', async () => {
+  const { journal, store } = await freshJournal()
+  const key = `log:${journal.date}:오늘`
+  journal.records[key] = {
+    key,
+    kind: 'log',
+    data: { text: '지어낸 원본 문장' },
+    updatedAt: 100,
+    syncedAt: 100,
+  }
+
+  journal.setLog('오늘', '지어낸 이 탭 문장')
+  journal.flush()
+  store.records.set(key, {
+    key,
+    kind: 'log',
+    data: { text: '다른 탭의 지어낸 문장' },
+    updatedAt: Date.now() + 1000,
+    syncedAt: 100,
+  })
+  await journal.reload()
+
+  journal.setLog('오늘', '지어낸 원본 문장')
+  journal.flush()
+
+  assert.equal(journal.records[key].data.text, '지어낸 원본 문장')
+  assert.notEqual(journal.records[key].data.text, '다른 탭의 지어낸 문장')
+  assert.ok(journal.conflicts.some((/** @type {{text: string}} */ c) => c.text === '지어낸 이 탭 문장'))
 })
 
 test('2000~2099 밖 날짜로는 이동하지 않는다 — export 형식이 두 자리 연도다', async () => {

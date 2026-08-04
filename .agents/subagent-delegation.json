@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "bounded_review_delegation": "granted",
+  "scopes": [
+    "critique"
+  ],
+  "recorded_by": "user",
+  "note": "\uc0ac\uc6a9\uc790\uac00 \uc81c\uacf5\ud55c AGENTS.md\uc758 Subagent Delegation \uacc4\uc57d\uc774 bounded critique review\ub97c standing-approved\ub85c \uc704\uc784\ud568"
+}

@@ -5,7 +5,7 @@
 
   import Conflicts from './Conflicts.svelte'
   import { autogrow } from './autogrow.js'
-  import { kstDate, kstTime } from './date.js'
+  import { kstDate, kstTime, kstTimestamp } from './date.js'
 
   /** @type {{journal: import('./state.svelte.js').Journal, kind: string}} */
   let { journal, kind } = $props()
@@ -19,7 +19,11 @@
     <h2>{kind}</h2>
     {#if rec.updatedAt}
       <!-- 에너지의 `scoredAt`과 같은 자리. 기록 시각이 해석에 영향을 준다 (`F4`). -->
-      <span class="at" title="마지막으로 손댄 시각">
+      <span
+        class="at"
+        aria-label={`마지막 수정 시각: ${kstTimestamp(rec.updatedAt)}`}
+        title={`마지막 수정 시각: ${kstTimestamp(rec.updatedAt)}`}
+      >
         {kstDate(rec.updatedAt) === journal.date ? '' : `${kstDate(rec.updatedAt)} `}{kstTime(
           rec.updatedAt,
         )}
@@ -37,6 +41,7 @@
   <textarea
     use:autogrow={rec.data.text}
     rows="6"
+    aria-label={`${kind} 기록`}
     placeholder="- "
     value={rec.data.text}
     oninput={(/** @type {Event & {currentTarget: HTMLTextAreaElement}} */ e) => journal.setLog(kind, e.currentTarget.value)}

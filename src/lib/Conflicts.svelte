@@ -14,7 +14,11 @@
   <details class="conflict">
     <summary>⚠ 충돌 사본 ({kstTime(c.at)})</summary>
     <pre>{c.text}</pre>
-    <button type="button" onclick={() => journal.dismissConflict(/** @type {number} */ (c.id))}>
+    <button
+      type="button"
+      title="충돌 사본을 닫고 삭제"
+      onclick={() => journal.dismissConflict(/** @type {number} */ (c.id))}
+    >
       옮겼습니다 — 닫기
     </button>
   </details>

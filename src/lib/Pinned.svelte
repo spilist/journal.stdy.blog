@@ -6,7 +6,8 @@
 
   import Conflicts from './Conflicts.svelte'
   import { autogrow } from './autogrow.js'
-  import { kstDate, kstTime } from './date.js'
+  import { kstDate, kstTime, kstTimestamp } from './date.js'
+  import { diffLines } from './diff.js'
 
   /** @type {{journal: import('./state.svelte.js').Journal}} */
   let { journal } = $props()
@@ -21,51 +22,98 @@
       .trim(),
   )
 
-  let showRevisions = $state(false)
+  let showDiff = $state(false)
+  let revisionDiffs = $derived(
+    revisions.map((revision) => ({ revision, lines: diffLines(revision.data.text, rec.data.text) })),
+  )
+
+  function toggleDiff() {
+    if (!journal.pinnedOpen) journal.pinnedOpen = true
+    showDiff = !showDiff
+  }
 
   const PLACEHOLDER = '# 잊지 않을 것\n\n여기에 적는다. 제목도 직접 쓴다.'
 </script>
 
 <section class="pinned" class:open={journal.pinnedOpen}>
-  <button type="button" class="toggle" onclick={() => (journal.pinnedOpen = !journal.pinnedOpen)}>
-    <span class="caret">{journal.pinnedOpen ? '▾' : '▸'}</span>
-    <span class="title">{title || '잊지 않을 것'}</span>
-    {#if !journal.pinnedOpen && journal.pinnedConflictCount() > 0}
-      <!-- 접혀 있으면 안쪽 사본이 안 보인다. 있다는 사실만은 겉에 남긴다. -->
-      <span class="badge">⚠ {journal.pinnedConflictCount()}</span>
+  <div class="head">
+    <button
+      type="button"
+      class="toggle"
+      aria-expanded={journal.pinnedOpen}
+      aria-controls="pinned-content"
+      title={journal.pinnedOpen ? '고정 노트 접기' : '고정 노트 펼치기'}
+      onclick={() => (journal.pinnedOpen = !journal.pinnedOpen)}
+    >
+      <span class="caret" aria-hidden="true">{journal.pinnedOpen ? '▾' : '▸'}</span>
+      <span class="title">{title || '잊지 않을 것'}</span>
+      {#if !journal.pinnedOpen && journal.pinnedConflictCount() > 0}
+        <!-- 접혀 있으면 안쪽 사본이 안 보인다. 있다는 사실만은 겉에 남긴다. -->
+        <span class="badge">⚠ {journal.pinnedConflictCount()}</span>
+      {/if}
+    </button>
+    {#if revisions.length}
+      <button
+        type="button"
+        class="ghost history-toggle"
+        aria-expanded={showDiff}
+        aria-controls="pinned-diff"
+        title={showDiff ? '고정 노트 본문 보기' : '고정 노트 변경 내역 보기'}
+        onclick={toggleDiff}
+      >
+        {showDiff ? '본문' : '변경 내역'}{showDiff ? '' : ` ${revisions.length}개`}
+      </button>
     {/if}
-  </button>
+  </div>
 
   {#if journal.pinnedOpen}
-    {#if rec.updatedAt}
-      <div class="at">마지막 수정 {kstDate(rec.updatedAt)} {kstTime(rec.updatedAt)}</div>
-    {/if}
-    <textarea
-      use:autogrow={rec.data.text}
-      rows="10"
-      placeholder={PLACEHOLDER}
-      value={rec.data.text}
-      oninput={(/** @type {Event & {currentTarget: HTMLTextAreaElement}} */ e) => journal.setPinned(e.currentTarget.value)}
-      onblur={() => journal.flush()}
-    ></textarea>
-
-    <Conflicts {journal} target="pinned" />
-
-    {#if revisions.length}
-      <div class="revisions">
-        <button type="button" class="link" onclick={() => (showRevisions = !showRevisions)}>
-          변경 내역 {revisions.length}개
-        </button>
-        {#if showRevisions}
-          {#each revisions as rev (rev.key)}
-            <details>
-              <summary>{rev.key.slice('revision:'.length)}</summary>
-              <pre>{rev.data.text}</pre>
-            </details>
-          {/each}
+    <div id="pinned-content">
+      {#if !showDiff}
+        {#if rec.updatedAt}
+          <div
+            class="at"
+            aria-label={`마지막 수정 시각: ${kstTimestamp(rec.updatedAt)}`}
+            title={`마지막 수정 시각: ${kstTimestamp(rec.updatedAt)}`}
+          >
+            마지막 수정 {kstDate(rec.updatedAt)} {kstTime(rec.updatedAt)}
+          </div>
         {/if}
-      </div>
-    {/if}
+        <textarea
+          use:autogrow={rec.data.text}
+          rows="10"
+          aria-label="고정 노트"
+          placeholder={PLACEHOLDER}
+          value={rec.data.text}
+          oninput={(/** @type {Event & {currentTarget: HTMLTextAreaElement}} */ e) => journal.setPinned(e.currentTarget.value)}
+          onblur={() => journal.flush()}
+        ></textarea>
+
+        <Conflicts {journal} target="pinned" />
+      {:else}
+        <div id="pinned-diff" class="diff-view" aria-label="고정 노트 변경 내역">
+          <p class="diff-note">각 항목은 그날 처음 고치기 전 내용과 현재 내용을 비교합니다.</p>
+          {#each revisionDiffs as entry (entry.revision.key)}
+            <section class="diff-entry">
+              <h3>{entry.revision.key.slice('revision:'.length)} 변경 전</h3>
+              <div class="diff" role="list">
+                {#each entry.lines as line, i (i)}
+                  <div
+                    class:added={line.kind === 'added'}
+                    class:removed={line.kind === 'removed'}
+                    class="diff-line"
+                    aria-label={`${line.kind === 'added' ? '추가' : line.kind === 'removed' ? '삭제' : '같음'}: ${line.text || '빈 줄'}`}
+                    role="listitem"
+                  >
+                    <span class="marker" aria-hidden="true">{line.kind === 'added' ? '+' : line.kind === 'removed' ? '-' : ' '}</span>
+                    <span aria-hidden="true">{line.text || ' '}</span>
+                  </div>
+                {/each}
+              </div>
+            </section>
+          {/each}
+        </div>
+      {/if}
+    </div>
   {/if}
 </section>
 
@@ -75,6 +123,11 @@
     border-radius: 8px;
     background: var(--raised);
     margin-bottom: 1rem;
+  }
+  .head {
+    display: flex;
+    align-items: stretch;
+    gap: 0.25rem;
   }
   .toggle {
     display: flex;
@@ -89,6 +142,14 @@
     font-weight: 600;
     text-align: left;
     cursor: pointer;
+    min-width: 0;
+  }
+  .history-toggle {
+    flex: none;
+    min-height: 44px;
+    align-self: center;
+    padding: 0 0.5rem;
+    font-size: 0.8rem;
   }
   .caret {
     color: var(--dim);
@@ -113,28 +174,52 @@
     font-size: 0.75rem;
     color: var(--dim);
   }
+  #pinned-content {
+    padding-bottom: 0.01rem;
+  }
   .pinned.open textarea {
     margin: 0 0.9rem 0.9rem;
     width: calc(100% - 1.8rem);
   }
-  .revisions {
+  .diff-view {
     padding: 0 0.9rem 0.9rem;
-    font-size: 0.85rem;
   }
-  .link {
-    background: none;
-    border: 0;
-    padding: 0;
-    color: var(--accent);
-    cursor: pointer;
-    font: inherit;
-  }
-  .revisions pre {
-    white-space: pre-wrap;
-    word-break: break-word;
-    font: inherit;
+  .diff-note {
+    margin: 0 0 0.7rem;
     color: var(--dim);
-    border-left: 3px solid var(--line);
-    padding-left: 0.6rem;
+    font-size: 0.8rem;
+  }
+  .diff-entry + .diff-entry {
+    margin-top: 1rem;
+  }
+  .diff-entry h3 {
+    margin: 0 0 0.35rem;
+    color: var(--dim);
+    font-size: 0.8rem;
+    font-weight: 600;
+  }
+  .diff {
+    overflow-x: auto;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--bg);
+    font: 0.82rem/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  .diff-line {
+    display: grid;
+    grid-template-columns: 1.5rem minmax(0, 1fr);
+    min-height: 1.5em;
+    padding: 0 0.35rem;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+  .diff-line.added {
+    background: color-mix(in srgb, var(--accent) 16%, transparent);
+  }
+  .diff-line.removed {
+    background: color-mix(in srgb, var(--warn) 18%, transparent);
+  }
+  .marker {
+    color: var(--dim);
   }
 </style>

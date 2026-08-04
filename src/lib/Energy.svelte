@@ -11,8 +11,8 @@
   import Conflicts from './Conflicts.svelte'
   import Graph from './Graph.svelte'
 
-  /** @type {{journal: import('./state.svelte.js').Journal, dims: readonly string[]}} */
-  let { journal, dims } = $props()
+  /** @type {{journal: import('./state.svelte.js').Journal, dims: readonly string[], ondate?: (date: string) => void}} */
+  let { journal, dims, ondate } = $props()
 
   const SCORES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 
@@ -91,6 +91,9 @@
     } else if ((e.key === 'Backspace' || e.key === 'Delete') && current !== null) {
       e.preventDefault()
       journal.toggleScore(dim, current)
+    } else if ((e.key === ' ' || e.key === 'Enter') && current !== null) {
+      e.preventDefault()
+      journal.toggleScore(dim, current)
     }
   }
 
@@ -129,6 +132,7 @@
       class="ghost graph"
       class:on={showGraph}
       aria-expanded={showGraph}
+      title={showGraph ? '에너지 그래프 접기' : '에너지 그래프 펼치기'}
       onclick={() => (showGraph = !showGraph)}
     >
       {showGraph ? '▾' : '▸'} 그래프
@@ -136,7 +140,7 @@
   </div>
 
   {#if showGraph}
-    <Graph {journal} {dims} />
+      <Graph {journal} {dims} {ondate} />
   {/if}
 
   {#each dims as dim (dim)}
@@ -155,7 +159,11 @@
           <!-- 보고 있는 날짜와 다르면 날짜를 앞에 붙인다 — 어제·오늘 블록과 **같은
                규칙이다.** 시각만 띄우면 7/20을 보면서 오늘 매긴 점수가 「7/20 14:32」로
                읽힌다. -->
-          <span class="at" title="마지막으로 손댄 시각">
+          <span
+            class="at"
+            aria-label={`마지막 수정 시각: ${kstDate(rec.updatedAt)} ${kstTime(rec.updatedAt)}`}
+            title={rec.updatedAt ? `마지막 수정 시각: ${kstDate(rec.updatedAt)} ${kstTime(rec.updatedAt)}` : ''}
+          >
             {kstDate(rec.updatedAt) === journal.date
               ? ''
               : `${kstDate(rec.updatedAt)} `}{kstTime(rec.updatedAt)}
@@ -174,7 +182,8 @@
       <div
         class="scores"
         role="radiogroup"
-        aria-label="{dim} 점수"
+        aria-label={`${dim} 점수, 현재 ${rec.data.score ?? '미입력'}`}
+        aria-activedescendant={rec.data.score ? `score-${dim}-${rec.data.score}` : undefined}
         tabindex="0"
         onkeydown={(e) => onKey(e, dim)}
         onpointerdown={(e) => onDown(e, dim)}
@@ -187,7 +196,10 @@
           <span
             role="radio"
             aria-checked={rec.data.score === score}
-            aria-label="{score}점"
+            id={`score-${dim}-${score}`}
+            aria-label={`${score}점`}
+            aria-setsize="10"
+            aria-posinset={score}
             tabindex="-1"
             class="cell"
             class:on={rec.data.score === score}
@@ -199,6 +211,7 @@
       <textarea
         use:autogrow={rec.data.reason}
         rows="2"
+        aria-label={`${dim} 점수 이유`}
         placeholder="이유"
         value={rec.data.reason}
         oninput={(/** @type {Event & {currentTarget: HTMLTextAreaElement}} */ e) => journal.setReason(dim, e.currentTarget.value)}
@@ -227,6 +240,11 @@
   }
   .graph.on {
     color: var(--accent);
+  }
+  .scores:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+    border-radius: 4px;
   }
   .dim + .dim {
     margin-top: 1.1rem;

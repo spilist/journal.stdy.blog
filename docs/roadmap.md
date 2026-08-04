@@ -13,7 +13,7 @@ Date: 2026-07-26
 **S1·S2 배포됨 (2026-07-26) — https://journal.stdy.blog**
 
 D1 `journal-db`와 Cloudflare Access 설정이 끝났고 게이트는 다 초록이다 —
-`npm run gate` (= `test` 135개 · `reach` · `lint` · `check` · `build`).
+`npm run gate` (= `test` 161개 · `reach` · `lint` · `check` · `build`).
 **CI는 안 한다** (n=1 리포).
 
 앱이 하는 일은 둘뿐이고, 그 둘에 닿지 않는 제안은 범위 밖이다 (AGENTS.md):
@@ -23,14 +23,15 @@ D1 `journal-db`와 Cloudflare Access 설정이 끝났고 게이트는 다 초록
 
 ### 1. 수용 확인 (**사람만 할 수 있다**)
 
-`AC-9`~`AC-11`은 닫혔다 (2026-07-26). **`AC-12`·`AC-19`가 남았다.** 절차의 단일
-출처는 [operator-acceptance.md](./operator-acceptance.md) `## 수용 확인`이다 —
-여기서 재선언하지 않는다.
+`AC-9`~`AC-11`은 닫혔다 (2026-07-26). **`AC-12`·`AC-19`·`AC-23`·`AC-25`~`AC-27`이
+남았다.** 절차의 단일 출처는 [operator-acceptance.md](./operator-acceptance.md)
+`## 수용 확인`이다 — 여기서 재선언하지 않는다.
 
 ### 2. 폰에서 볼 프로브
 
-`P-2`~`P-4`. **단일 출처는 [spec-first-slice.md](./spec-first-slice.md)
-`## Probe Questions`다.** 셋 다 스키마를 바꾸지 않으므로 언제든 되돌린다.
+`P-2`. **단일 출처는 [spec-first-slice.md](./spec-first-slice.md)
+`## Probe Questions`다.** 스키마를 바꾸지 않으므로 언제든 되돌린다. `P-3`은 우상단
+변경 내역 diff로 해소했다.
 
 ### 3. ~~S2 — 에너지 그래프~~ **구현 완료 (2026-07-26)**
 
@@ -40,7 +41,8 @@ D1 `journal-db`와 Cloudflare Access 설정이 끝났고 게이트는 다 초록
 전체 export의 날짜 범위 선택 UI는 **그래프 창을 쓰는 조합안으로 넣었다가 철회했다**
 (사용자 판정 2026-07-26: 강결합). 다시 미룬 결정이고, 경위는 같은 문서 `S-2`에 있다.
 
-**남은 것: 폰 확인(`P-6`·`AC-19`)과 `AC-12` 왕복.** `P-7`은 해소됐다.
+**남은 것: 폰 확인(`P-6`·`AC-19`), `AC-12` 왕복, 그리고 현재 작업 슬라이스의
+`AC-25`~`AC-27` 수용 확인.** `P-7`은 해소됐다.
 
 ### 4. 남은 리뷰
 

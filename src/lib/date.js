@@ -21,6 +21,17 @@ const timeFormatter = new Intl.DateTimeFormat('sv-SE', {
   hour12: false,
 })
 
+const timestampFormatter = new Intl.DateTimeFormat('sv-SE', {
+  timeZone: KST,
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+  hour12: false,
+})
+
 /**
  * @param {number} [ms] epoch ms. 생략하면 지금.
  * @returns {string} 'YYYY-MM-DD' (KST)
@@ -35,6 +46,29 @@ export function kstDate(ms) {
  */
 export function kstTime(ms) {
   return timeFormatter.format(new Date(ms))
+}
+
+/** @param {number} ms @returns {string} 'YYYY-MM-DD HH:MM:SS KST' */
+export function kstTimestamp(ms) {
+  return `${timestampFormatter.format(new Date(ms))} KST`
+}
+
+/**
+ * 날짜 입력·URL에 쓸 수 있는 실제 캘린더 날짜인지 확인한다.
+ *
+ * @param {string} date
+ * @returns {boolean}
+ */
+export function isCalendarDate(date) {
+  const m = /^(20\d{2})-(\d{2})-(\d{2})$/.exec(date)
+  if (!m) return false
+  const at = Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 12)
+  const shifted = new Date(at)
+  return (
+    shifted.getUTCFullYear() === Number(m[1]) &&
+    shifted.getUTCMonth() + 1 === Number(m[2]) &&
+    shifted.getUTCDate() === Number(m[3])
+  )
 }
 
 /**

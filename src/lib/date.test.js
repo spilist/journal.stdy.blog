@@ -1,12 +1,13 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { addDays, dayLabel, fromH1, kstDate, kstTime, toH1 } from './date.js'
+import { addDays, dayLabel, fromH1, isCalendarDate, kstDate, kstTime, kstTimestamp, toH1 } from './date.js'
 
 test('KST 새벽 3시는 그날 날짜다 (AC-5)', () => {
   // 2026-03-01 18:00 UTC = 2026-03-02 03:00 KST.
   assert.equal(kstDate(Date.UTC(2026, 2, 1, 18, 0)), '2026-03-02')
   assert.equal(kstTime(Date.UTC(2026, 2, 1, 18, 0)), '03:00')
+  assert.equal(kstTimestamp(Date.UTC(2026, 2, 1, 18, 0)), '2026-03-02 03:00:00 KST')
 })
 
 test('KST 09시 직전은 아직 전날이 아니다 — UTC로 계산하면 여기서 틀린다', () => {
@@ -41,4 +42,12 @@ test('dayLabel', () => {
   assert.equal(dayLabel('2026-03-01', '2026-03-02'), '어제')
   assert.equal(dayLabel('2026-03-03', '2026-03-02'), '내일')
   assert.equal(dayLabel('2026-02-14', '2026-03-02'), '2월 14일')
+})
+
+test('URL·날짜 입력은 실제 캘린더 날짜만 받는다', () => {
+  assert.equal(isCalendarDate('2026-02-28'), true)
+  assert.equal(isCalendarDate('2024-02-29'), true)
+  assert.equal(isCalendarDate('2026-02-29'), false)
+  assert.equal(isCalendarDate('2026-13-01'), false)
+  assert.equal(isCalendarDate('0226-08-03'), false)
 })

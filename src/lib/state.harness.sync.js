@@ -16,12 +16,18 @@ export let server = new Map()
 export let calls = []
 
 let rttMs = 0
+let responseDelayMs = 0
 let relogin = false
 let expireAfter = -1
 
 /** @param {number} ms */
 export function roundTrip(ms) {
   rttMs = ms
+}
+
+/** 서버 반영 뒤 응답이 돌아오기까지의 지연. push 중 pull 경합을 연다. @param {number} ms */
+export function responseDelay(ms) {
+  responseDelayMs = ms
 }
 
 /** Access 세션 만료를 흉내낸다. @param {boolean} on */
@@ -43,6 +49,7 @@ export function reset() {
   server = new Map()
   calls = []
   rttMs = 0
+  responseDelayMs = 0
   relogin = false
   expireAfter = -1
 }
@@ -70,6 +77,7 @@ export async function push(recs) {
       verdicts.push({ key: rec.key, applied: false, server: prev })
     }
   }
+  await wait(responseDelayMs)
   return { verdicts, now: Date.now() }
 }
 

@@ -18,8 +18,8 @@
     windowLabel,
   } from './series.js'
 
-  /** @type {{journal: import('./state.svelte.js').Journal, dims: readonly string[]}} */
-  let { journal, dims } = $props()
+  /** @type {{journal: import('./state.svelte.js').Journal, dims: readonly string[], ondate?: (date: string) => void}} */
+  let { journal, dims, ondate = (date) => journal.goTo(date) } = $props()
 
   const HEIGHT = 170
   /** 왼쪽은 점수 눈금, 아래는 날짜 눈금이 산다. */
@@ -73,7 +73,7 @@
     if (picked === date) {
       // 두 번째 탭 = 그날로 이동. 이동하면 자는 거기로 옮겨가므로 선택은 놓아준다.
       picked = ''
-      journal.goTo(date)
+      ondate(date)
       return
     }
     picked = date
@@ -143,7 +143,7 @@
       picked = dates[Math.min(last, Math.max(0, next))]
     } else if ((e.key === 'Enter' || e.key === ' ') && pickedIndex >= 0) {
       e.preventDefault()
-      journal.goTo(picked)
+      ondate(picked)
       picked = ''
     }
   }
@@ -158,6 +158,7 @@
       type="button"
       class="ghost"
       disabled={atFullSpan}
+      title={`${STEP_LABEL}만큼 그래프 범위 넓히기`}
       onclick={() => {
         const next = (days ?? STEP) + STEP
         // 전체를 넘어서면 그냥 전체로 접는다 — 왼쪽에 빈 주를 붙여봐야 읽을 게 없다.
@@ -168,13 +169,14 @@
       type="button"
       class="ghost"
       disabled={days === null}
+      title="기록이 있는 전체 기간 보기"
       onclick={() => (days = null)}
     >
       전체
     </button>
     <!-- 넓힌 창은 되돌릴 수 있어야 한다. -->
     {#if days !== STEP}
-      <button type="button" class="ghost" onclick={() => (days = STEP)}>
+      <button type="button" class="ghost" title={`${STEP_LABEL} 범위로 줄이기`} onclick={() => (days = STEP)}>
         {STEP_LABEL}
       </button>
     {/if}
@@ -188,6 +190,7 @@
         type="button"
         class="plot"
         aria-label="에너지 점수 {rangeLabel}. 좌우 화살표로 날짜를 짚고 엔터로 그날로 이동합니다."
+        title="날짜를 선택하려면 누르세요. 같은 날짜를 다시 누르면 이동합니다."
         onpointerdown={onDown}
         onpointerup={onUp}
         onpointercancel={onCancel}
@@ -239,7 +242,7 @@
   </ul>
 
   {#if pickedIndex >= 0}
-    <div class="tip">
+    <div class="tip" role="status" aria-live="polite">
       <div class="tip-head">
         <strong>{dayLabel(picked, journal.today)}</strong>
         <span class="date">{picked}</span>

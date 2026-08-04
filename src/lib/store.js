@@ -69,6 +69,30 @@ export async function putRecords(records) {
   })
 }
 
+/**
+ * 응답이 늦게 도착한 동기화 판본이 그 사이의 로컬 입력을 덮지 않게 쓴다.
+ * 같은 readwrite 트랜잭션 안에서 현재 updatedAt을 읽고 비교하므로, 두 탭의 쓰기
+ * 순서가 어떻게 겹쳐도 더 새로 저장된 글자가 이긴다.
+ *
+ * @param {Rec[]} records
+ */
+export async function putRecordsIfNewer(records) {
+  if (!records.length) return
+  const db = await open()
+  const tx = db.transaction('records', 'readwrite')
+  const os = tx.objectStore('records')
+  for (const rec of records) {
+    const req = os.get(rec.key)
+    req.onsuccess = () => {
+      if (!req.result || req.result.updatedAt <= rec.updatedAt) os.put(rec)
+    }
+  }
+  await new Promise((resolve, reject) => {
+    tx.oncomplete = () => resolve(undefined)
+    tx.onerror = () => reject(tx.error)
+  })
+}
+
 /** @param {Rec} record */
 export function putRecord(record) {
   return putRecords([record])

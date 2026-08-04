@@ -66,6 +66,16 @@ export async function putRecords(recs) {
   for (const rec of recs) records.set(rec.key, structuredClone(rec))
 }
 
+/** @param {Rec[]} recs */
+export async function putRecordsIfNewer(recs) {
+  if (delayMs) await wait(delayMs)
+  if (failPut) throw new Error('quota exceeded')
+  for (const rec of recs) {
+    const current = records.get(rec.key)
+    if (!current || current.updatedAt <= rec.updatedAt) records.set(rec.key, structuredClone(rec))
+  }
+}
+
 /** @param {Rec} rec */
 export function putRecord(rec) {
   if (failPut) return Promise.reject(new Error('quota exceeded'))

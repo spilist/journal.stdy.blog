@@ -223,7 +223,7 @@ export function describe(rec) {
  */
 export function nextText(prev, text, now) {
   if (prev.data.text === text) return prev
-  return { ...prev, data: { ...prev.data, text }, updatedAt: now }
+  return { ...prev, data: { ...prev.data, text }, updatedAt: Math.max(now, prev.updatedAt + 1) }
 }
 
 /**
@@ -240,7 +240,7 @@ export function nextEnergy(prev, patch, now) {
   const reason = patch.reason === undefined ? prev.data.reason : patch.reason
   if (score === prev.data.score && reason === prev.data.reason) return prev
   const scoredAt = score === prev.data.score ? prev.data.scoredAt : now
-  return { ...prev, data: { ...prev.data, score, reason, scoredAt }, updatedAt: now }
+  return { ...prev, data: { ...prev.data, score, reason, scoredAt }, updatedAt: Math.max(now, prev.updatedAt + 1) }
 }
 
 /**
