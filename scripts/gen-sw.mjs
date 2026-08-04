@@ -92,13 +92,13 @@ function cached(req) {
 // 부분 설치 뒤 온라인에서 되찾은 자산은 이번 캐시에 남겨야 한다. 그렇지 않으면
 // 첫 온라인 요청은 성공해도, 곧바로 오프라인이 되면 같은 자산이 다시 사라진다.
 function cacheResponse(req, res) {
-  if (!res?.ok || typeof res.clone !== 'function') return res
+  if (!res?.ok || typeof res.clone !== 'function') return { response: res, cache: Promise.resolve() }
   const copy = res.clone()
-  return caches
+  const cache = caches
     .open(CACHE)
     .then((cache) => cache.put(req, copy))
     .catch(() => undefined)
-    .then(() => res)
+  return { response: res, cache }
 }
 
 self.addEventListener('fetch', (e) => {
@@ -110,11 +110,18 @@ self.addEventListener('fetch', (e) => {
   // 화면 이동은 네트워크 먼저, 끊겼으면 앱 셸로. 쿼리가 붙은 진입(?x=1)도 같은 셸이다.
   if (e.request.mode === 'navigate') {
     e.respondWith(
-      fetch(e.request).catch(() =>
-        // **절대 undefined 를 돌려주지 않는다** — respondWith(undefined) 는 TypeError 라
-        // 오프라인에서 브라우저 오류 페이지가 뜬다. 캐시가 비었으면 그냥 네트워크 오류다.
-        cached('/index.html').then((hit) => hit ?? Response.error()),
-      ),
+      fetch(e.request)
+        // 루트로 받은 셸도 오프라인 fallback이 찾는 /index.html 이름으로 보관한다.
+        .then((res) => {
+          const cached = cacheResponse('/index.html', res)
+          e.waitUntil(cached.cache)
+          return cached.response
+        })
+        .catch(() =>
+          // **절대 undefined 를 돌려주지 않는다** — respondWith(undefined) 는 TypeError 라
+          // 오프라인에서 브라우저 오류 페이지가 뜬다. 캐시가 비었으면 그냥 네트워크 오류다.
+          cached('/index.html').then((hit) => hit ?? Response.error()),
+        ),
     )
     return
   }
@@ -123,8 +130,19 @@ self.addEventListener('fetch', (e) => {
     caches
       .match(e.request, { ignoreSearch: true, cacheName: CACHE })
       // 이번 캐시에 없으면 네트워크. 네트워크도 없으면 옛 캐시라도 준다.
-      .then((hit) => hit ?? fetch(e.request).catch(() => cached(e.request)))
-      .then((res) => (res && !res.ok ? res : cacheResponse(e.request, res)))
+      // **네트워크 응답만** 현재 캐시에 넣는다. cached의 옛 캐시 fallback까지
+      // 저장하면 옛 JS/CSS가 이번 캐시를 오염시켜 다음 배포를 막는다.
+      .then(
+        (hit) =>
+          hit ??
+          fetch(e.request)
+            .then((res) => {
+              const cached = cacheResponse(e.request, res)
+              e.waitUntil(cached.cache)
+              return cached.response
+            })
+            .catch(() => cached(e.request)),
+      )
       .then((res) => res ?? Response.error()),
   )
 })

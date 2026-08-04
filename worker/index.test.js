@@ -144,3 +144,15 @@ test('안 쓴 레코드에 applied 를 주지 않는다', () => {
   const db = createD1()
   assert.equal(writeStatement(db, rec('알수없음:x', 'log', { text: 'x' }, 1), 1), null)
 })
+
+test('쓰지 못한 malformed winner가 뒤의 writable winner 판정을 밀지 않는다', async () => {
+  const db = createD1()
+  const verdicts = await applyPush(db, [
+    rec('알수없음:x', 'log', { text: '무시할 지어낸 값' }, 100),
+    log('2026-08-03', '오늘', '저장할 지어낸 값', 100),
+  ])
+
+  assert.equal(verdicts.find((v) => v.key === '알수없음:x')?.applied, false)
+  assert.equal(verdicts.find((v) => v.key === 'log:2026-08-03:오늘')?.applied, true)
+  assert.equal(db._rows.log[0].text, '저장할 지어낸 값')
+})

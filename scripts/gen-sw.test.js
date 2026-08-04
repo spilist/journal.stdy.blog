@@ -102,9 +102,17 @@ function runWorker(env) {
     /** @param {string} path @param {string} [mode] */
     async fetchEvent(path, mode = 'no-cors') {
       let responded
+      /** @type {Promise<any>[]} */
+      const waits = []
       const req = { url: `https://journal.stdy.blog${path}`, method: 'GET', mode }
-      on.fetch({ request: req, respondWith: (/** @type {any} */ r) => (responded = r) })
-      return responded === undefined ? undefined : await responded
+      on.fetch({
+        request: req,
+        respondWith: (/** @type {any} */ r) => (responded = r),
+        waitUntil: (/** @type {Promise<any>} */ p) => waits.push(p),
+      })
+      const response = responded === undefined ? undefined : await responded
+      await Promise.all(waits)
+      return response
     },
   }
 }
@@ -152,6 +160,16 @@ test('이번 캐시가 옛 캐시를 이긴다 — 예전 화면에 갇히지 �
   assert.equal(shell, 'v-test:/index.html')
 })
 
+test('옛 캐시 fallback을 이번 캐시에 승격하지 않는다 — 새 배포를 막지 않는다', async () => {
+  const caches = fakeCaches()
+  caches._store.set('v-old', new Map([['/assets/app-abc123.js', 'v-old:/assets/app-abc123.js']]))
+  const sw = runWorker({ caches, fetch: netFail, failAdd: (p) => p === '/assets/app-abc123.js' })
+  await sw.install()
+
+  assert.equal(await sw.fetchEvent('/assets/app-abc123.js'), 'v-old:/assets/app-abc123.js')
+  assert.equal(await caches.match('/assets/app-abc123.js', { cacheName: 'v-test' }), undefined)
+})
+
 test('캐시가 비어도 undefined 를 돌려주지 않는다 — respondWith(undefined)는 TypeError다', async () => {
   const caches = fakeCaches()
   const sw = runWorker({ caches, fetch: netFail })
@@ -186,6 +204,28 @@ test('온라인에서 되찾은 자산을 이번 캐시에 보관한다 — 부�
     /** @type {any} */ (await offlineWorker.fetchEvent('/assets/app-abc123.js'))?.body,
     '온라인에서 받은 지어낸 자산',
   )
+})
+
+test('온라인에서 되찾은 navigation 셸을 이번 캐시에 보관한다', async () => {
+  const caches = fakeCaches()
+  const online = async () => ({
+    ok: true,
+    body: '온라인에서 받은 지어낸 셸',
+    clone() {
+      return { ok: true, body: this.body, clone: this.clone }
+    },
+  })
+  const sw = runWorker({ caches, fetch: online, failAdd: (p) => p === '/index.html' })
+  await sw.install()
+
+  assert.equal((/** @type {any} */ (await sw.fetchEvent('/', 'navigate'))).body, '온라인에서 받은 지어낸 셸')
+  assert.equal(
+    /** @type {any} */ (await caches.match('/index.html', { cacheName: 'v-test' }))?.body,
+    '온라인에서 받은 지어낸 셸',
+  )
+
+  const offlineWorker = runWorker({ caches, fetch: netFail })
+  assert.equal((/** @type {any} */ (await offlineWorker.fetchEvent('/', 'navigate'))).body, '온라인에서 받은 지어낸 셸')
 })
 
 test('`/api/*`는 절대 캐시하지 않는다 — 낡은 동기화 응답이 정본 행세를 한다', async () => {

@@ -204,8 +204,8 @@ export async function applyPush(db, incoming) {
   // `readOne` 루프가 도는 동안(레코드가 많으면 초 단위다) 다른 기기가 pull을 돌려
   // 커서를 그 시각 너머로 옮길 수 있다 — 그러면 여기서 쓴 행은 영영 안 잡힌다.
   const now = Date.now()
-  /** @type {D1PreparedStatement[]} */
-  const writes = []
+  /** @type {{rec: Rec, server: Rec | undefined, stmt: D1PreparedStatement}[]} */
+  const writable = []
   for (const { rec, server } of winners) {
     // **안 쓰고 `applied`를 주지 않는다.** 클라이언트는 그걸 보고 `syncedAt`을 붙여
     // 영원히 비-더티로 만든다 — 서버엔 행이 없는데 로컬은 올렸다고 믿게 된다.
@@ -213,15 +213,15 @@ export async function applyPush(db, incoming) {
     // 자동 밀봉본이고 먼저 쓴 쪽이 남는 게 `D11`이라 그대로 둔다.)
     const stmt = writeStatement(db, rec, now)
     if (stmt) {
-      writes.push(stmt)
+      writable.push({ rec, server, stmt })
     } else {
       verdicts.push({ key: rec.key, applied: false, server })
     }
   }
 
-  if (writes.length) {
-    const results = await db.batch(writes)
-    for (const [i, { rec, server }] of winners.entries()) {
+  if (writable.length) {
+    const results = await db.batch(writable.map(({ stmt }) => stmt))
+    for (const [i, { rec, server }] of writable.entries()) {
       const changed = Number(results[i]?.meta?.changes ?? 0) > 0
       if (changed) {
         // **덮은 값을 그대로 돌려준다** (`SC-6`). 클라이언트가 그걸로 사본을 만든다 —

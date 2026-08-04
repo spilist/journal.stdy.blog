@@ -880,7 +880,7 @@ export class Journal {
       const current = this.records[rec.key]
       // 저장 중에 사용자가 같은 자리를 다시 썼다면, 디스크가 비어 있었어도 그
       // 최신 입력을 화면에서 가져오지 않는다. 다음 올리기가 그 입력을 보낸다.
-      if (!current || current.updatedAt < rec.updatedAt || sameImportData(rec.kind, current, rec.data)) {
+      if (!current || current.updatedAt < rec.updatedAt || sameImportData(rec.kind, current.data, rec.data)) {
         this.records[rec.key] = rec
       }
     }

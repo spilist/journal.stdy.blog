@@ -12,7 +12,7 @@ Ambient repo findings: quality 어댑터 bootstrap이 손으로 다듬은 주석
 
 ## Current Gates
 
-- `npm run gate` 통과: 테스트 165개, `reach` 프로덕션 22개 중 11개 도달, lint 문서
+- `npm run gate` 통과: 테스트 168개, `reach` 프로덕션 22개 중 11개 도달, lint 문서
   검사 통과, `svelte-check`·Worker 타입 검사 0건, Vite build 통과.
 - `npm audit`와 `npm audit --omit=dev` 모두 0 vulnerabilities. `wrangler`를 최신
   4.x로 올리고 `undici` 7.29.0 override를 추가했다.
