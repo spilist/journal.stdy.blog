@@ -1,0 +1,28 @@
+{
+  "kind": "deployment-observation",
+  "observed_at": "2026-08-04",
+  "target": "https://journal.stdy.blog",
+  "deployment": {
+    "worker": "journal-stdy-blog",
+    "version_id": "81e17bfe-db5b-40dd-82be-6c0628787214"
+  },
+  "observations": [
+    {
+      "method": "GET",
+      "path": "/",
+      "status": 302,
+      "meaning": "비인증 요청이 Cloudflare Access로 리다이렉트됨"
+    },
+    {
+      "method": "GET",
+      "path": "/api/pull",
+      "status": 302,
+      "meaning": "비인증 API 요청이 Cloudflare Access로 리다이렉트됨"
+    }
+  ],
+  "privacy": "인증하지 않았으며 저널 응답 본문을 읽거나 기록하지 않음",
+  "not_verified": [
+    "인증된 브라우저 UI 수용 확인",
+    "두 기기 동기화의 사람 수용 확인"
+  ]
+}
