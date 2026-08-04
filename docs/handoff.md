@@ -60,7 +60,10 @@
 `verifyAccess` try · 쓰기 Origin 검사 · 에너지 시각 날짜 접두 · 토스트
 `pointer-events` · 저장 실패 시 `syncState` · 디바운스 `#pending` · `SC-6` 사본 경로 ·
 raced의 `syncedAt` · push 청킹 · 충돌 사본 저장 순서 · 왕복 중 편집 보호 ·
-`pushNow` 재진입 가드 · 내려받기 토스트의 사본 개수.
+`pushNow` 재진입 가드 · 내려받기 토스트의 사본 개수 · 열린 `dim`의 export 보존 ·
+로드 중 디바운스 입력 보존 · 같은 밀리초 로컬 탭 경합 · 10점 키보드 상한 ·
+Access redirect의 서비스워커 캐시 · 메타 저장소와 네트워크 오류 구분 ·
+영속화 Promise 처리.
 
 **결정으로 닫힌 것(제안 금지)**: 충돌 사본을 D1에 올리거나 export 형식에 넣기 ·
 CI/훅 자동화 · TypeScript 이관 · Prettier · 차트 라이브러리 · 앱 내 LLM · 멀티유저 ·
@@ -103,6 +106,14 @@ CI/훅 자동화 · TypeScript 이관 · Prettier · 차트 라이브러리 · �
 **S1·S2 배포됨 — https://journal.stdy.blog** (Cloudflare Access, 허용 이메일 하나).
 S2 배포는 2026-07-26. 배포 직후 `AC-9` 재확인함
 (인증 없이 `/api/pull` → Access가 302).
+
+**2026-08-05 전체 품질 라운드가 로컬 작업트리에서 끝났다(아직 미배포).** 테스트는
+174개로 늘었고 게이트는 `test`·`reach`·`lint`·`check`·`build` 모두 통과했다. 열린
+`dim`을 export에서 보존하고, 로드 중 입력·같은 밀리초 탭 경합·10점 키보드 입력·Access
+로그인 redirect 캐시·메타 저장소 오류 분류를 근본 경계에서 고쳤다. 영속화 거절의
+unhandled rejection도 닫았다. 실제 배포와 사람 수용 확인은 아직 남아 있다. Charness
+부트스트랩이 기존 어댑터를 덮어쓰는 문제는 상류 이슈
+[#507](https://github.com/corca-ai/charness/issues/507)로 올렸다.
 
 **2026-08-04 품질 개선 슬라이스 배포됨.** 버전
 `81e17bfe-db5b-40dd-82be-6c0628787214`. 월치 복사·날짜 URL·변경 내역 diff·접근성,
