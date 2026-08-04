@@ -24,7 +24,7 @@
 
   let showDiff = $state(false)
   let revisionDiffs = $derived(
-    revisions.map((revision) => ({ revision, lines: diffLines(revision.data.text, rec.data.text) })),
+    showDiff ? revisions.map((revision) => ({ revision, lines: diffLines(revision.data.text, rec.data.text) })) : [],
   )
 
   function toggleDiff() {

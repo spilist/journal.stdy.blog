@@ -276,7 +276,7 @@ export class Journal {
     try {
       // 사본이 먼저다 — `#push`와 같은 순서, 같은 이유다.
       await db.addConflicts(kept)
-      await db.putRecords(writeBack)
+      await db.putRecordsIfNewer(writeBack)
     } catch (err) {
       this.storageError = `저장 실패 — 이 화면의 글자를 다른 곳에 복사해 두세요 (${err})`
       return
@@ -875,9 +875,16 @@ export class Journal {
     // **미리보기 시점의 판정을 그대로 믿지 않는다.** 사이에 그 블록을 썼거나 자동
     // pull이 채웠으면 지금은 덮으면 안 되는 자리다 — 이유는 `importCollides`에 있다.
     const fresh = plain.filter((rec) => !importCollides(this.records[rec.key], rec.kind, rec.data))
-    await db.putRecords(fresh)
-    for (const rec of fresh) this.records[rec.key] = rec
-    return { written: fresh.length, skipped: plain.length - fresh.length }
+    const stored = await db.putRecordsIfNewer(fresh)
+    for (const rec of stored) {
+      const current = this.records[rec.key]
+      // 저장 중에 사용자가 같은 자리를 다시 썼다면, 디스크가 비어 있었어도 그
+      // 최신 입력을 화면에서 가져오지 않는다. 다음 올리기가 그 입력을 보낸다.
+      if (!current || current.updatedAt < rec.updatedAt || sameImportData(rec.kind, current, rec.data)) {
+        this.records[rec.key] = rec
+      }
+    }
+    return { written: stored.length, skipped: plain.length - stored.length }
   }
 
   // ── 동기화 ──────────────────────────────────────────────────────────────

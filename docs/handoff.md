@@ -127,11 +127,11 @@ S2 배포는 2026-07-26. 배포 직후 `AC-9` 재확인함
   내려받기 토스트가 그 개수를 말한다
 - **`AC-11`의 applied 방향은 사람이 확인한 적이 없다** — `AC-23`으로 신설했다.
   위 `Workflow Trigger`의 「아직 아무도 확인 못 한 것」 참조
-- **테스트 161개 · 도달 21개 중 10개** ([기준선](../scripts/reach-baseline.txt)).
+- **테스트 165개 · 도달 22개 중 11개** ([기준선](../scripts/reach-baseline.txt)).
   `state.svelte.js`·`gen-sw.mjs`·`worker/` 둘에 하네스가 있다 —
   [state.harness.js](../src/lib/state.harness.js) · [d1.harness.js](../worker/d1.harness.js)
 
-- 게이트 확인: **`npm run gate`** (= `test` 161개 · **`reach`** · `lint` · `check` · `build`).
+- 게이트 확인: **`npm run gate`** (= `test` 165개 · **`reach`** · `lint` · `check` · `build`).
   `lint`는 eslint와 문서 검사(링크 + **수용 기준 ID 중복**)를 둘 다 돈다
 - **S2에서 새로 생긴 것** — 계약은
   [spec-first-slice.md](./spec-first-slice.md) `## S2 — 에너지 그래프`
@@ -140,7 +140,7 @@ S2 배포는 2026-07-26. 배포 직후 `AC-9` 재확인함
   - 탭하면 이유, 다시 탭하면 그날로 이동 (날짜 이동의 조합이지 새 기능이 아니다)
   - **「전체 내려받기」는 S1 그대로 전량이다.** 그래프 창을 범위로 쓰는 결합을
     넣었다가 **사용자 판정으로 철회했다** (`S-2`) — 강결합이었다
-- **현재 작업 슬라이스(미배포)** — 원복한 텍스트는 같은 편집 세션의 새 revision과
+- **현재 작업 슬라이스(배포 전)** — 원복한 텍스트는 같은 편집 세션의 새 revision과
   더티 상태에서 제거하고, 선택한 달의 고정 노트·기록을 복사한다. 고정 노트의
   변경 내역은 우상단 읽기 전용 diff로 보고, 날짜 이동은 `?date=YYYY-MM-DD`와
   브라우저 뒤로/앞으로에 반영한다. 버튼 설명·포커스·정확한 KST 시각도 보강했다.

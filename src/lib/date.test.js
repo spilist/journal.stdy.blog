@@ -35,6 +35,8 @@ test('날짜가 아닌 H1은 null — 고정 블록을 가르는 기준이다 (D
   assert.equal(fromH1('2026 하반기 목표'), null)
   assert.equal(fromH1('올해 잊지 않을 것'), null)
   assert.equal(fromH1('2026-07-26'), null) // 네 자리 연도는 정본 형식이 아니다
+  assert.equal(fromH1('26-02-29'), null, '존재하지 않는 윤년 날짜는 날짜 블록이 아니다')
+  assert.equal(fromH1('26-13-01'), null, '존재하지 않는 달은 날짜 블록이 아니다')
 })
 
 test('dayLabel', () => {

@@ -75,22 +75,29 @@ export async function putRecords(records) {
  * 순서가 어떻게 겹쳐도 더 새로 저장된 글자가 이긴다.
  *
  * @param {Rec[]} records
+ * @returns {Promise<Rec[]>} 실제로 저장한 레코드
  */
 export async function putRecordsIfNewer(records) {
-  if (!records.length) return
+  if (!records.length) return []
   const db = await open()
   const tx = db.transaction('records', 'readwrite')
   const os = tx.objectStore('records')
+  /** @type {Rec[]} */
+  const stored = []
   for (const rec of records) {
     const req = os.get(rec.key)
     req.onsuccess = () => {
-      if (!req.result || req.result.updatedAt <= rec.updatedAt) os.put(rec)
+      if (!req.result || req.result.updatedAt <= rec.updatedAt) {
+        os.put(rec)
+        stored.push(rec)
+      }
     }
   }
   await new Promise((resolve, reject) => {
     tx.oncomplete = () => resolve(undefined)
     tx.onerror = () => reject(tx.error)
   })
+  return stored
 }
 
 /** @param {Rec} record */

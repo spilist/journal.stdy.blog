@@ -16,7 +16,7 @@ function fakeCaches() {
   /** @type {Map<string, Map<string, string>>} */
   const store = new Map()
   /** @param {any} req */
-  const url = (req) => (typeof req === 'string' ? req : req.url)
+  const url = (req) => (typeof req === 'string' ? req : new URL(req.url).pathname)
   return {
     _store: store,
     /** @param {string} name */
@@ -28,6 +28,10 @@ function fakeCaches() {
         async add(path) {
           if (this._fail?.(path)) throw new TypeError('failed to fetch')
           c.set(path, `${name}:${path}`)
+        },
+        /** @param {any} req @param {any} response */
+        async put(req, response) {
+          c.set(url(req), response)
         },
         /** @type {((p: string) => boolean) | undefined} */
         _fail: undefined,
@@ -153,6 +157,35 @@ test('캐시가 비어도 undefined 를 돌려주지 않는다 — respondWith(u
   const sw = runWorker({ caches, fetch: netFail })
   assert.equal(await sw.fetchEvent('/', 'navigate'), 'RESPONSE_ERROR')
   assert.equal(await sw.fetchEvent('/assets/app-abc123.js'), 'RESPONSE_ERROR')
+})
+
+test('온라인에서 되찾은 자산을 이번 캐시에 보관한다 — 부분 설치 뒤 오프라인 복구', async () => {
+  const caches = fakeCaches()
+  const online = async () => ({
+    ok: true,
+    body: '온라인에서 받은 지어낸 자산',
+    clone() {
+      return { ok: true, body: this.body, clone: this.clone }
+    },
+  })
+  const sw = runWorker({ caches, fetch: online, failAdd: (p) => p === '/assets/app-abc123.js' })
+  await sw.install()
+
+  const first = /** @type {any} */ (await sw.fetchEvent('/assets/app-abc123.js'))
+  assert.equal(first.body, '온라인에서 받은 지어낸 자산')
+  assert.equal(
+    /** @type {any} */ (await caches.match('/assets/app-abc123.js', { cacheName: 'v-test' }))?.body,
+    '온라인에서 받은 지어낸 자산',
+  )
+
+  const offline = async () => {
+    throw new TypeError('offline')
+  }
+  const offlineWorker = runWorker({ caches, fetch: offline })
+  assert.equal(
+    /** @type {any} */ (await offlineWorker.fetchEvent('/assets/app-abc123.js'))?.body,
+    '온라인에서 받은 지어낸 자산',
+  )
 })
 
 test('`/api/*`는 절대 캐시하지 않는다 — 낡은 동기화 응답이 정본 행세를 한다', async () => {

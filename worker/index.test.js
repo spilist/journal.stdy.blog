@@ -111,9 +111,31 @@ test('판정~커밋 창에 끼어든 오래된 판본이 최신을 덮지 않는
   const [phoneVerdicts, pcVerdicts] = await Promise.all([phone, pc])
 
   assert.equal(phoneVerdicts[0].applied, true)
-  assert.equal(pcVerdicts[0].applied, true, '둘 다 같은 옛 값을 읽었으므로 판정은 둘 다 통과다')
+  assert.equal(pcVerdicts[0].applied, false, '조건부 쓰기가 거절된 쪽은 서버 판본을 받아야 한다')
+  assert.equal(pcVerdicts[0].server?.data.text, '폰에서 쓴 지어낸 문단')
   assert.equal(db._rows.log[0].text, '폰에서 쓴 지어낸 문단', '더 새로운 판본이 서버에 남는다')
   assert.equal(db._rows.log[0].updated_at, 1000)
+})
+
+test('조건부 쓰기가 거절되면 applied 를 주지 않는다 — 판정과 커밋 사이의 경합', async () => {
+  const db = createD1()
+  await applyPush(db, [log('2026-08-03', '오늘', '기존의 지어낸 문단', 100)])
+  db._beforeBatch = () => {
+    db._rows.log[0] = {
+      date: '2026-08-03',
+      kind: '오늘',
+      text: '경합으로 먼저 들어온 지어낸 문단',
+      updated_at: 400,
+      synced_at: 400,
+    }
+    db._beforeBatch = undefined
+  }
+
+  const verdicts = await applyPush(db, [log('2026-08-03', '오늘', '늦은 지어낸 문단', 300)])
+
+  assert.equal(verdicts[0].applied, false)
+  assert.equal(verdicts[0].server?.data.text, '경합으로 먼저 들어온 지어낸 문단')
+  assert.equal(db._rows.log[0].text, '경합으로 먼저 들어온 지어낸 문단')
 })
 
 test('안 쓴 레코드에 applied 를 주지 않는다', () => {

@@ -107,7 +107,8 @@ export function toH1(date) {
 export function fromH1(heading) {
   const m = /^(\d{2})-(\d{2})-(\d{2})$/.exec(heading.trim())
   if (!m) return null
-  return `20${m[1]}-${m[2]}-${m[3]}`
+  const date = `20${m[1]}-${m[2]}-${m[3]}`
+  return isCalendarDate(date) ? date : null
 }
 
 /**

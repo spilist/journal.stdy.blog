@@ -66,14 +66,19 @@ export async function putRecords(recs) {
   for (const rec of recs) records.set(rec.key, structuredClone(rec))
 }
 
-/** @param {Rec[]} recs */
+/** @param {Rec[]} recs @returns {Promise<Rec[]>} 실제로 저장한 레코드 */
 export async function putRecordsIfNewer(recs) {
   if (delayMs) await wait(delayMs)
   if (failPut) throw new Error('quota exceeded')
+  const stored = []
   for (const rec of recs) {
     const current = records.get(rec.key)
-    if (!current || current.updatedAt <= rec.updatedAt) records.set(rec.key, structuredClone(rec))
+    if (!current || current.updatedAt <= rec.updatedAt) {
+      records.set(rec.key, structuredClone(rec))
+      stored.push(rec)
+    }
   }
+  return stored
 }
 
 /** @param {Rec} rec */

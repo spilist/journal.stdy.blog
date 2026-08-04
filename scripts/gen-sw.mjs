@@ -89,6 +89,18 @@ function cached(req) {
     .then((hit) => hit ?? caches.match(req, { ignoreSearch: true }))
 }
 
+// 부분 설치 뒤 온라인에서 되찾은 자산은 이번 캐시에 남겨야 한다. 그렇지 않으면
+// 첫 온라인 요청은 성공해도, 곧바로 오프라인이 되면 같은 자산이 다시 사라진다.
+function cacheResponse(req, res) {
+  if (!res?.ok || typeof res.clone !== 'function') return res
+  const copy = res.clone()
+  return caches
+    .open(CACHE)
+    .then((cache) => cache.put(req, copy))
+    .catch(() => undefined)
+    .then(() => res)
+}
+
 self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url)
   if (e.request.method !== 'GET') return
@@ -112,6 +124,7 @@ self.addEventListener('fetch', (e) => {
       .match(e.request, { ignoreSearch: true, cacheName: CACHE })
       // 이번 캐시에 없으면 네트워크. 네트워크도 없으면 옛 캐시라도 준다.
       .then((hit) => hit ?? fetch(e.request).catch(() => cached(e.request)))
+      .then((res) => (res && !res.ok ? res : cacheResponse(e.request, res)))
       .then((res) => res ?? Response.error()),
   )
 })

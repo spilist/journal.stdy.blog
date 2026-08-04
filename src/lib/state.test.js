@@ -158,6 +158,20 @@ test('가져오기는 미리보기 때 비어 있던 자리에는 그대로 쓴�
   assert.equal(store.records.get(KEY)?.data.text, '파일에 있던 지어낸 문단')
 })
 
+test('가져오기의 저장 직전에 다른 탭이 쓴 최신 판본을 덮지 않는다', async () => {
+  const { journal, store } = await freshJournal()
+  const preview = journal.previewImport('# 26-08-03\n\n## 오늘\n파일에 있던 지어낸 문단\n')
+  store.writeDelay(30)
+
+  const importing = journal.applyImport(preview.writes)
+  await new Promise((resolve) => setTimeout(resolve, 5))
+  store.records.set(KEY, rec('다른 탭의 더 최신 지어낸 문단', Date.now() + 10_000, 0))
+  const result = await importing
+
+  assert.deepEqual(result, { written: 0, skipped: 1 })
+  assert.equal(store.records.get(KEY)?.data.text, '다른 탭의 더 최신 지어낸 문단')
+})
+
 test('다른 탭이 쓴 판본을 덮지 않는다 — 진 쪽은 사본으로 남는다 (불변식 3)', async () => {
   // 탭 둘을 열어두면 pull(서버만 읽는다)로도 `#load`(마운트에 한 번)로도 서로의
   // 판본이 안 들어온다. 그래서 나중에 커밋한 탭이 앞 탭의 글자를 신호 없이 덮었다.
@@ -189,6 +203,20 @@ test('다시 읽기가 디바운스 중인 입력을 디스크 판본으로 밀�
 
   assert.equal(journal.records[KEY].data.text, '이 탭이 쓴 지어낸 문단', '입력 중인 키는 건드리지 않는다')
   assert.deepEqual(store.conflicts, [], '사본도 만들지 않는다')
+})
+
+test('다시 읽기의 write-back이 그 사이 다른 탭의 최신 판본을 덮지 않는다', async () => {
+  const { journal, store } = await freshJournal()
+  journal.records[KEY] = rec('이 탭의 지어낸 문단', 300, 0)
+  store.records.set(KEY, rec('디스크의 오래된 지어낸 문단', 200, 0))
+  store.writeDelay(30)
+
+  const reloading = journal.reload()
+  await new Promise((resolve) => setTimeout(resolve, 5))
+  store.records.set(KEY, rec('다른 탭의 더 최신 지어낸 문단', 400, 0))
+  await reloading
+
+  assert.equal(store.records.get(KEY)?.data.text, '다른 탭의 더 최신 지어낸 문단')
 })
 
 test('텍스트를 고친 뒤 원복하면 본체와 새 revision이 더티로 남지 않는다', async () => {

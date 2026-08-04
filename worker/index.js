@@ -214,21 +214,27 @@ export async function applyPush(db, incoming) {
     const stmt = writeStatement(db, rec, now)
     if (stmt) {
       writes.push(stmt)
-      // **덮은 값을 그대로 돌려준다** (`SC-6`). 클라이언트가 그걸로 사본을 만든다 —
-      // 안 보내면 진 쪽 글자가 서버에도 어느 기기에도 안 남는다.
-      //
-      // **판정은 여기서 못 한다.** 사본이 필요한지는 "이 기기가 그 판본을 본 적
-      // 있나"인데, 그 근거인 `syncedAt`은 **로컬 전용이라 전선에 실리지 않는다**
-      // (`sync.js`). 워커가 판정하려 들면 항상 참이 되어 가드가 죽는다 — 실제로
-      // 한 번 그렇게 짰다가 되돌렸다. 판정하는 곳은 `syncedAt`을 아는 클라이언트다.
-      // 대가는 덮은 경우의 페이로드뿐이고, 보내는 건 더티 레코드뿐이라 작다.
-      verdicts.push({ key: rec.key, applied: true, server })
     } else {
       verdicts.push({ key: rec.key, applied: false, server })
     }
   }
 
-  if (writes.length) await db.batch(writes)
+  if (writes.length) {
+    const results = await db.batch(writes)
+    for (const [i, { rec, server }] of winners.entries()) {
+      const changed = Number(results[i]?.meta?.changes ?? 0) > 0
+      if (changed) {
+        // **덮은 값을 그대로 돌려준다** (`SC-6`). 클라이언트가 그걸로 사본을 만든다 —
+        // 안 보내면 진 쪽 글자가 서버에도 어느 기기에도 남지 않는다.
+        verdicts.push({ key: rec.key, applied: true, server })
+      } else {
+        // 읽기와 쓰기 사이에 다른 기기가 더 새 판본을 커밋했을 수 있다. SQL의
+        // 조건부 UPSERT가 거절한 사실을 `applied`로 숨기면 클라이언트가 서버에
+        // 없는 판본을 올렸다고 믿고 더티 표시를 지운다.
+        verdicts.push({ key: rec.key, applied: false, server: await readOne(db, rec.key) })
+      }
+    }
+  }
   return verdicts
 }
 

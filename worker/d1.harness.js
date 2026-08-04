@@ -24,6 +24,7 @@ const PK = {
  *   _rows: Record<string, Record<string, any>[]>,
  *   _queries: () => number,
  *   _resetQueries: () => void,
+ *   _beforeBatch?: () => void,
  * }}
  */
 export function createD1() {
@@ -99,13 +100,14 @@ export function createD1() {
 
   // 대역은 이 워커가 실제로 쓰는 문장만 안다. `D1Database` 전체를 구현하지 않으므로
   // 여기서 한 번만 캐스팅한다 — 테스트마다 캐스팅을 흩뿌리는 것보다 낫다.
-  return /** @type {any} */ ({
+  const db = /** @type {any} */ ({
     /** @param {string} sql */
     prepare(sql) {
       return statement({ sql, args: [] })
     },
     /** @param {{_stmt: Stmt}[]} stmts */
     async batch(stmts) {
+      db._beforeBatch?.()
       return stmts.map((s) => run(s._stmt))
     },
     // ── 테스트가 들여다보는 것 ────────────────────────────────────────────
@@ -116,4 +118,5 @@ export function createD1() {
       queries = 0
     },
   })
+  return db
 }
