@@ -7,7 +7,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
 import { createD1 } from './d1.harness.js'
-import { applyPush, pullSince, readOne, writeStatement } from './index.js'
+import { applyPush, parseSince, pullSince, readOne, writeStatement } from './index.js'
 
 /**
  * @param {string} key
@@ -19,6 +19,13 @@ const rec = (key, kind, data, updatedAt) => ({ key, kind, data, updatedAt })
 
 const log = (/** @type {string} */ date, /** @type {string} */ k, /** @type {string} */ text, /** @type {number} */ at) =>
   rec(`log:${date}:${k}`, 'log', { text }, at)
+
+test('pull 커서가 비정상이면 처음부터 다시 읽는다', () => {
+  assert.equal(parseSince('Infinity'), 0)
+  assert.equal(parseSince('NaN'), 0)
+  assert.equal(parseSince('-1'), 0)
+  assert.equal(parseSince('42'), 42)
+})
 
 test('키를 테이블·컬럼으로 되돌린다 — 클라이언트와 같은 규칙이어야 한다', async () => {
   const db = createD1()

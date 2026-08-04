@@ -102,6 +102,11 @@ test('aud · iss · exp 를 각각 본다', async () => {
   assert.deepEqual(await check(await token({ payload: { exp: 1 } })), { ok: false, reason: 'expired' })
 })
 
+test('exp가 현재 초와 같으면 만료로 처리한다', async () => {
+  const out = await check(await token({ payload: { exp: Math.floor(Date.now() / 1000) } }))
+  assert.deepEqual(out, { ok: false, reason: 'expired' })
+})
+
 test('aud 가 배열이어도 본다', async () => {
   assert.deepEqual(await check(await token({ payload: { aud: ['남의-앱', AUD] } })), {
     ok: true,
@@ -131,7 +136,14 @@ test('허용 목록 시크릿이 없으면 **닫는다** — 못 정하면 여�
 })
 
 test('망가진 토큰에 예외를 던지지 않는다 — 500이 되면 F-4 계약이 깨진다', async () => {
-  for (const bad of ['', 'a.b', 'a.b.c.d', '!!!.@@@.###', `${b64url({ alg: 'RS256', kid: 'kid-1' })}.@@@.x`]) {
+  for (const bad of [
+    '',
+    'a.b',
+    'a.b.c.d',
+    '!!!.@@@.###',
+    `${b64url({ alg: 'RS256', kid: 'kid-1' })}.@@@.x`,
+    await token({ signature: '%%%' }),
+  ]) {
     const out = await check(bad)
     assert.equal(out.ok, false, bad)
   }

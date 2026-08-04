@@ -15,6 +15,12 @@ import { verifyAccess } from './access.js'
  */
 const PULL_CURSOR_SLACK_MS = 10_000
 
+/** @param {string | null} value @returns {number} */
+export function parseSince(value) {
+  const since = Number(value ?? 0)
+  return Number.isFinite(since) && since >= 0 ? since : 0
+}
+
 /** @param {unknown} body @param {number} [status] */
 const json = (body, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -267,7 +273,7 @@ export default {
       }
 
       if (url.pathname === '/api/pull' && request.method === 'GET') {
-        const since = Number(url.searchParams.get('since') ?? 0) || 0
+        const since = parseSince(url.searchParams.get('since'))
         // 커서는 **질의 전** 시각에서 여유를 두고 물러선다. push는 판정을 다 낸 뒤
         // 커밋하므로 "스탬프는 찍혔는데 아직 안 보이는" 창이 ms가 아니라 그 요청
         // 길이만큼이다. 그 창을 안 덮으면 그 행은 영영 안 잡힌다. 겹쳐 받는 건
@@ -282,7 +288,8 @@ export default {
         return json({ verdicts: await applyPush(env.DB, records), now: Date.now() })
       }
     } catch (err) {
-      return json({ error: 'server', message: String(err) }, 500)
+      console.error('api request failed', err)
+      return json({ error: 'server' }, 500)
     }
 
     return json({ error: 'not-found' }, 404)

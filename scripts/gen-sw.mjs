@@ -24,7 +24,7 @@ const DIST = 'dist'
 
 /** @param {string} dir @returns {string[]} */
 function walk(dir) {
-  return readdirSync(dir).flatMap((name) => {
+  return readdirSync(dir).sort().flatMap((name) => {
     const full = join(dir, name)
     return statSync(full).isDirectory() ? walk(full) : [full]
   })

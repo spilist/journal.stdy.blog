@@ -86,18 +86,18 @@ export async function verifyAccess(request, env) {
   if (!key) return { ok: false, reason: 'unknown-kid' }
 
   const signed = new TextEncoder().encode(`${parts[0]}.${parts[1]}`)
-  const valid = await crypto.subtle.verify(
-    'RSASSA-PKCS1-v1_5',
-    key,
-    b64urlToBytes(parts[2]),
-    signed,
-  )
+  let valid
+  try {
+    valid = await crypto.subtle.verify('RSASSA-PKCS1-v1_5', key, b64urlToBytes(parts[2]), signed)
+  } catch {
+    return { ok: false, reason: 'malformed' }
+  }
   if (!valid) return { ok: false, reason: 'signature' }
 
   const aud = Array.isArray(payload.aud) ? payload.aud : [payload.aud]
   if (!aud.includes(env.ACCESS_AUD)) return { ok: false, reason: 'aud' }
   if (payload.iss !== `https://${env.ACCESS_TEAM_DOMAIN}`) return { ok: false, reason: 'iss' }
-  if (!payload.exp || payload.exp * 1000 < Date.now()) return { ok: false, reason: 'expired' }
+  if (!payload.exp || payload.exp * 1000 <= Date.now()) return { ok: false, reason: 'expired' }
 
   // 허용 이메일 하나. 정책이 Access 쪽에도 있지만 여기서 한 번 더 본다 —
   // 정책 실수 하나로 저널이 열리면 안 된다.
