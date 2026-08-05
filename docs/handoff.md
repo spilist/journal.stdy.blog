@@ -194,9 +194,10 @@ Access 302/no-store임을 [6차 관찰 기록](../charness-artifacts/probe/2026-
 도달·10개 미도달로 조였다.
 
 최종 `npm run gate`는 183개 테스트·reach 22/12·문서 47개·Svelte/Worker check·build를
-통과했다. 이 HEAD를 Worker `6d2a285c-4366-4777-b496-5abf8b19960a`로 배포했고, 비인증
+통과했다. 배포 당시 코드 포함 HEAD `98b14d0`을 Worker `6d2a285c-4366-4777-b496-5abf8b19960a`로 배포했고, 비인증
 `/`·`/api/pull?since=0`·`/sw.js`가 모두 Access 302/no-store임을 [7차 관찰 기록](../charness-artifacts/probe/2026-08-05-deploy-verification-round-7.json)으로
-남겼다. 이 readback은 인증 없는 header-only 확인이다.
+남겼다. 이후 `3167146`은 기록·probe·handoff만 바꾼 문서 커밋이라 재배포하지 않았다. 이
+readback은 인증 없는 header-only 확인이다.
 
 quality·critique·retro 기록은
 각각 [7차 quality](../charness-artifacts/quality/2026-08-05-quality-review-round-7.md),
