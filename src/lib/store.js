@@ -48,6 +48,22 @@ function done(req) {
 }
 
 /**
+ * Wait for the transaction, rather than just its individual requests.
+ *
+ * An explicit abort does not have to produce a request error, so rejecting on
+ * both error paths prevents a failed write from leaving its caller pending.
+ * @param {IDBTransaction} tx
+ * @returns {Promise<void>}
+ */
+function transactionDone(tx) {
+  return new Promise((resolve, reject) => {
+    tx.oncomplete = () => resolve()
+    tx.onerror = () => reject(tx.error ?? new Error('IndexedDB transaction failed'))
+    tx.onabort = () => reject(tx.error ?? new Error('IndexedDB transaction aborted'))
+  })
+}
+
+/**
  * @param {string} name
  * @param {IDBTransactionMode} mode
  */
@@ -69,10 +85,7 @@ export async function putRecords(records) {
   const db = await open()
   const tx = db.transaction('records', 'readwrite')
   for (const rec of records) tx.objectStore('records').put(rec)
-  await new Promise((resolve, reject) => {
-    tx.oncomplete = () => resolve(undefined)
-    tx.onerror = () => reject(tx.error)
-  })
+  await transactionDone(tx)
 }
 
 /**
@@ -99,10 +112,7 @@ export async function putRecordsIfNewer(records) {
       }
     }
   }
-  await new Promise((resolve, reject) => {
-    tx.oncomplete = () => resolve(undefined)
-    tx.onerror = () => reject(tx.error)
-  })
+  await transactionDone(tx)
   return stored
 }
 
@@ -145,10 +155,7 @@ export async function addConflicts(conflicts) {
       existing.add(key)
     }
   }
-  await new Promise((resolve, reject) => {
-    tx.oncomplete = () => resolve(undefined)
-    tx.onerror = () => reject(tx.error)
-  })
+  await transactionDone(tx)
 }
 
 /** @param {number} id */
