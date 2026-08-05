@@ -170,6 +170,27 @@ IndexedDB 충돌 저장은 read-write transaction 안에서 `(target, text, at)`
 전부 통과했다. 기능·의존성·자동화를 늘리는 계획은 아니다. 다음 구현은 UI-1 한 slice를
 정한 뒤 사람의 브라우저 수용을 포함해 닫는다.
 
+**2026-08-05 6차 전체 품질 라운드와 UI 인출 경계 수정의 배포가 끝났다.** 코드 커밋
+`d826a18`을 `origin/main`에 push하고 Worker `249f2dea-0a2b-4744-ae65-5db845cc4aa8`로
+배포했다. 그래프에서 선택한 날짜의 긴 이유는 좁은 폭에서 줄바꿈하며, 가져오기 패널은
+`prefers-reduced-motion`일 때 즉시 이동한다. 에너지 그래프 진입 버튼이 전역 44px 조작면을
+덮어쓰던 32px 예외도 제거했다. 실제 테스트 정본보다 좁은 glob을 가리키던
+`AGENTS.md`·`spec-first-slice.md`를 `npm test`로 통일했고, 운영자 인수에 UI-1~3의 수동
+확인 절차를 추가했다.
+
+`npm run gate`는 182개 테스트·reach 22/11·lint/docs·Svelte/Worker check·build를 통과했다.
+`npm audit`은 0 vulnerabilities다. 배포 후 비인증 `/`·`/api/pull?since=0`·`/sw.js`가 모두
+Access 302/no-store임을 [6차 관찰 기록](../charness-artifacts/probe/2026-08-05-deploy-verification-round-6.json)으로
+남겼다. 이 readback은 인증 없는 header-only 확인이므로 로그인 브라우저 수용을 대신하지
+않는다. quality·critique·retro 기록은 각각 [6차 quality](../charness-artifacts/quality/2026-08-05-quality-review-round-6.md),
+[6차 critique](../charness-artifacts/critique/2026-08-05-critique-round-6.md),
+[6차 retro](../charness-artifacts/retro/2026-08-05-session-retro-round-6.md)다.
+
+이번 라운드에서 새 inventory·runtime budget·browser runner·테스트 삭제는 만들지 않았다.
+Vulture/nose의 zero-scope 오류와 Charness adapter bootstrap 재직렬화 경고는 clean으로 숨기지
+않고 upstream 소유의 advisory/deferred로 기록했다. quality 위임 기록의 critique-only 범위는
+`AGENTS.md`의 quality 계약과 맞췄다.
+
 ### 이번 5차 라운드의 운영 교훈
 
 - adapter/primer 뒤에 `npm run check`와 최소 결정론 gate를 reviewer보다 먼저 부른다. 이번에는
@@ -181,6 +202,20 @@ IndexedDB 충돌 저장은 read-write transaction 안에서 `(target, text, at)`
   한 경로만 고치지 않고 `reload()`·`push()`를 공통 owner로 합쳤다.
 - quality·critique·retro artifact는 canonical field를 읽고 작성한 뒤 validator를 통과시키고
   최종 gate를 부른다. `packet_sections: []`이면 packet은 만들지 않는다.
+
+### 이번 6차 라운드의 운영 교훈
+
+- `AGENTS.md`가 quality·critique를 standing-approved로 위임하면 delegation record도 전체
+  scope를 한 번에 기록한다. 일부 scope만 쓰면 기존 범위를 덮어쓰는 낭비가 생긴다.
+- broad inventory는 사용자 요청상 유지하되, Promise.all의 큰 출력은 잘려 다시 읽게 만들 수
+  있다. 다음에는 명령별 결과를 작게 모아 읽고 출력 손실을 quality 결과로 오해하지 않는다.
+- 그래프 이유는 “ellipsis 제거”가 아니라 bounded wrapping으로 전문과 폭 제약을 같이 지킨다.
+  UI-1~3은 코드 gate가 아닌 사람 브라우저 수용이며, 현재 미실행을 pass로 포장하지 않는다.
+- host가 reviewer capability/전달을 막으면 wait를 반복하지 않고 no-delivery를 기록한다. 같은
+  에이전트 검토로 대체하지 않으며, 이번 parent boundary fingerprint는 clean이었다.
+- runtime budget/startup probe, zero-scope inventory wrapper, 새 test runner는 실제 병목·회귀가
+  생길 때까지 보류한다. adapter는 `bootstrap_adapter.py --dry-run`만 확인하고 #507 후속 전에는
+  쓰기 bootstrap을 하지 않는다.
 
 ### 이번 3차 라운드의 운영 교훈
 
