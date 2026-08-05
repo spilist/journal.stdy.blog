@@ -19,6 +19,7 @@ export let meta = Object.create(null)
 let failPut = false
 let failRead = false
 let failMetaRead = false
+let failConflictRead = false
 let delayMs = 0
 let readDelayMs = 0
 
@@ -44,6 +45,11 @@ export function failMetaReads(on) {
   failMetaRead = on
 }
 
+/** 충돌 사본 읽기만 실패시킨다. @param {boolean} on */
+export function failConflictReads(on) {
+  failConflictRead = on
+}
+
 /** 쓰기를 느리게 만든다 — 왕복 중 편집이 끼어드는 창을 열려면 필요하다. @param {number} ms */
 export function writeDelay(ms) {
   delayMs = ms
@@ -61,6 +67,7 @@ export function reset() {
   failPut = false
   failRead = false
   failMetaRead = false
+  failConflictRead = false
   delayMs = 0
   readDelayMs = 0
 }
@@ -109,12 +116,19 @@ export async function dropRecord(key) {
 }
 
 export async function allConflicts() {
+  if (failConflictRead) throw new Error('conflicts 스토어를 열지 못했습니다')
   return conflicts.map((c, i) => ({ ...c, id: i + 1 }))
 }
 
 /** @param {Omit<Conflict, 'id'>[]} list */
 export async function addConflicts(list) {
-  for (const c of list) conflicts.push(/** @type {Conflict} */ (structuredClone(c)))
+  const existing = new Set(conflicts.map((c) => JSON.stringify([c.target, c.text, c.at])))
+  for (const c of list) {
+    const key = JSON.stringify([c.target, c.text, c.at])
+    if (existing.has(key)) continue
+    conflicts.push(/** @type {Conflict} */ (structuredClone(c)))
+    existing.add(key)
+  }
 }
 
 /** @param {number} id */

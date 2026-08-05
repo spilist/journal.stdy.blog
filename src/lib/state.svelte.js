@@ -185,6 +185,7 @@ export class Journal {
   #loadFailed = false
 
   /** 현재 초기 로드. 복귀 pull이 로드보다 먼저 실행되지 않게 한다. */
+  /** @type {Promise<boolean> | null} */
   #loading = null
 
   /** lifecycle pull 직렬화 꼬리. `online`과 `visibilitychange`가 겹쳐도 한 줄로 선다. */
@@ -312,14 +313,28 @@ export class Journal {
     if (!kept.length && !writeBack.length) return true
     try {
       // 사본이 먼저다 — `#push`와 같은 순서, 같은 이유다.
-      await db.addConflicts(kept)
-      await db.putRecordsIfNewer(writeBack)
+      await this.#persistMerge(kept, writeBack)
     } catch (err) {
       this.storageError = `저장 실패 — 이 화면의 글자를 다른 곳에 복사해 두세요 (${err})`
       return false
     }
-    if (kept.length) this.conflicts = await db.allConflicts()
     return true
+  }
+
+  /**
+   * 병합 결과를 저장한다. 충돌 사본은 본체보다 먼저 영속화하고, 성공 직후 화면에도
+   * 읽어온다. 본체 저장이 뒤늦게 실패해도 이미 남긴 사용자의 글자가 숨지 않아야 한다.
+   * 저장 재시도는 `store.addConflicts()`가 같은 사본을 멱등 처리한다.
+   *
+   * @param {import('./store.js').Conflict[]} conflicts
+   * @param {Rec[]} records
+   */
+  async #persistMerge(conflicts, records) {
+    if (conflicts.length) {
+      await db.addConflicts(conflicts)
+      this.conflicts = await db.allConflicts()
+    }
+    await db.putRecordsIfNewer(records)
   }
 
   /**
@@ -1282,8 +1297,7 @@ export class Journal {
         // 사라지는데, 그 사본은 **남은 유일한 판본**이라 되살릴 길이 없다 — 서버엔
         // 이미 내 값이 써졌고, 재시도하면 `resolveRejected`가 내용이 같다고 판단해
         // 사본을 안 만든다. 순서를 뒤집으면 최악이 「지울 수 있는 잉여 배지 하나」다.
-        await db.addConflicts(newConflicts)
-        await db.putRecordsIfNewer(updates)
+        await this.#persistMerge(newConflicts, updates)
       } catch (err) {
         // **로컬 쓰기 실패는 '오프라인'이 아니다** (`F-6`). 서버엔 이미 써졌는데
         // 네트워크 탓이라고 말하면, 사용자는 영구 더티가 된 이유를 못 본다.
@@ -1303,7 +1317,6 @@ export class Journal {
           delete this.#revertedText[rec.key]
         }
       }
-      if (newConflicts.length) this.conflicts = await db.allConflicts()
       conflicted += newConflicts.length
       // **`lastPulledAt`을 여기서 옮기지 않는다.** push 응답은 내가 보낸 키의 판정만
       // 담고 있어서, 커서를 밀면 그 사이 서버에 생긴 다른 기기의 변경을 영영 건너뛴다.

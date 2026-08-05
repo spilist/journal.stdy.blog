@@ -213,6 +213,71 @@ test('다른 탭이 쓴 판본을 덮지 않는다 — 진 쪽은 사본으로 �
   assert.equal(journal.conflicts.length, 1, '화면에도 바로 붙는다')
 })
 
+test('로컬 병합의 충돌 사본은 본체 저장 실패 뒤에도 보이고 재시도해도 중복되지 않는다', async () => {
+  const { journal, store } = await freshJournal()
+  const newerKey = 'log:2026-08-03:어제'
+  const olderKey = 'log:2026-08-03:오늘'
+  journal.records[newerKey] = {
+    key: newerKey,
+    kind: 'log',
+    data: { text: '이 탭의 오래된 문장' },
+    updatedAt: 100,
+    syncedAt: 0,
+  }
+  journal.records[olderKey] = rec('이 탭의 더 최신 문장', 300, 0)
+  store.records.set(newerKey, {
+    key: newerKey,
+    kind: 'log',
+    data: { text: '다른 탭의 더 최신 문장' },
+    updatedAt: 300,
+    syncedAt: 0,
+  })
+  store.records.set(olderKey, rec('', 200, 0))
+
+  store.failWrites(true)
+  await journal.reload()
+
+  assert.equal(journal.conflicts.length, 1, '본체 저장이 실패해도 사본을 화면에 붙인다')
+  assert.equal(store.conflicts.length, 1, '사본 자체는 먼저 보존된다')
+
+  store.failWrites(false)
+  await journal.reload()
+
+  assert.equal(journal.conflicts.length, 1, '재시도해도 같은 사본을 중복하지 않는다')
+  assert.equal(store.conflicts.length, 1)
+})
+
+test('push의 충돌 사본도 본체 저장 실패 뒤 보이고 재시도해도 중복되지 않는다', async () => {
+  const { journal, store, sync } = await freshJournal()
+  const original = rec('이 기기의 지어낸 문장', 300, 100)
+  journal.records[KEY] = original
+  sync.server.set(KEY, rec('서버의 더 최신 지어낸 문장', 400, 400))
+
+  store.failWrites(true)
+  await journal.pushNow()
+
+  assert.equal(journal.conflicts.length, 1, '저장 실패 뒤에도 충돌 사본을 화면에 붙인다')
+  assert.equal(journal.syncState, 'error')
+
+  store.failWrites(false)
+  await journal.pushNow()
+
+  assert.equal(journal.conflicts.length, 1, '재시도해도 같은 사본을 중복하지 않는다')
+  assert.equal(store.conflicts.length, 1)
+})
+
+test('충돌 사본 read-back 실패는 저장 오류로 보이고 오프라인으로 위장하지 않는다', async () => {
+  const { journal, store } = await freshJournal()
+  store.records.set(KEY, rec('디스크의 더 최신 지어낸 문장', 300, 0))
+  journal.records[KEY] = rec('이 탭의 지어낸 문장', 200, 0)
+  store.failConflictReads(true)
+
+  const result = await journal.reload()
+
+  assert.equal(result, false)
+  assert.match(journal.storageError, /저장 실패/)
+})
+
 test('lifecycle pull은 온라인 복귀 전에 다른 탭의 로컬 판본을 읽는다', async () => {
   const { journal, store, sync } = await freshJournal()
   journal.records[KEY] = rec('이 탭이 마지막으로 본 지어낸 문단', 100, 100)

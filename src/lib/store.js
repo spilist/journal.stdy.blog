@@ -112,6 +112,11 @@ export async function dropRecord(key) {
 
 /** @typedef {{id?: number, target: string, text: string, at: number}} Conflict */
 
+/** @param {Conflict} conflict @returns {string} */
+function conflictKey(conflict) {
+  return JSON.stringify([conflict.target, conflict.text, conflict.at])
+}
+
 /** @returns {Promise<Conflict[]>} */
 export async function allConflicts() {
   return done(/** @type {IDBRequest<Conflict[]>} */ ((await store('conflicts', 'readonly')).getAll()))
@@ -122,7 +127,18 @@ export async function addConflicts(conflicts) {
   if (!conflicts.length) return
   const db = await open()
   const tx = db.transaction('conflicts', 'readwrite')
-  for (const c of conflicts) tx.objectStore('conflicts').add(c)
+  const os = tx.objectStore('conflicts')
+  const existing = new Set()
+  const req = os.getAll()
+  req.onsuccess = () => {
+    for (const c of req.result) existing.add(conflictKey(c))
+    for (const c of conflicts) {
+      const key = conflictKey(c)
+      if (existing.has(key)) continue
+      os.add(c)
+      existing.add(key)
+    }
+  }
   await new Promise((resolve, reject) => {
     tx.oncomplete = () => resolve(undefined)
     tx.onerror = () => reject(tx.error)
