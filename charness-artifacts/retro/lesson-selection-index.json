@@ -12,8 +12,8 @@
     "independent_source_count": "human-authored sources count individually; all emissions sharing one generator count once"
   },
   "as_of_source_date": "2026-08-05",
-  "source_artifact_count": 1,
-  "candidate_count": 9,
+  "source_artifact_count": 2,
+  "candidate_count": 19,
   "top_candidates": [
     {
       "candidate_id": "current_focus:044935fd711b",
@@ -38,6 +38,32 @@
           "generator": null,
           "kind": "current_focus",
           "lesson": "이번 단위는 4차 repo-wide 품질 검사와 온라인 복귀 동기화 수정이다."
+        }
+      ]
+    },
+    {
+      "candidate_id": "current_focus:ab5be3015254",
+      "kind": "current_focus",
+      "lesson": "이번 단위는 5차 repo-wide 품질 검사, 충돌 사본 저장 경계 수정, push와 배포다.",
+      "normalized_key": "이번 단위는 5차 repo wide 품질 검사 충돌 사본 저장 경계 수정 push와 배포다",
+      "recurrence_class": null,
+      "source_count": 1,
+      "independent_source_count": 1,
+      "generator_authored": 0,
+      "latest_source_path": "charness-artifacts/retro/2026-08-05-session-retro-round-5.md",
+      "latest_source_date": "2026-08-05",
+      "age_days": 0,
+      "recency_weight": 1.0,
+      "alpha": 0.12,
+      "selection_weight": 1.0,
+      "sources": [
+        {
+          "artifact_path": "charness-artifacts/retro/2026-08-05-session-retro-round-5.md",
+          "date": "2026-08-05",
+          "section": "Context",
+          "generator": null,
+          "kind": "current_focus",
+          "lesson": "이번 단위는 5차 repo-wide 품질 검사, 충돌 사본 저장 경계 수정, push와 배포다."
         }
       ]
     },
@@ -68,6 +94,32 @@
       ]
     },
     {
+      "candidate_id": "next_improvement:dffce8eed865",
+      "kind": "next_improvement",
+      "lesson": "adapter/primer 다음에 `npm run check`와 최소 deterministic gate를 먼저 실행하고, 그 결과를 reviewer prompt에 고정한다.",
+      "normalized_key": "adapter primer 다음에 npm run check 와 최소 deterministic gate를 먼저 실행하고 그 결과를",
+      "recurrence_class": null,
+      "source_count": 1,
+      "independent_source_count": 1,
+      "generator_authored": 0,
+      "latest_source_path": "charness-artifacts/retro/2026-08-05-session-retro-round-5.md",
+      "latest_source_date": "2026-08-05",
+      "age_days": 0,
+      "recency_weight": 1.0,
+      "alpha": 0.12,
+      "selection_weight": 1.0,
+      "sources": [
+        {
+          "artifact_path": "charness-artifacts/retro/2026-08-05-session-retro-round-5.md",
+          "date": "2026-08-05",
+          "section": "Next Improvements",
+          "generator": null,
+          "kind": "next_improvement",
+          "lesson": "adapter/primer 다음에 `npm run check`와 최소 deterministic gate를 먼저 실행하고, 그 결과를 reviewer prompt에 고정한다."
+        }
+      ]
+    },
+    {
       "candidate_id": "next_improvement:bbf2150d259c",
       "kind": "next_improvement",
       "lesson": "Charness upstream #507에 custom adapter 보존과 empty-packet preflight를 후속한다. 이 리포 안에 숨은 bootstrap wrapper를 만들지 않는다.",
@@ -90,6 +142,58 @@
           "generator": null,
           "kind": "next_improvement",
           "lesson": "Charness upstream #507에 custom adapter 보존과 empty-packet preflight를 후속한다. 이 리포 안에 숨은 bootstrap wrapper를 만들지 않는다."
+        }
+      ]
+    },
+    {
+      "candidate_id": "next_improvement:ce4ea6ff5bd1",
+      "kind": "next_improvement",
+      "lesson": "critique runner가 reviewer별 snapshot 경로와 application/delivery 상태를 자동으로 분리 기록하게 한다. 현재 host capability가 없으므로 이 리포에 wrapper를 만들지 않는다.",
+      "normalized_key": "critique runner가 reviewer별 snapshot 경로와 application delivery 상태를 자동으로 분리 기록하게 한다 현재 host",
+      "recurrence_class": null,
+      "source_count": 1,
+      "independent_source_count": 1,
+      "generator_authored": 0,
+      "latest_source_path": "charness-artifacts/retro/2026-08-05-session-retro-round-5.md",
+      "latest_source_date": "2026-08-05",
+      "age_days": 0,
+      "recency_weight": 1.0,
+      "alpha": 0.12,
+      "selection_weight": 1.0,
+      "sources": [
+        {
+          "artifact_path": "charness-artifacts/retro/2026-08-05-session-retro-round-5.md",
+          "date": "2026-08-05",
+          "section": "Next Improvements",
+          "generator": null,
+          "kind": "next_improvement",
+          "lesson": "critique runner가 reviewer별 snapshot 경로와 application/delivery 상태를 자동으로 분리 기록하게 한다. 현재 host capability가 없으므로 이 리포에 wrapper를 만들지 않는다."
+        }
+      ]
+    },
+    {
+      "candidate_id": "next_improvement:3ceddcc2c59e",
+      "kind": "next_improvement",
+      "lesson": "parent가 reviewer별 boundary window를 만들고, child는 `.charness` bookkeeping을 쓰지 않도록 명시한다. 반환 직후 해당 window만 verify한다.",
+      "normalized_key": "parent가 reviewer별 boundary window를 만들고 child는 charness bookkeeping을 쓰지 않도록 명시한다 반환 직후 해당",
+      "recurrence_class": null,
+      "source_count": 1,
+      "independent_source_count": 1,
+      "generator_authored": 0,
+      "latest_source_path": "charness-artifacts/retro/2026-08-05-session-retro-round-5.md",
+      "latest_source_date": "2026-08-05",
+      "age_days": 0,
+      "recency_weight": 1.0,
+      "alpha": 0.12,
+      "selection_weight": 1.0,
+      "sources": [
+        {
+          "artifact_path": "charness-artifacts/retro/2026-08-05-session-retro-round-5.md",
+          "date": "2026-08-05",
+          "section": "Next Improvements",
+          "generator": null,
+          "kind": "next_improvement",
+          "lesson": "parent가 reviewer별 boundary window를 만들고, child는 `.charness` bookkeeping을 쓰지 않도록 명시한다. 반환 직후 해당 window만 verify한다."
         }
       ]
     },
@@ -146,15 +250,15 @@
       ]
     },
     {
-      "candidate_id": "repeat_trap:6e8fbd187a3a",
-      "kind": "repeat_trap",
-      "lesson": "**낭비로 분류하지 않은 탐색**: 사용자가 unknown-unknown 전체 검사를 요청했으므로 넓은 스캔·counterweight는 exploration 단계의 의도된 비용이다. triage lock 뒤에는 online lifecycle 한 건만 fix-now로 남기고 의존성·브라우저 경계는 defer했다.",
-      "normalized_key": "낭비로 분류하지 않은 탐색 사용자가 unknown unknown 전체 검사를 요청했으므로 넓은 스캔 counterweight는 exploration",
+      "candidate_id": "next_improvement:2422337cc8d9",
+      "kind": "next_improvement",
+      "lesson": "이번 fix·deferred·사람 수용 잔여를 `docs/handoff.md`의 5차 교훈 섹션에 기록한다.",
+      "normalized_key": "이번 fix deferred 사람 수용 잔여를 docs handoff md 의 5차 교훈 섹션에 기록한다",
       "recurrence_class": null,
       "source_count": 1,
       "independent_source_count": 1,
       "generator_authored": 0,
-      "latest_source_path": "charness-artifacts/retro/2026-08-05-session-retro.md",
+      "latest_source_path": "charness-artifacts/retro/2026-08-05-session-retro-round-5.md",
       "latest_source_date": "2026-08-05",
       "age_days": 0,
       "recency_weight": 1.0,
@@ -162,25 +266,25 @@
       "selection_weight": 1.0,
       "sources": [
         {
-          "artifact_path": "charness-artifacts/retro/2026-08-05-session-retro.md",
+          "artifact_path": "charness-artifacts/retro/2026-08-05-session-retro-round-5.md",
           "date": "2026-08-05",
-          "section": "Waste",
+          "section": "Next Improvements",
           "generator": null,
-          "kind": "repeat_trap",
-          "lesson": "**낭비로 분류하지 않은 탐색**: 사용자가 unknown-unknown 전체 검사를 요청했으므로 넓은 스캔·counterweight는 exploration 단계의 의도된 비용이다. triage lock 뒤에는 online lifecycle 한 건만 fix-now로 남기고 의존성·브라우저 경계는 defer했다."
+          "kind": "next_improvement",
+          "lesson": "이번 fix·deferred·사람 수용 잔여를 `docs/handoff.md`의 5차 교훈 섹션에 기록한다."
         }
       ]
     },
     {
-      "candidate_id": "class:6fb1c129c880",
+      "candidate_id": "class:6976f39a179b",
       "kind": "repeat_trap",
-      "lesson": "**불필요한 packet 생성**: adapter가 `packet_sections: []`라고 이미 말했는데 packet을 생성했다. 이번에는 adapter를 먼저 읽고 생략했다. 비용은 command/attention 재작업으로 관찰됐지만 정확한 token 비용은 unavailable이다.",
-      "normalized_key": "불필요한 packet 생성 adapter가 packet sections 라고 이미 말했는데 packet을 생성했다 이번에는 adapter를 먼저",
-      "recurrence_class": "empty-packet-preflight",
+      "lesson": "**artifact-validator-repair:** round-5 품질 artifact와 critique를 만든 뒤 validator가 runtime prefix, passive 이유, enum 상태를 각각 잡았다. 이는 낭비라기보다 검증 가능한 기록을 만드는 verification 비용이지만, 다음에는 scaffold의 canonical field vocabulary를 먼저 읽어 한 번에 작성한다.",
+      "normalized_key": "artifact validator repair round 5 품질 artifact와 critique를 만든 뒤 validator가 runtime prefix passive",
+      "recurrence_class": "artifact-validator-repair",
       "source_count": 1,
       "independent_source_count": 1,
       "generator_authored": 0,
-      "latest_source_path": "charness-artifacts/retro/2026-08-05-session-retro.md",
+      "latest_source_path": "charness-artifacts/retro/2026-08-05-session-retro-round-5.md",
       "latest_source_date": "2026-08-05",
       "age_days": 0,
       "recency_weight": 1.0,
@@ -188,25 +292,25 @@
       "selection_weight": 1.0,
       "sources": [
         {
-          "artifact_path": "charness-artifacts/retro/2026-08-05-session-retro.md",
+          "artifact_path": "charness-artifacts/retro/2026-08-05-session-retro-round-5.md",
           "date": "2026-08-05",
           "section": "Waste",
           "generator": null,
           "kind": "repeat_trap",
-          "lesson": "**불필요한 packet 생성**: adapter가 `packet_sections: []`라고 이미 말했는데 packet을 생성했다. 이번에는 adapter를 먼저 읽고 생략했다. 비용은 command/attention 재작업으로 관찰됐지만 정확한 token 비용은 unavailable이다."
+          "lesson": "**artifact-validator-repair:** round-5 품질 artifact와 critique를 만든 뒤 validator가 runtime prefix, passive 이유, enum 상태를 각각 잡았다. 이는 낭비라기보다 검증 가능한 기록을 만드는 verification 비용이지만, 다음에는 scaffold의 canonical field vocabulary를 먼저 읽어 한 번에 작성한다."
         }
       ]
     },
     {
-      "candidate_id": "class:87cfadd53d0a",
+      "candidate_id": "repeat_trap:08c198fa0abe",
       "kind": "repeat_trap",
-      "lesson": "**순서가 만드는 경계 재작업**: fingerprint snapshot과 packet 생성/리뷰 준비를 병렬화해 boundary drift를 만들었다. 이번에는 snapshot→spawn→wait→verify 순서를 지켰고, 다만 여러 reviewer 완료 뒤 한 번에 verify한 것은 남은 절차 개선점이다.",
-      "normalized_key": "순서가 만드는 경계 재작업 fingerprint snapshot과 packet 생성 리뷰 준비를 병렬화해 boundary drift를 만들었다",
-      "recurrence_class": "sequential-review-boundary",
+      "lesson": "**broad exploration은 waste로 분류하지 않음:** 사용자가 전체 품질과 unknown-unknown을 직접 요청했으므로 exploration은 의도됐다. triage lock에서 fix-now는 타입 오류와 conflict persistence였고, service-worker old tab·tombstone·dependency major·새 runner는 deferred, false positive는 없었다.",
+      "normalized_key": "broad exploration은 waste로 분류하지 않음 사용자가 전체 품질과 unknown unknown을 직접 요청했으므로 exploration은 의도됐다",
+      "recurrence_class": null,
       "source_count": 1,
       "independent_source_count": 1,
       "generator_authored": 0,
-      "latest_source_path": "charness-artifacts/retro/2026-08-05-session-retro.md",
+      "latest_source_path": "charness-artifacts/retro/2026-08-05-session-retro-round-5.md",
       "latest_source_date": "2026-08-05",
       "age_days": 0,
       "recency_weight": 1.0,
@@ -214,38 +318,12 @@
       "selection_weight": 1.0,
       "sources": [
         {
-          "artifact_path": "charness-artifacts/retro/2026-08-05-session-retro.md",
+          "artifact_path": "charness-artifacts/retro/2026-08-05-session-retro-round-5.md",
           "date": "2026-08-05",
           "section": "Waste",
           "generator": null,
           "kind": "repeat_trap",
-          "lesson": "**순서가 만드는 경계 재작업**: fingerprint snapshot과 packet 생성/리뷰 준비를 병렬화해 boundary drift를 만들었다. 이번에는 snapshot→spawn→wait→verify 순서를 지켰고, 다만 여러 reviewer 완료 뒤 한 번에 verify한 것은 남은 절차 개선점이다."
-        }
-      ]
-    },
-    {
-      "candidate_id": "class:54f1bf42bd11",
-      "kind": "repeat_trap",
-      "lesson": "**파일 추적 전 gate**: 문서가 가리키는 새 산출물을 먼저 git 추적하지 않아 문서 gate가 한 번 실패했다. 이번 round는 artifact validation을 먼저 마치고 최종 gate 전에 status를 확인한다.",
-      "normalized_key": "파일 추적 전 gate 문서가 가리키는 새 산출물을 먼저 git 추적하지 않아 문서 gate가",
-      "recurrence_class": "artifact-before-gate",
-      "source_count": 1,
-      "independent_source_count": 1,
-      "generator_authored": 0,
-      "latest_source_path": "charness-artifacts/retro/2026-08-05-session-retro.md",
-      "latest_source_date": "2026-08-05",
-      "age_days": 0,
-      "recency_weight": 1.0,
-      "alpha": 0.12,
-      "selection_weight": 1.0,
-      "sources": [
-        {
-          "artifact_path": "charness-artifacts/retro/2026-08-05-session-retro.md",
-          "date": "2026-08-05",
-          "section": "Waste",
-          "generator": null,
-          "kind": "repeat_trap",
-          "lesson": "**파일 추적 전 gate**: 문서가 가리키는 새 산출물을 먼저 git 추적하지 않아 문서 gate가 한 번 실패했다. 이번 round는 artifact validation을 먼저 마치고 최종 gate 전에 status를 확인한다."
+          "lesson": "**broad exploration은 waste로 분류하지 않음:** 사용자가 전체 품질과 unknown-unknown을 직접 요청했으므로 exploration은 의도됐다. triage lock에서 fix-now는 타입 오류와 conflict persistence였고, service-worker old tab·tombstone·dependency major·새 runner는 deferred, false positive는 없었다."
         }
       ]
     }
@@ -278,6 +356,32 @@
       ]
     },
     {
+      "candidate_id": "current_focus:ab5be3015254",
+      "kind": "current_focus",
+      "lesson": "이번 단위는 5차 repo-wide 품질 검사, 충돌 사본 저장 경계 수정, push와 배포다.",
+      "normalized_key": "이번 단위는 5차 repo wide 품질 검사 충돌 사본 저장 경계 수정 push와 배포다",
+      "recurrence_class": null,
+      "source_count": 1,
+      "independent_source_count": 1,
+      "generator_authored": 0,
+      "latest_source_path": "charness-artifacts/retro/2026-08-05-session-retro-round-5.md",
+      "latest_source_date": "2026-08-05",
+      "age_days": 0,
+      "recency_weight": 1.0,
+      "alpha": 0.12,
+      "selection_weight": 1.0,
+      "sources": [
+        {
+          "artifact_path": "charness-artifacts/retro/2026-08-05-session-retro-round-5.md",
+          "date": "2026-08-05",
+          "section": "Context",
+          "generator": null,
+          "kind": "current_focus",
+          "lesson": "이번 단위는 5차 repo-wide 품질 검사, 충돌 사본 저장 경계 수정, push와 배포다."
+        }
+      ]
+    },
+    {
       "candidate_id": "next_improvement:afe9be52592f",
       "kind": "next_improvement",
       "lesson": "adapter `packet_sections`·reviewer boundary 상태를 spawn 전에 확인하고, snapshot→spawn→각 결과 수령 후 verify를 고정한다.",
@@ -304,6 +408,32 @@
       ]
     },
     {
+      "candidate_id": "next_improvement:dffce8eed865",
+      "kind": "next_improvement",
+      "lesson": "adapter/primer 다음에 `npm run check`와 최소 deterministic gate를 먼저 실행하고, 그 결과를 reviewer prompt에 고정한다.",
+      "normalized_key": "adapter primer 다음에 npm run check 와 최소 deterministic gate를 먼저 실행하고 그 결과를",
+      "recurrence_class": null,
+      "source_count": 1,
+      "independent_source_count": 1,
+      "generator_authored": 0,
+      "latest_source_path": "charness-artifacts/retro/2026-08-05-session-retro-round-5.md",
+      "latest_source_date": "2026-08-05",
+      "age_days": 0,
+      "recency_weight": 1.0,
+      "alpha": 0.12,
+      "selection_weight": 1.0,
+      "sources": [
+        {
+          "artifact_path": "charness-artifacts/retro/2026-08-05-session-retro-round-5.md",
+          "date": "2026-08-05",
+          "section": "Next Improvements",
+          "generator": null,
+          "kind": "next_improvement",
+          "lesson": "adapter/primer 다음에 `npm run check`와 최소 deterministic gate를 먼저 실행하고, 그 결과를 reviewer prompt에 고정한다."
+        }
+      ]
+    },
+    {
       "candidate_id": "next_improvement:bbf2150d259c",
       "kind": "next_improvement",
       "lesson": "Charness upstream #507에 custom adapter 보존과 empty-packet preflight를 후속한다. 이 리포 안에 숨은 bootstrap wrapper를 만들지 않는다.",
@@ -326,6 +456,58 @@
           "generator": null,
           "kind": "next_improvement",
           "lesson": "Charness upstream #507에 custom adapter 보존과 empty-packet preflight를 후속한다. 이 리포 안에 숨은 bootstrap wrapper를 만들지 않는다."
+        }
+      ]
+    },
+    {
+      "candidate_id": "next_improvement:ce4ea6ff5bd1",
+      "kind": "next_improvement",
+      "lesson": "critique runner가 reviewer별 snapshot 경로와 application/delivery 상태를 자동으로 분리 기록하게 한다. 현재 host capability가 없으므로 이 리포에 wrapper를 만들지 않는다.",
+      "normalized_key": "critique runner가 reviewer별 snapshot 경로와 application delivery 상태를 자동으로 분리 기록하게 한다 현재 host",
+      "recurrence_class": null,
+      "source_count": 1,
+      "independent_source_count": 1,
+      "generator_authored": 0,
+      "latest_source_path": "charness-artifacts/retro/2026-08-05-session-retro-round-5.md",
+      "latest_source_date": "2026-08-05",
+      "age_days": 0,
+      "recency_weight": 1.0,
+      "alpha": 0.12,
+      "selection_weight": 1.0,
+      "sources": [
+        {
+          "artifact_path": "charness-artifacts/retro/2026-08-05-session-retro-round-5.md",
+          "date": "2026-08-05",
+          "section": "Next Improvements",
+          "generator": null,
+          "kind": "next_improvement",
+          "lesson": "critique runner가 reviewer별 snapshot 경로와 application/delivery 상태를 자동으로 분리 기록하게 한다. 현재 host capability가 없으므로 이 리포에 wrapper를 만들지 않는다."
+        }
+      ]
+    },
+    {
+      "candidate_id": "next_improvement:3ceddcc2c59e",
+      "kind": "next_improvement",
+      "lesson": "parent가 reviewer별 boundary window를 만들고, child는 `.charness` bookkeeping을 쓰지 않도록 명시한다. 반환 직후 해당 window만 verify한다.",
+      "normalized_key": "parent가 reviewer별 boundary window를 만들고 child는 charness bookkeeping을 쓰지 않도록 명시한다 반환 직후 해당",
+      "recurrence_class": null,
+      "source_count": 1,
+      "independent_source_count": 1,
+      "generator_authored": 0,
+      "latest_source_path": "charness-artifacts/retro/2026-08-05-session-retro-round-5.md",
+      "latest_source_date": "2026-08-05",
+      "age_days": 0,
+      "recency_weight": 1.0,
+      "alpha": 0.12,
+      "selection_weight": 1.0,
+      "sources": [
+        {
+          "artifact_path": "charness-artifacts/retro/2026-08-05-session-retro-round-5.md",
+          "date": "2026-08-05",
+          "section": "Next Improvements",
+          "generator": null,
+          "kind": "next_improvement",
+          "lesson": "parent가 reviewer별 boundary window를 만들고, child는 `.charness` bookkeeping을 쓰지 않도록 명시한다. 반환 직후 해당 window만 verify한다."
         }
       ]
     },
@@ -378,6 +560,162 @@
           "generator": null,
           "kind": "next_improvement",
           "lesson": "문서 링크가 새 파일을 가리키면 파일 생성·validator·git status를 gate보다 먼저 실행한다."
+        }
+      ]
+    },
+    {
+      "candidate_id": "next_improvement:2422337cc8d9",
+      "kind": "next_improvement",
+      "lesson": "이번 fix·deferred·사람 수용 잔여를 `docs/handoff.md`의 5차 교훈 섹션에 기록한다.",
+      "normalized_key": "이번 fix deferred 사람 수용 잔여를 docs handoff md 의 5차 교훈 섹션에 기록한다",
+      "recurrence_class": null,
+      "source_count": 1,
+      "independent_source_count": 1,
+      "generator_authored": 0,
+      "latest_source_path": "charness-artifacts/retro/2026-08-05-session-retro-round-5.md",
+      "latest_source_date": "2026-08-05",
+      "age_days": 0,
+      "recency_weight": 1.0,
+      "alpha": 0.12,
+      "selection_weight": 1.0,
+      "sources": [
+        {
+          "artifact_path": "charness-artifacts/retro/2026-08-05-session-retro-round-5.md",
+          "date": "2026-08-05",
+          "section": "Next Improvements",
+          "generator": null,
+          "kind": "next_improvement",
+          "lesson": "이번 fix·deferred·사람 수용 잔여를 `docs/handoff.md`의 5차 교훈 섹션에 기록한다."
+        }
+      ]
+    },
+    {
+      "candidate_id": "class:6976f39a179b",
+      "kind": "repeat_trap",
+      "lesson": "**artifact-validator-repair:** round-5 품질 artifact와 critique를 만든 뒤 validator가 runtime prefix, passive 이유, enum 상태를 각각 잡았다. 이는 낭비라기보다 검증 가능한 기록을 만드는 verification 비용이지만, 다음에는 scaffold의 canonical field vocabulary를 먼저 읽어 한 번에 작성한다.",
+      "normalized_key": "artifact validator repair round 5 품질 artifact와 critique를 만든 뒤 validator가 runtime prefix passive",
+      "recurrence_class": "artifact-validator-repair",
+      "source_count": 1,
+      "independent_source_count": 1,
+      "generator_authored": 0,
+      "latest_source_path": "charness-artifacts/retro/2026-08-05-session-retro-round-5.md",
+      "latest_source_date": "2026-08-05",
+      "age_days": 0,
+      "recency_weight": 1.0,
+      "alpha": 0.12,
+      "selection_weight": 1.0,
+      "sources": [
+        {
+          "artifact_path": "charness-artifacts/retro/2026-08-05-session-retro-round-5.md",
+          "date": "2026-08-05",
+          "section": "Waste",
+          "generator": null,
+          "kind": "repeat_trap",
+          "lesson": "**artifact-validator-repair:** round-5 품질 artifact와 critique를 만든 뒤 validator가 runtime prefix, passive 이유, enum 상태를 각각 잡았다. 이는 낭비라기보다 검증 가능한 기록을 만드는 verification 비용이지만, 다음에는 scaffold의 canonical field vocabulary를 먼저 읽어 한 번에 작성한다."
+        }
+      ]
+    },
+    {
+      "candidate_id": "repeat_trap:08c198fa0abe",
+      "kind": "repeat_trap",
+      "lesson": "**broad exploration은 waste로 분류하지 않음:** 사용자가 전체 품질과 unknown-unknown을 직접 요청했으므로 exploration은 의도됐다. triage lock에서 fix-now는 타입 오류와 conflict persistence였고, service-worker old tab·tombstone·dependency major·새 runner는 deferred, false positive는 없었다.",
+      "normalized_key": "broad exploration은 waste로 분류하지 않음 사용자가 전체 품질과 unknown unknown을 직접 요청했으므로 exploration은 의도됐다",
+      "recurrence_class": null,
+      "source_count": 1,
+      "independent_source_count": 1,
+      "generator_authored": 0,
+      "latest_source_path": "charness-artifacts/retro/2026-08-05-session-retro-round-5.md",
+      "latest_source_date": "2026-08-05",
+      "age_days": 0,
+      "recency_weight": 1.0,
+      "alpha": 0.12,
+      "selection_weight": 1.0,
+      "sources": [
+        {
+          "artifact_path": "charness-artifacts/retro/2026-08-05-session-retro-round-5.md",
+          "date": "2026-08-05",
+          "section": "Waste",
+          "generator": null,
+          "kind": "repeat_trap",
+          "lesson": "**broad exploration은 waste로 분류하지 않음:** 사용자가 전체 품질과 unknown-unknown을 직접 요청했으므로 exploration은 의도됐다. triage lock에서 fix-now는 타입 오류와 conflict persistence였고, service-worker old tab·tombstone·dependency major·새 runner는 deferred, false positive는 없었다."
+        }
+      ]
+    },
+    {
+      "candidate_id": "repeat_trap:83b8c00a1089",
+      "kind": "repeat_trap",
+      "lesson": "**gate-baseline runtime:** measured `/usr/bin/time -p npm run gate` real 11.99s, Node test 1.60s, Vite build 0.89s. 현재 budget 초과나 느린 gate recurrence는 관찰되지 않아 제거·병렬 runner를 만들지 않았다.",
+      "normalized_key": "gate baseline runtime measured usr bin time p npm run gate real 11 99s",
+      "recurrence_class": null,
+      "source_count": 1,
+      "independent_source_count": 1,
+      "generator_authored": 0,
+      "latest_source_path": "charness-artifacts/retro/2026-08-05-session-retro-round-5.md",
+      "latest_source_date": "2026-08-05",
+      "age_days": 0,
+      "recency_weight": 1.0,
+      "alpha": 0.12,
+      "selection_weight": 1.0,
+      "sources": [
+        {
+          "artifact_path": "charness-artifacts/retro/2026-08-05-session-retro-round-5.md",
+          "date": "2026-08-05",
+          "section": "Waste",
+          "generator": null,
+          "kind": "repeat_trap",
+          "lesson": "**gate-baseline runtime:** measured `/usr/bin/time -p npm run gate` real 11.99s, Node test 1.60s, Vite build 0.89s. 현재 budget 초과나 느린 gate recurrence는 관찰되지 않아 제거·병렬 runner를 만들지 않았다."
+        }
+      ]
+    },
+    {
+      "candidate_id": "class:3dbe88001f25",
+      "kind": "repeat_trap",
+      "lesson": "**gate-before-reviewer:** 탐색 후 fresh-eye를 먼저 기다리고 나서 `npm run check`를 실행했다. 이미 존재하던 `#loading` 타입 오류는 reviewer가 찾기 전에 값싼 check로 닫을 수 있었다. 비용은 reviewer attention의 재사용 가능한 일부였고 정확한 token/tool 비용은 unavailable이다. 다음에는 adapter/primer 직후 `check`와 최소 gate packet을 먼저 실행한다.",
+      "normalized_key": "gate before reviewer 탐색 후 fresh eye를 먼저 기다리고 나서 npm run check 를",
+      "recurrence_class": "gate-before-reviewer",
+      "source_count": 1,
+      "independent_source_count": 1,
+      "generator_authored": 0,
+      "latest_source_path": "charness-artifacts/retro/2026-08-05-session-retro-round-5.md",
+      "latest_source_date": "2026-08-05",
+      "age_days": 0,
+      "recency_weight": 1.0,
+      "alpha": 0.12,
+      "selection_weight": 1.0,
+      "sources": [
+        {
+          "artifact_path": "charness-artifacts/retro/2026-08-05-session-retro-round-5.md",
+          "date": "2026-08-05",
+          "section": "Waste",
+          "generator": null,
+          "kind": "repeat_trap",
+          "lesson": "**gate-before-reviewer:** 탐색 후 fresh-eye를 먼저 기다리고 나서 `npm run check`를 실행했다. 이미 존재하던 `#loading` 타입 오류는 reviewer가 찾기 전에 값싼 check로 닫을 수 있었다. 비용은 reviewer attention의 재사용 가능한 일부였고 정확한 token/tool 비용은 unavailable이다. 다음에는 adapter/primer 직후 `check`와 최소 gate packet을 먼저 실행한다."
+        }
+      ]
+    },
+    {
+      "candidate_id": "class:feb88ad35987",
+      "kind": "repeat_trap",
+      "lesson": "**reviewer-boundary-snapshot-collision:** parent snapshot 뒤 child가 같은 `.charness/reviewer-boundary/snapshot.json`을 써서 첫 verify가 window-id mismatch가 됐다. 실제 tree drift는 없었지만 재-snapshot과 추가 확인이 필요했다. child prompt에서 parent bookkeeping을 쓰지 않게 하고, reviewer별 window/path를 parent가 소유하는 순서로 고친다. 정확한 시간·토큰 비용은 unavailable이다.",
+      "normalized_key": "reviewer boundary snapshot collision parent snapshot 뒤 child가 같은 charness reviewer boundary snapshot json",
+      "recurrence_class": "reviewer-boundary-snapshot-collision",
+      "source_count": 1,
+      "independent_source_count": 1,
+      "generator_authored": 0,
+      "latest_source_path": "charness-artifacts/retro/2026-08-05-session-retro-round-5.md",
+      "latest_source_date": "2026-08-05",
+      "age_days": 0,
+      "recency_weight": 1.0,
+      "alpha": 0.12,
+      "selection_weight": 1.0,
+      "sources": [
+        {
+          "artifact_path": "charness-artifacts/retro/2026-08-05-session-retro-round-5.md",
+          "date": "2026-08-05",
+          "section": "Waste",
+          "generator": null,
+          "kind": "repeat_trap",
+          "lesson": "**reviewer-boundary-snapshot-collision:** parent snapshot 뒤 child가 같은 `.charness/reviewer-boundary/snapshot.json`을 써서 첫 verify가 window-id mismatch가 됐다. 실제 tree drift는 없었지만 재-snapshot과 추가 확인이 필요했다. child prompt에서 parent bookkeeping을 쓰지 않게 하고, reviewer별 window/path를 parent가 소유하는 순서로 고친다. 정확한 시간·토큰 비용은 unavailable이다."
         }
       ]
     },

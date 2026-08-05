@@ -50,8 +50,9 @@
 2026-08-03 여섯째 라운드에서 **넷을 더 썼다**: 시간 축(첫 사용/1년/5년)과 저장소 압박 ·
 여러 탭·기기 동시성 · 되돌리기와 복구 경로 + 한국어 IME · 문서와 코드의 인과 역전.
 
-**아직 안 쓴 각도 후보**: 의존성 업그레이드 내성 · 서비스워커 판올림 중의 옛 탭 ·
-접근성 재점검 · 국제화 일반(IME 말고).
+**2026-08-05 5차에서 새로 검토한 각도**: 의존성 업그레이드 내성 · 서비스워커 판올림 중의
+옛 탭 · 접근성 재점검 · 국제화 일반(IME 말고). 새 출하 차단은 없었고, dependency·old-tab
+재시도는 별도 증거가 생길 때까지 보류한다.
 
 ### 다시 지적하지 말 것 (전부 처리·기록됨)
 
@@ -141,6 +142,32 @@ pull하며, 초기 load와 두 이벤트의 중첩도 한 큐에서 처리한다
 - 새 artifact를 문서가 링크하면 파일·validator·추적 상태를 먼저 닫고 gate를 부른다.
 - 라운드의 낭비와 미측정 비용은 [4차 quality](../charness-artifacts/quality/2026-08-05-quality-review-round-4.md)와
   [session retro](../charness-artifacts/retro/2026-08-05-session-retro.md)에 남겼다.
+
+**2026-08-05 5차 전체 품질 라운드와 충돌 사본 저장 경계 수정의 배포가 끝났다.** 코드
+커밋은 `2e3de6c`, 품질·critique·retro 기록은 각각
+[5차 quality](../charness-artifacts/quality/2026-08-05-quality-review-round-5.md) ·
+[5차 critique](../charness-artifacts/critique/2026-08-05-critique-round-5.md) ·
+[5차 retro](../charness-artifacts/retro/2026-08-05-session-retro-round-5.md)다. Worker
+Version ID는 `0bb51f21-c35e-43c0-b6a1-9a52e0ba35e9` (이전
+`b3cdc37b-e12b-4b7b-adfa-091fdeb2920c`)이고, 182개 테스트와 전체 gate가 통과했다.
+`#loading` 타입 회귀를 고쳤고, `reload()`와 `push()`의 충돌 사본 저장을 공통
+`#persistMerge()`로 묶어 본체 저장 실패 뒤에도 사본을 화면에 붙이며 재시도 중복을 막는다.
+IndexedDB 충돌 저장은 read-write transaction 안에서 `(target, text, at)`를 멱등화한다.
+비인증 `/`·`/api/pull`·`/sw.js`는 모두 Access 302/no-store였다
+([관찰 기록](../charness-artifacts/probe/2026-08-05-deploy-verification-round-5.json)).
+인증 브라우저·두 탭/두 기기·대량 D1 push의 사람 수용 확인은 여전히 미확인이다.
+
+### 이번 5차 라운드의 운영 교훈
+
+- adapter/primer 뒤에 `npm run check`와 최소 결정론 gate를 reviewer보다 먼저 부른다. 이번에는
+  `#loading` 타입 오류를 reviewer가 먼저 발견해, 싸게 닫을 수 있는 실패가 review phase까지 갔다.
+- boundary snapshot은 parent가 소유한다. 이번에는 child가 같은 snapshot 파일을 써서 첫 verify가
+  window-id mismatch가 됐고, 이후 reviewer별 window를 다시 잡아 반환 직후 verify했다. 다음에는
+  child가 `.charness` bookkeeping을 쓰지 않게 명시한다.
+- 충돌 사본처럼 유사한 저장 순서가 둘 이상이면 state helper와 store transaction을 함께 본다.
+  한 경로만 고치지 않고 `reload()`·`push()`를 공통 owner로 합쳤다.
+- quality·critique·retro artifact는 canonical field를 읽고 작성한 뒤 validator를 통과시키고
+  최종 gate를 부른다. `packet_sections: []`이면 packet은 만들지 않는다.
 
 ### 이번 3차 라운드의 운영 교훈
 
