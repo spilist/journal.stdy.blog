@@ -13,12 +13,16 @@ Date: 2026-07-26
 **S1·S2 배포됨 (2026-07-26) — https://journal.stdy.blog**
 
 D1 `journal-db`와 Cloudflare Access 설정이 끝났고 게이트는 다 초록이다 —
-2026-08-05 마지막 확인에서 `npm run gate` (= `test` 179개 · `reach` · `lint` ·
+2026-08-05 마지막 확인에서 `npm run gate` (= `test` 182개 · `reach` · `lint` ·
 `check` · `build`)가 통과했다.
 **CI는 안 한다** (n=1 리포).
 
 앱이 하는 일은 둘뿐이고, 그 둘에 닿지 않는 제안은 범위 밖이다 (AGENTS.md):
 **복붙을 없앤다**, **에너지 레벨을 추적한다.**
+
+UI 판단의 파생 정본은 [디자인 원칙](./design-principles.md), 구현 순서는
+[UI 개선 계획](./ui-improvement-plan.md)이다. 이 문서들은 앱의 두 목적과 기존
+불변식을 재선언하지 않고 UI 관점으로 해석한다.
 
 ## 다음 — 순서대로
 

@@ -157,6 +157,19 @@ IndexedDB 충돌 저장은 read-write transaction 안에서 `(target, text, at)`
 ([관찰 기록](../charness-artifacts/probe/2026-08-05-deploy-verification-round-5.json)).
 인증 브라우저·두 탭/두 기기·대량 D1 push의 사람 수용 확인은 여전히 미확인이다.
 
+**2026-08-05 g15e 디자인 출처 수집과 UI 개선 계획을 정리했다.** 사용자가 지정한 세
+원문과 직접 연관 문서는 [gather 출처 기록](../charness-artifacts/gather/2026-08-05-g15e-design-sources.md)에
+보존했고, sibling repo의 성공한 capture를 checksum으로 대조해 재사용했다. destination
+재-fetch는 로그인 벽으로 끝났으므로 새 공개 fetch 성공을 주장하지 않는다. 외부 논의를
+저널의 오프라인 우선·수동 동기화·글자 보존·앱 내 LLM 금지와 통합한
+[디자인 원칙](./design-principles.md)과 [UI 개선 계획](./ui-improvement-plan.md)을
+추가했다. [bounded critique](../charness-artifacts/critique/2026-08-05-ui-design-critique.md)를
+거쳐 no-JS/cold offline을 현재 계약에서 제외하고, 첫 순서를 오늘 기록 → 에너지
+점수/이유 → 재방문 인출로 좁혔다. UI-1~3의 사람 수용과 G-1 gate의 소유권도 계획에
+명시했다. 문서 착지 뒤 `npm run gate`는 182개 테스트·reach 22/11·문서 41개·check/build
+전부 통과했다. 기능·의존성·자동화를 늘리는 계획은 아니다. 다음 구현은 UI-1 한 slice를
+정한 뒤 사람의 브라우저 수용을 포함해 닫는다.
+
 ### 이번 5차 라운드의 운영 교훈
 
 - adapter/primer 뒤에 `npm run check`와 최소 결정론 gate를 reviewer보다 먼저 부른다. 이번에는
