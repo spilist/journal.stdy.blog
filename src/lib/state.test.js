@@ -213,6 +213,31 @@ test('다른 탭이 쓴 판본을 덮지 않는다 — 진 쪽은 사본으로 �
   assert.equal(journal.conflicts.length, 1, '화면에도 바로 붙는다')
 })
 
+test('lifecycle pull은 온라인 복귀 전에 다른 탭의 로컬 판본을 읽는다', async () => {
+  const { journal, store, sync } = await freshJournal()
+  journal.records[KEY] = rec('이 탭이 마지막으로 본 지어낸 문단', 100, 100)
+  store.records.set(KEY, rec('다른 탭이 아직 올리지 않은 지어낸 문단', 300, 0))
+  sync.server.set(KEY, rec('서버의 중간 시각 지어낸 문단', 200, 200))
+
+  await journal.lifecyclePull({ reload: true, auto: true })
+
+  assert.equal(journal.records[KEY].data.text, '다른 탭이 아직 올리지 않은 지어낸 문단')
+  assert.equal(store.records.get(KEY)?.data.text, '다른 탭이 아직 올리지 않은 지어낸 문단')
+  assert.equal(journal.diverged, 1, '로컬을 읽은 뒤 서버 판본도 확인한다')
+})
+
+test('lifecycle pull은 로컬 재로드가 실패하면 서버 값을 받지 않는다', async () => {
+  const { journal, store, sync } = await freshJournal()
+  journal.records[KEY] = rec('이 탭에 남아 있는 지어낸 문단', 100, 100)
+  sync.server.set(KEY, rec('서버의 지어낸 문단', 200, 200))
+  store.failReads(true)
+
+  await journal.lifecyclePull({ reload: true, auto: true })
+
+  assert.equal(journal.records[KEY].data.text, '이 탭에 남아 있는 지어낸 문단', '로컬 실패 뒤 서버 판본을 적용하지 않는다')
+  assert.match(journal.storageError, /로컬 저장소를 읽지 못했습니다/)
+})
+
 test('다른 탭과 같은 밀리초에 쓴 판본도 조용히 버리지 않는다', async () => {
   const { journal, store } = await freshJournal()
   store.records.set(KEY, rec('디스크의 지어낸 문장', 300, 0))

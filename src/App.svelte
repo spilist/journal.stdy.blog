@@ -63,7 +63,7 @@
   }
 
   $effect(() => {
-    journal.load().then(() => journal.pullNow())
+    journal.load().then(() => journal.lifecyclePull())
 
     // 폰에서 앱을 전환하거나 화면을 끌 때 디바운스 중인 글자를 잃지 않게 한다.
     // 돌아올 때는 반대로 받아온다 — **PC 탭을 열어둔 채 폰에서 고치는 게 실제 루프다.**
@@ -81,11 +81,11 @@
       if (journal.date !== before) updateDateUrl(journal.date, 'replace')
       // **로컬을 서버보다 먼저 다시 읽는다.** 같은 브라우저의 다른 탭이 쓴 판본은
       // 이 경로가 아니면 안 들어오고, 모르는 채로 커밋하면 그 탭의 글자를 덮는다.
-      journal.reload().then(() => journal.pullNow({ auto: true }))
+      journal.lifecyclePull({ reload: true, auto: true })
     }
     // 오프라인에서 돌아왔을 때. 이게 없이는 `syncState`가 'offline'에 갇혀 있다가
     // 새로고침해야 풀린다.
-    const onOnline = () => journal.pullNow({ auto: true })
+    const onOnline = () => journal.lifecyclePull({ reload: true, auto: true })
     const onPopState = () => restoreDateFromUrl()
     document.addEventListener('visibilitychange', onVisibility)
     window.addEventListener('online', onOnline)

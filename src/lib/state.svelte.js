@@ -184,15 +184,37 @@ export class Journal {
    */
   #loadFailed = false
 
+  /** 현재 초기 로드. 복귀 pull이 로드보다 먼저 실행되지 않게 한다. */
+  #loading = null
+
+  /** lifecycle pull 직렬화 꼬리. `online`과 `visibilitychange`가 겹쳐도 한 줄로 선다. */
+  #lifecyclePull = Promise.resolve()
+
+  /**
+   * 로컬을 읽고, 실패 여부를 호출자에게 돌려준다. 같은 시점의 중복 로드는 합친다.
+   *
+   * @returns {Promise<boolean>} 로컬 정본을 읽었는가
+   */
   async load() {
+    if (this.#loading) return this.#loading
+    const loading = (async () => {
+      try {
+        await this.#load()
+        return true
+      } catch (err) {
+        // 여기서 조용히 실패하면 `loaded`가 false로 남아 에너지·어제·오늘 블록이
+        // 통째로 안 뜬다. 사용자는 "앱이 반쯤 비어 있다"만 본다.
+        this.#loadFailed = true
+        this.storageError = `로컬 저장소를 열지 못했습니다 (${err}). 프라이빗 모드이거나 저장 공간이 부족할 수 있습니다.`
+        this.loaded = true
+        return false
+      }
+    })()
+    this.#loading = loading
     try {
-      await this.#load()
-    } catch (err) {
-      // 여기서 조용히 실패하면 `loaded`가 false로 남아 에너지·어제·오늘 블록이
-      // 통째로 안 뜬다. 사용자는 "앱이 반쯤 비어 있다"만 본다.
-      this.#loadFailed = true
-      this.storageError = `로컬 저장소를 열지 못했습니다 (${err}). 프라이빗 모드이거나 저장 공간이 부족할 수 있습니다.`
-      this.loaded = true
+      return await loading
+    } finally {
+      if (this.#loading === loading) this.#loading = null
     }
   }
 
@@ -230,16 +252,18 @@ export class Journal {
    *
    * 디바운스 중인 입력이 있는 키는 건드리지 않는다. 아직 커밋 안 된 글자를 디스크
    * 판본으로 밀면 화면에서 글자가 사라진다 — `pullNow`의 `#hasPendingEdit`과 같은 이유다.
+   *
+   * @returns {Promise<boolean>} 로컬을 읽어 병합할 수 있었는가
    */
   async reload() {
-    if (!this.loaded || this.#loadFailed) return
+    if (!this.loaded || this.#loadFailed) return false
     /** @type {Rec[]} */
     let disk
     try {
       disk = await db.allRecords()
     } catch (err) {
       this.storageError = `로컬 저장소를 읽지 못했습니다 (${err})`
-      return
+      return false
     }
 
     /** @type {import('./store.js').Conflict[]} */
@@ -285,16 +309,38 @@ export class Journal {
       else writeBack.push($state.snapshot(mine))
     }
 
-    if (!kept.length && !writeBack.length) return
+    if (!kept.length && !writeBack.length) return true
     try {
       // 사본이 먼저다 — `#push`와 같은 순서, 같은 이유다.
       await db.addConflicts(kept)
       await db.putRecordsIfNewer(writeBack)
     } catch (err) {
       this.storageError = `저장 실패 — 이 화면의 글자를 다른 곳에 복사해 두세요 (${err})`
-      return
+      return false
     }
     if (kept.length) this.conflicts = await db.allConflicts()
+    return true
+  }
+
+  /**
+   * 앱 시작·온라인 복귀·화면 복귀의 pull을 한 순서로 묶는다.
+   *
+   * `online`은 서버보다 먼저 같은 브라우저의 다른 탭이 쓴 IndexedDB를 읽어야 한다.
+   * 이 큐가 없으면 `visibilitychange`와 `online`이 겹칠 때 두 reload가 서로의 중간
+   * 상태를 보고, 초기 `load()`가 끝나기 전에 pull이 먼저 실행될 수도 있다.
+   *
+   * @param {{reload?: boolean, auto?: boolean}} [opts]
+   * @returns {Promise<void>}
+   */
+  lifecyclePull({ reload = false, auto = false } = {}) {
+    const next = this.#lifecyclePull.then(async () => {
+      if (this.#loading && !(await this.#loading)) return
+      if (!this.loaded || this.#loadFailed) return
+      if (reload && !(await this.reload())) return
+      await this.pullNow({ auto })
+    })
+    this.#lifecyclePull = next.catch(() => {})
+    return this.#lifecyclePull
   }
 
   // ── 읽기 ────────────────────────────────────────────────────────────────
