@@ -1,0 +1,489 @@
+{
+  "schema_version": 1,
+  "kind": "retro-lesson-selection-index",
+  "source": "charness-artifacts/retro/*.md Context/Waste/Next Improvements",
+  "selection_policy": {
+    "advisory": true,
+    "recency_half_life_days": 45,
+    "alpha_base": 0.6,
+    "warmup_n": 5,
+    "recurrence_multiplier": "1 + alpha_t * max(0, independent_source_count - 1)",
+    "alpha_t": "alpha_base * min(1, independent_source_count / warmup_n)",
+    "independent_source_count": "human-authored sources count individually; all emissions sharing one generator count once"
+  },
+  "as_of_source_date": "2026-08-05",
+  "source_artifact_count": 1,
+  "candidate_count": 9,
+  "top_candidates": [
+    {
+      "candidate_id": "current_focus:044935fd711b",
+      "kind": "current_focus",
+      "lesson": "이번 단위는 4차 repo-wide 품질 검사와 온라인 복귀 동기화 수정이다.",
+      "normalized_key": "이번 단위는 4차 repo wide 품질 검사와 온라인 복귀 동기화 수정이다",
+      "recurrence_class": null,
+      "source_count": 1,
+      "independent_source_count": 1,
+      "generator_authored": 0,
+      "latest_source_path": "charness-artifacts/retro/2026-08-05-session-retro.md",
+      "latest_source_date": "2026-08-05",
+      "age_days": 0,
+      "recency_weight": 1.0,
+      "alpha": 0.12,
+      "selection_weight": 1.0,
+      "sources": [
+        {
+          "artifact_path": "charness-artifacts/retro/2026-08-05-session-retro.md",
+          "date": "2026-08-05",
+          "section": "Context",
+          "generator": null,
+          "kind": "current_focus",
+          "lesson": "이번 단위는 4차 repo-wide 품질 검사와 온라인 복귀 동기화 수정이다."
+        }
+      ]
+    },
+    {
+      "candidate_id": "next_improvement:afe9be52592f",
+      "kind": "next_improvement",
+      "lesson": "adapter `packet_sections`·reviewer boundary 상태를 spawn 전에 확인하고, snapshot→spawn→각 결과 수령 후 verify를 고정한다.",
+      "normalized_key": "adapter packet sections reviewer boundary 상태를 spawn 전에 확인하고 snapshot spawn 각 결과 수령",
+      "recurrence_class": null,
+      "source_count": 1,
+      "independent_source_count": 1,
+      "generator_authored": 0,
+      "latest_source_path": "charness-artifacts/retro/2026-08-05-session-retro.md",
+      "latest_source_date": "2026-08-05",
+      "age_days": 0,
+      "recency_weight": 1.0,
+      "alpha": 0.12,
+      "selection_weight": 1.0,
+      "sources": [
+        {
+          "artifact_path": "charness-artifacts/retro/2026-08-05-session-retro.md",
+          "date": "2026-08-05",
+          "section": "Next Improvements",
+          "generator": null,
+          "kind": "next_improvement",
+          "lesson": "adapter `packet_sections`·reviewer boundary 상태를 spawn 전에 확인하고, snapshot→spawn→각 결과 수령 후 verify를 고정한다."
+        }
+      ]
+    },
+    {
+      "candidate_id": "next_improvement:bbf2150d259c",
+      "kind": "next_improvement",
+      "lesson": "Charness upstream #507에 custom adapter 보존과 empty-packet preflight를 후속한다. 이 리포 안에 숨은 bootstrap wrapper를 만들지 않는다.",
+      "normalized_key": "charness upstream 507에 custom adapter 보존과 empty packet preflight를 후속한다 이 리포 안에 숨은",
+      "recurrence_class": null,
+      "source_count": 1,
+      "independent_source_count": 1,
+      "generator_authored": 0,
+      "latest_source_path": "charness-artifacts/retro/2026-08-05-session-retro.md",
+      "latest_source_date": "2026-08-05",
+      "age_days": 0,
+      "recency_weight": 1.0,
+      "alpha": 0.12,
+      "selection_weight": 1.0,
+      "sources": [
+        {
+          "artifact_path": "charness-artifacts/retro/2026-08-05-session-retro.md",
+          "date": "2026-08-05",
+          "section": "Next Improvements",
+          "generator": null,
+          "kind": "next_improvement",
+          "lesson": "Charness upstream #507에 custom adapter 보존과 empty-packet preflight를 후속한다. 이 리포 안에 숨은 bootstrap wrapper를 만들지 않는다."
+        }
+      ]
+    },
+    {
+      "candidate_id": "next_improvement:b64c32660b1e",
+      "kind": "next_improvement",
+      "lesson": "[quality round 4](../quality/2026-08-05-quality-review-round-4.md)와 [handoff](../../docs/handoff.md)에 이번 lifecycle 계약과 deferred 경계를 남긴다.",
+      "normalized_key": "quality round 4 quality 2026 08 05 quality review round 4 md 와 handoff",
+      "recurrence_class": null,
+      "source_count": 1,
+      "independent_source_count": 1,
+      "generator_authored": 0,
+      "latest_source_path": "charness-artifacts/retro/2026-08-05-session-retro.md",
+      "latest_source_date": "2026-08-05",
+      "age_days": 0,
+      "recency_weight": 1.0,
+      "alpha": 0.12,
+      "selection_weight": 1.0,
+      "sources": [
+        {
+          "artifact_path": "charness-artifacts/retro/2026-08-05-session-retro.md",
+          "date": "2026-08-05",
+          "section": "Next Improvements",
+          "generator": null,
+          "kind": "next_improvement",
+          "lesson": "[quality round 4](../quality/2026-08-05-quality-review-round-4.md)와 [handoff](../../docs/handoff.md)에 이번 lifecycle 계약과 deferred 경계를 남긴다."
+        }
+      ]
+    },
+    {
+      "candidate_id": "next_improvement:4d08c66c1368",
+      "kind": "next_improvement",
+      "lesson": "문서 링크가 새 파일을 가리키면 파일 생성·validator·git status를 gate보다 먼저 실행한다.",
+      "normalized_key": "문서 링크가 새 파일을 가리키면 파일 생성 validator git status를 gate보다 먼저 실행한다",
+      "recurrence_class": null,
+      "source_count": 1,
+      "independent_source_count": 1,
+      "generator_authored": 0,
+      "latest_source_path": "charness-artifacts/retro/2026-08-05-session-retro.md",
+      "latest_source_date": "2026-08-05",
+      "age_days": 0,
+      "recency_weight": 1.0,
+      "alpha": 0.12,
+      "selection_weight": 1.0,
+      "sources": [
+        {
+          "artifact_path": "charness-artifacts/retro/2026-08-05-session-retro.md",
+          "date": "2026-08-05",
+          "section": "Next Improvements",
+          "generator": null,
+          "kind": "next_improvement",
+          "lesson": "문서 링크가 새 파일을 가리키면 파일 생성·validator·git status를 gate보다 먼저 실행한다."
+        }
+      ]
+    },
+    {
+      "candidate_id": "repeat_trap:6e8fbd187a3a",
+      "kind": "repeat_trap",
+      "lesson": "**낭비로 분류하지 않은 탐색**: 사용자가 unknown-unknown 전체 검사를 요청했으므로 넓은 스캔·counterweight는 exploration 단계의 의도된 비용이다. triage lock 뒤에는 online lifecycle 한 건만 fix-now로 남기고 의존성·브라우저 경계는 defer했다.",
+      "normalized_key": "낭비로 분류하지 않은 탐색 사용자가 unknown unknown 전체 검사를 요청했으므로 넓은 스캔 counterweight는 exploration",
+      "recurrence_class": null,
+      "source_count": 1,
+      "independent_source_count": 1,
+      "generator_authored": 0,
+      "latest_source_path": "charness-artifacts/retro/2026-08-05-session-retro.md",
+      "latest_source_date": "2026-08-05",
+      "age_days": 0,
+      "recency_weight": 1.0,
+      "alpha": 0.12,
+      "selection_weight": 1.0,
+      "sources": [
+        {
+          "artifact_path": "charness-artifacts/retro/2026-08-05-session-retro.md",
+          "date": "2026-08-05",
+          "section": "Waste",
+          "generator": null,
+          "kind": "repeat_trap",
+          "lesson": "**낭비로 분류하지 않은 탐색**: 사용자가 unknown-unknown 전체 검사를 요청했으므로 넓은 스캔·counterweight는 exploration 단계의 의도된 비용이다. triage lock 뒤에는 online lifecycle 한 건만 fix-now로 남기고 의존성·브라우저 경계는 defer했다."
+        }
+      ]
+    },
+    {
+      "candidate_id": "class:6fb1c129c880",
+      "kind": "repeat_trap",
+      "lesson": "**불필요한 packet 생성**: adapter가 `packet_sections: []`라고 이미 말했는데 packet을 생성했다. 이번에는 adapter를 먼저 읽고 생략했다. 비용은 command/attention 재작업으로 관찰됐지만 정확한 token 비용은 unavailable이다.",
+      "normalized_key": "불필요한 packet 생성 adapter가 packet sections 라고 이미 말했는데 packet을 생성했다 이번에는 adapter를 먼저",
+      "recurrence_class": "empty-packet-preflight",
+      "source_count": 1,
+      "independent_source_count": 1,
+      "generator_authored": 0,
+      "latest_source_path": "charness-artifacts/retro/2026-08-05-session-retro.md",
+      "latest_source_date": "2026-08-05",
+      "age_days": 0,
+      "recency_weight": 1.0,
+      "alpha": 0.12,
+      "selection_weight": 1.0,
+      "sources": [
+        {
+          "artifact_path": "charness-artifacts/retro/2026-08-05-session-retro.md",
+          "date": "2026-08-05",
+          "section": "Waste",
+          "generator": null,
+          "kind": "repeat_trap",
+          "lesson": "**불필요한 packet 생성**: adapter가 `packet_sections: []`라고 이미 말했는데 packet을 생성했다. 이번에는 adapter를 먼저 읽고 생략했다. 비용은 command/attention 재작업으로 관찰됐지만 정확한 token 비용은 unavailable이다."
+        }
+      ]
+    },
+    {
+      "candidate_id": "class:87cfadd53d0a",
+      "kind": "repeat_trap",
+      "lesson": "**순서가 만드는 경계 재작업**: fingerprint snapshot과 packet 생성/리뷰 준비를 병렬화해 boundary drift를 만들었다. 이번에는 snapshot→spawn→wait→verify 순서를 지켰고, 다만 여러 reviewer 완료 뒤 한 번에 verify한 것은 남은 절차 개선점이다.",
+      "normalized_key": "순서가 만드는 경계 재작업 fingerprint snapshot과 packet 생성 리뷰 준비를 병렬화해 boundary drift를 만들었다",
+      "recurrence_class": "sequential-review-boundary",
+      "source_count": 1,
+      "independent_source_count": 1,
+      "generator_authored": 0,
+      "latest_source_path": "charness-artifacts/retro/2026-08-05-session-retro.md",
+      "latest_source_date": "2026-08-05",
+      "age_days": 0,
+      "recency_weight": 1.0,
+      "alpha": 0.12,
+      "selection_weight": 1.0,
+      "sources": [
+        {
+          "artifact_path": "charness-artifacts/retro/2026-08-05-session-retro.md",
+          "date": "2026-08-05",
+          "section": "Waste",
+          "generator": null,
+          "kind": "repeat_trap",
+          "lesson": "**순서가 만드는 경계 재작업**: fingerprint snapshot과 packet 생성/리뷰 준비를 병렬화해 boundary drift를 만들었다. 이번에는 snapshot→spawn→wait→verify 순서를 지켰고, 다만 여러 reviewer 완료 뒤 한 번에 verify한 것은 남은 절차 개선점이다."
+        }
+      ]
+    },
+    {
+      "candidate_id": "class:54f1bf42bd11",
+      "kind": "repeat_trap",
+      "lesson": "**파일 추적 전 gate**: 문서가 가리키는 새 산출물을 먼저 git 추적하지 않아 문서 gate가 한 번 실패했다. 이번 round는 artifact validation을 먼저 마치고 최종 gate 전에 status를 확인한다.",
+      "normalized_key": "파일 추적 전 gate 문서가 가리키는 새 산출물을 먼저 git 추적하지 않아 문서 gate가",
+      "recurrence_class": "artifact-before-gate",
+      "source_count": 1,
+      "independent_source_count": 1,
+      "generator_authored": 0,
+      "latest_source_path": "charness-artifacts/retro/2026-08-05-session-retro.md",
+      "latest_source_date": "2026-08-05",
+      "age_days": 0,
+      "recency_weight": 1.0,
+      "alpha": 0.12,
+      "selection_weight": 1.0,
+      "sources": [
+        {
+          "artifact_path": "charness-artifacts/retro/2026-08-05-session-retro.md",
+          "date": "2026-08-05",
+          "section": "Waste",
+          "generator": null,
+          "kind": "repeat_trap",
+          "lesson": "**파일 추적 전 gate**: 문서가 가리키는 새 산출물을 먼저 git 추적하지 않아 문서 gate가 한 번 실패했다. 이번 round는 artifact validation을 먼저 마치고 최종 gate 전에 status를 확인한다."
+        }
+      ]
+    }
+  ],
+  "candidates": [
+    {
+      "candidate_id": "current_focus:044935fd711b",
+      "kind": "current_focus",
+      "lesson": "이번 단위는 4차 repo-wide 품질 검사와 온라인 복귀 동기화 수정이다.",
+      "normalized_key": "이번 단위는 4차 repo wide 품질 검사와 온라인 복귀 동기화 수정이다",
+      "recurrence_class": null,
+      "source_count": 1,
+      "independent_source_count": 1,
+      "generator_authored": 0,
+      "latest_source_path": "charness-artifacts/retro/2026-08-05-session-retro.md",
+      "latest_source_date": "2026-08-05",
+      "age_days": 0,
+      "recency_weight": 1.0,
+      "alpha": 0.12,
+      "selection_weight": 1.0,
+      "sources": [
+        {
+          "artifact_path": "charness-artifacts/retro/2026-08-05-session-retro.md",
+          "date": "2026-08-05",
+          "section": "Context",
+          "generator": null,
+          "kind": "current_focus",
+          "lesson": "이번 단위는 4차 repo-wide 품질 검사와 온라인 복귀 동기화 수정이다."
+        }
+      ]
+    },
+    {
+      "candidate_id": "next_improvement:afe9be52592f",
+      "kind": "next_improvement",
+      "lesson": "adapter `packet_sections`·reviewer boundary 상태를 spawn 전에 확인하고, snapshot→spawn→각 결과 수령 후 verify를 고정한다.",
+      "normalized_key": "adapter packet sections reviewer boundary 상태를 spawn 전에 확인하고 snapshot spawn 각 결과 수령",
+      "recurrence_class": null,
+      "source_count": 1,
+      "independent_source_count": 1,
+      "generator_authored": 0,
+      "latest_source_path": "charness-artifacts/retro/2026-08-05-session-retro.md",
+      "latest_source_date": "2026-08-05",
+      "age_days": 0,
+      "recency_weight": 1.0,
+      "alpha": 0.12,
+      "selection_weight": 1.0,
+      "sources": [
+        {
+          "artifact_path": "charness-artifacts/retro/2026-08-05-session-retro.md",
+          "date": "2026-08-05",
+          "section": "Next Improvements",
+          "generator": null,
+          "kind": "next_improvement",
+          "lesson": "adapter `packet_sections`·reviewer boundary 상태를 spawn 전에 확인하고, snapshot→spawn→각 결과 수령 후 verify를 고정한다."
+        }
+      ]
+    },
+    {
+      "candidate_id": "next_improvement:bbf2150d259c",
+      "kind": "next_improvement",
+      "lesson": "Charness upstream #507에 custom adapter 보존과 empty-packet preflight를 후속한다. 이 리포 안에 숨은 bootstrap wrapper를 만들지 않는다.",
+      "normalized_key": "charness upstream 507에 custom adapter 보존과 empty packet preflight를 후속한다 이 리포 안에 숨은",
+      "recurrence_class": null,
+      "source_count": 1,
+      "independent_source_count": 1,
+      "generator_authored": 0,
+      "latest_source_path": "charness-artifacts/retro/2026-08-05-session-retro.md",
+      "latest_source_date": "2026-08-05",
+      "age_days": 0,
+      "recency_weight": 1.0,
+      "alpha": 0.12,
+      "selection_weight": 1.0,
+      "sources": [
+        {
+          "artifact_path": "charness-artifacts/retro/2026-08-05-session-retro.md",
+          "date": "2026-08-05",
+          "section": "Next Improvements",
+          "generator": null,
+          "kind": "next_improvement",
+          "lesson": "Charness upstream #507에 custom adapter 보존과 empty-packet preflight를 후속한다. 이 리포 안에 숨은 bootstrap wrapper를 만들지 않는다."
+        }
+      ]
+    },
+    {
+      "candidate_id": "next_improvement:b64c32660b1e",
+      "kind": "next_improvement",
+      "lesson": "[quality round 4](../quality/2026-08-05-quality-review-round-4.md)와 [handoff](../../docs/handoff.md)에 이번 lifecycle 계약과 deferred 경계를 남긴다.",
+      "normalized_key": "quality round 4 quality 2026 08 05 quality review round 4 md 와 handoff",
+      "recurrence_class": null,
+      "source_count": 1,
+      "independent_source_count": 1,
+      "generator_authored": 0,
+      "latest_source_path": "charness-artifacts/retro/2026-08-05-session-retro.md",
+      "latest_source_date": "2026-08-05",
+      "age_days": 0,
+      "recency_weight": 1.0,
+      "alpha": 0.12,
+      "selection_weight": 1.0,
+      "sources": [
+        {
+          "artifact_path": "charness-artifacts/retro/2026-08-05-session-retro.md",
+          "date": "2026-08-05",
+          "section": "Next Improvements",
+          "generator": null,
+          "kind": "next_improvement",
+          "lesson": "[quality round 4](../quality/2026-08-05-quality-review-round-4.md)와 [handoff](../../docs/handoff.md)에 이번 lifecycle 계약과 deferred 경계를 남긴다."
+        }
+      ]
+    },
+    {
+      "candidate_id": "next_improvement:4d08c66c1368",
+      "kind": "next_improvement",
+      "lesson": "문서 링크가 새 파일을 가리키면 파일 생성·validator·git status를 gate보다 먼저 실행한다.",
+      "normalized_key": "문서 링크가 새 파일을 가리키면 파일 생성 validator git status를 gate보다 먼저 실행한다",
+      "recurrence_class": null,
+      "source_count": 1,
+      "independent_source_count": 1,
+      "generator_authored": 0,
+      "latest_source_path": "charness-artifacts/retro/2026-08-05-session-retro.md",
+      "latest_source_date": "2026-08-05",
+      "age_days": 0,
+      "recency_weight": 1.0,
+      "alpha": 0.12,
+      "selection_weight": 1.0,
+      "sources": [
+        {
+          "artifact_path": "charness-artifacts/retro/2026-08-05-session-retro.md",
+          "date": "2026-08-05",
+          "section": "Next Improvements",
+          "generator": null,
+          "kind": "next_improvement",
+          "lesson": "문서 링크가 새 파일을 가리키면 파일 생성·validator·git status를 gate보다 먼저 실행한다."
+        }
+      ]
+    },
+    {
+      "candidate_id": "repeat_trap:6e8fbd187a3a",
+      "kind": "repeat_trap",
+      "lesson": "**낭비로 분류하지 않은 탐색**: 사용자가 unknown-unknown 전체 검사를 요청했으므로 넓은 스캔·counterweight는 exploration 단계의 의도된 비용이다. triage lock 뒤에는 online lifecycle 한 건만 fix-now로 남기고 의존성·브라우저 경계는 defer했다.",
+      "normalized_key": "낭비로 분류하지 않은 탐색 사용자가 unknown unknown 전체 검사를 요청했으므로 넓은 스캔 counterweight는 exploration",
+      "recurrence_class": null,
+      "source_count": 1,
+      "independent_source_count": 1,
+      "generator_authored": 0,
+      "latest_source_path": "charness-artifacts/retro/2026-08-05-session-retro.md",
+      "latest_source_date": "2026-08-05",
+      "age_days": 0,
+      "recency_weight": 1.0,
+      "alpha": 0.12,
+      "selection_weight": 1.0,
+      "sources": [
+        {
+          "artifact_path": "charness-artifacts/retro/2026-08-05-session-retro.md",
+          "date": "2026-08-05",
+          "section": "Waste",
+          "generator": null,
+          "kind": "repeat_trap",
+          "lesson": "**낭비로 분류하지 않은 탐색**: 사용자가 unknown-unknown 전체 검사를 요청했으므로 넓은 스캔·counterweight는 exploration 단계의 의도된 비용이다. triage lock 뒤에는 online lifecycle 한 건만 fix-now로 남기고 의존성·브라우저 경계는 defer했다."
+        }
+      ]
+    },
+    {
+      "candidate_id": "class:6fb1c129c880",
+      "kind": "repeat_trap",
+      "lesson": "**불필요한 packet 생성**: adapter가 `packet_sections: []`라고 이미 말했는데 packet을 생성했다. 이번에는 adapter를 먼저 읽고 생략했다. 비용은 command/attention 재작업으로 관찰됐지만 정확한 token 비용은 unavailable이다.",
+      "normalized_key": "불필요한 packet 생성 adapter가 packet sections 라고 이미 말했는데 packet을 생성했다 이번에는 adapter를 먼저",
+      "recurrence_class": "empty-packet-preflight",
+      "source_count": 1,
+      "independent_source_count": 1,
+      "generator_authored": 0,
+      "latest_source_path": "charness-artifacts/retro/2026-08-05-session-retro.md",
+      "latest_source_date": "2026-08-05",
+      "age_days": 0,
+      "recency_weight": 1.0,
+      "alpha": 0.12,
+      "selection_weight": 1.0,
+      "sources": [
+        {
+          "artifact_path": "charness-artifacts/retro/2026-08-05-session-retro.md",
+          "date": "2026-08-05",
+          "section": "Waste",
+          "generator": null,
+          "kind": "repeat_trap",
+          "lesson": "**불필요한 packet 생성**: adapter가 `packet_sections: []`라고 이미 말했는데 packet을 생성했다. 이번에는 adapter를 먼저 읽고 생략했다. 비용은 command/attention 재작업으로 관찰됐지만 정확한 token 비용은 unavailable이다."
+        }
+      ]
+    },
+    {
+      "candidate_id": "class:87cfadd53d0a",
+      "kind": "repeat_trap",
+      "lesson": "**순서가 만드는 경계 재작업**: fingerprint snapshot과 packet 생성/리뷰 준비를 병렬화해 boundary drift를 만들었다. 이번에는 snapshot→spawn→wait→verify 순서를 지켰고, 다만 여러 reviewer 완료 뒤 한 번에 verify한 것은 남은 절차 개선점이다.",
+      "normalized_key": "순서가 만드는 경계 재작업 fingerprint snapshot과 packet 생성 리뷰 준비를 병렬화해 boundary drift를 만들었다",
+      "recurrence_class": "sequential-review-boundary",
+      "source_count": 1,
+      "independent_source_count": 1,
+      "generator_authored": 0,
+      "latest_source_path": "charness-artifacts/retro/2026-08-05-session-retro.md",
+      "latest_source_date": "2026-08-05",
+      "age_days": 0,
+      "recency_weight": 1.0,
+      "alpha": 0.12,
+      "selection_weight": 1.0,
+      "sources": [
+        {
+          "artifact_path": "charness-artifacts/retro/2026-08-05-session-retro.md",
+          "date": "2026-08-05",
+          "section": "Waste",
+          "generator": null,
+          "kind": "repeat_trap",
+          "lesson": "**순서가 만드는 경계 재작업**: fingerprint snapshot과 packet 생성/리뷰 준비를 병렬화해 boundary drift를 만들었다. 이번에는 snapshot→spawn→wait→verify 순서를 지켰고, 다만 여러 reviewer 완료 뒤 한 번에 verify한 것은 남은 절차 개선점이다."
+        }
+      ]
+    },
+    {
+      "candidate_id": "class:54f1bf42bd11",
+      "kind": "repeat_trap",
+      "lesson": "**파일 추적 전 gate**: 문서가 가리키는 새 산출물을 먼저 git 추적하지 않아 문서 gate가 한 번 실패했다. 이번 round는 artifact validation을 먼저 마치고 최종 gate 전에 status를 확인한다.",
+      "normalized_key": "파일 추적 전 gate 문서가 가리키는 새 산출물을 먼저 git 추적하지 않아 문서 gate가",
+      "recurrence_class": "artifact-before-gate",
+      "source_count": 1,
+      "independent_source_count": 1,
+      "generator_authored": 0,
+      "latest_source_path": "charness-artifacts/retro/2026-08-05-session-retro.md",
+      "latest_source_date": "2026-08-05",
+      "age_days": 0,
+      "recency_weight": 1.0,
+      "alpha": 0.12,
+      "selection_weight": 1.0,
+      "sources": [
+        {
+          "artifact_path": "charness-artifacts/retro/2026-08-05-session-retro.md",
+          "date": "2026-08-05",
+          "section": "Waste",
+          "generator": null,
+          "kind": "repeat_trap",
+          "lesson": "**파일 추적 전 gate**: 문서가 가리키는 새 산출물을 먼저 git 추적하지 않아 문서 gate가 한 번 실패했다. 이번 round는 artifact validation을 먼저 마치고 최종 gate 전에 status를 확인한다."
+        }
+      ]
+    }
+  ]
+}
