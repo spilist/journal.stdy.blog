@@ -205,6 +205,22 @@ quality·critique·retro 기록은
 [7차 retro](../charness-artifacts/retro/2026-08-05-session-retro-round-7.md)다. 이번에도
 IndexedDB 실제 브라우저 복구, UI-1~3, 두 탭·두 기기·대량 D1 push는 사람 수용으로 남는다.
 
+**2026-08-05 nose 중복 분류·IndexedDB transaction 경계 슬라이스가 배포됐다.** 구현 커밋
+`e10695a`를 `origin/main`에 push했고, `store.js`의 세 transaction 완료 대기를
+`transactionDone`으로 통합했다. `onabort`에서 Promise가 매달리던 경로를 reject로 닫고,
+각 store 테스트를 fresh dynamic-import/fake DB로 격리해 error·abort rollback까지 검증한다.
+최종 `npm run gate`는 188개 테스트·reach 22/12·lint/docs·Svelte/Worker check·build를
+통과했고 `npm audit`은 0 vulnerabilities다. 배포 Version ID는
+`dbdfe75f-6d92-4350-8987-83081cb76a69`다. 비인증 `/`·`/api/pull?since=0`·`/sw.js`는
+모두 Access 302/no-store였고, 이는 인증 없는 header-only readback이라 브라우저 수용을
+대신하지 않는다.
+
+이번 nose scan은 실제 범위(`src`, `worker`, `scripts`)로 35개 가족을 분류했다. 테스트
+scenario setup·컴포넌트 국소 CSS·서로 다른 sync 경계는 유지하고, `store.js` transaction
+중복만 구조적으로 처리했다. 품질 기록은 [현재 quality 기록](../charness-artifacts/quality/latest.md)과
+세 critique packet에 남겼다. 전체 35개를 baseline으로 숨기지 않았고, 수정 뒤에는 34개
+가족/상위 20개 401 duplicate lines가 advisory로 남는다.
+
 이번 라운드에서 새 inventory·runtime budget·browser runner·테스트 삭제는 만들지 않았다.
 Vulture/nose의 zero-scope 오류와 Charness adapter bootstrap 재직렬화 경고는 clean으로 숨기지
 않고 upstream 소유의 advisory/deferred로 기록했다. quality 위임 기록의 critique-only 범위는
@@ -252,6 +268,16 @@ Vulture/nose의 zero-scope 오류와 Charness adapter bootstrap 재직렬화 경
   가정으로 왕복하지 않고, artifact를 추적한 뒤 gate를 부르는 순서를 유지한다.
 - zsh에서 `path`는 `$PATH`와 연결된 special 변수이므로 readback loop 변수로 쓰지 않는다. 이번에는
   curl·npx·git이 사라진 것처럼 보이는 낭비를 `route`로 바꿔 즉시 복구했다.
+
+### 이번 nose 분류 슬라이스의 운영 교훈
+
+- nose의 `total_dup_lines`를 줄이는 것이 목표가 아니다. 각 가족을 test intent·component
+  ownership·boundary semantics로 분류한 뒤 실제 공통 owner가 생길 때만 추출한다.
+- fake-IDB를 키울 때는 테스트 간 module-level cache와 실패 transaction rollback을 같이
+  고정한다. 첫 구현은 shared state와 즉시 Map 반영을 fresh-eye가 잡았고, dynamic import
+  격리·pending commit으로 고쳤다.
+- 병렬 reviewer마다 snapshot output을 별도로 둔다. 초기 두 angle은 기본 snapshot을 덮어써
+  verify window mismatch를 만들었고, 이후 `/tmp`별 snapshot과 반환 직후 verify로 회복했다.
 
 ### 이번 3차 라운드의 운영 교훈
 

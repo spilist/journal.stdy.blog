@@ -1,87 +1,81 @@
 # Quality Review
 Date: 2026-08-05
-Title: 7차 전체 품질 검사 — IndexedDB 재시도 복구와 품질 루프 낭비 정리
+Title: nose 중복 분류와 IndexedDB transaction 경계 정리
 
 ## Scope
 
-Target boundary: repo-wide quality — 잠재 버그, 유사 패턴의 구조적 원인, 테스트·코드 속도,
-중복, 부트스트랩·inventory와 이번 과정의 낭비.
+Target boundary: `inventory_nose_clones.py`의 실제 저장소 범위(`src`, `worker`, `scripts`)와 그중 구조적으로 처리 가능한 중복.
 
-Ambient repo findings: Charness adapter/inventory 오류와 사람 브라우저 수용은 이 리포의
-소유가 아니거나 자동 증명이 불가능한 별도 경계로 분리했다.
+Ambient repo findings: 기존 UI·인증 브라우저 수용, Charness adapter/bootstrap은 이 슬라이스의 소유가 아니다.
 
 ## Current Gates
 
-- 구현 후 `npm test`: 183/183 pass.
-- `npm run reach`: 기준선 갱신 후 production 22개 중 12개 도달, 미도달 10개.
-- focused `node --test src/lib/store.test.js`와 `npm run lint`: pass.
-- 최종 `npm run gate`: 183/183, reach 22/12, lint/docs 47개, Svelte 0/0, Worker tsc, build 130 modules pass.
-- `npm run deploy`: pass — Worker `6d2a285c-4366-4777-b496-5abf8b19960a`; 비인증 `/`·`/api/pull?since=0`·`/sw.js`는 302/no-store.
-- `npm audit --omit=optional --audit-level=high`: 0 vulnerabilities.
+- `node --test src/lib/store.test.js`: 6/6 pass.
+- `npm run gate`: 188/188 pass; reach 22개 중 12개, lint/docs, Svelte·Worker check, 130-module build, service worker 생성 pass.
+- `npm run lint`: pass, 문서 47개.
+- `npm run check`: Svelte 0 errors/0 warnings, Worker TypeScript pass.
+- nose 0.20.0: exit 0, baseline 없음. 수정 전 35 가족/상위 20개 441줄, 수정 후 34 가족/상위 20개 401줄.
 
 ## Runtime Signals
 
-- runtime source: structured timing source가 없어 `render_runtime_summary.py --detail`의
-  `runtime-signals.json`은 absent; 단일 측정으로 추세를 주장하지 않는다.
-- runtime hot spots: test default 1.71–1.75초, `--test-concurrency=1` 2.83초, concurrency=4
-  1.71초. 새 runner·삭제·병렬화의 근거가 없다.
-- coverage gate: 줄 커버리지는 없고 `reach`가 도달 가능성 22/12를 래칫한다.
-- evaluator depth: deterministic gate와 bounded fresh-eye 일부만 실행; 인증 브라우저·Cautilus는 미실행.
+- runtime source: timing capture is missing; command: `node --test src/lib/store.test.js` 단일 측정만 있어 전체 게이트 추세를 주장하지 않는다.
+- runtime hot spots: 이번 변경은 IndexedDB helper 1개와 격리된 경계 테스트이며 standing gate 범위를 넓히지 않았다. `npm run gate`는 1.58초 test phase를 포함해 pass했다.
+- coverage gate: 줄 커버리지 없음; `reach`가 도달 가능성만 래칫한다.
+- evaluator depth: deterministic gate와 bounded critique만 실행; 인증 브라우저/Cautilus는 미실행.
 
 ## Healthy
 
-- `store.open()` 실패 뒤 거절된 Promise를 캐시하지 않아 다음 접근이 새 IndexedDB open을 시도한다.
-- 최소 경계 테스트가 첫 실패→두 번째 성공과 open 호출 2회를 직접 고정하고 fake 의존성을 추가하지 않는다.
-- 183개 테스트, lint, audit가 현재 변경에서 양호하며 reach가 `store.js` 도달로 개선됐다.
-- structural waste·dual implementation·brittle guard·lint ignore·hardcoded discovery 후보는 0개였다.
+- 세 IndexedDB readwrite 호출자의 transaction 완료 대기를 `transactionDone` 한 곳으로 소유시켰다.
+- `oncomplete`, `onerror`, request error가 없는 explicit `onabort` 모두 caller를 끝내도록 했다.
+- fake-IDB가 open 재시도, 성공 저장, newer 판정, conflict dedupe, transaction error/abort를 실제 public 함수 경계로 실행한다.
+- nose는 advisory로만 사용했고 total_dup_lines를 목표로 삼지 않았다. baseline도 생성하지 않았다.
 
 ## Weak
 
-- reach는 production 22개 중 12개만 테스트가 로드한다. IndexedDB 실제 브라우저 동작과 Svelte UI는 사람 수용에 남는다.
-- runtime budget/startup probe와 CI workflow가 없어 반복 실행 비용과 pre-push enforcement를 자동 판정하지 못한다.
-- Node 대역 테스트는 브라우저별 private mode·quota·권한 오류를 증명하지 않는다.
+- reach는 기존처럼 production 22개 중 12개 도달이며 IndexedDB 실제 브라우저 동작은 Node 대역보다 약하다.
+- fake-IDB는 quota/private mode와 브라우저별 abort 세부 동작을 증명하지 않는다.
 
 ## Missing
 
-- 인증 브라우저에서 IndexedDB 일시 실패 후 세션 내 복구가 실제로 가능한지 확인하는 운영자 수용.
-- 기존 UI-1~3, 두 탭·두 기기·대량 D1 push·warm-cache 수동 확인.
+- 배포된 인증 브라우저에서 IndexedDB abort/retry와 UI 수용을 사람이 확인하는 증거.
 
 ## Deferred
 
-- `store.js` transaction 완료 대기 중복은 이번 원인과 별개이며 다음 IndexedDB 변경 때 공통 owner가 실제 복잡도를 줄이는지 재검토한다.
-- runtime timing/budget/startup probe, 새 browser runner, 테스트 삭제·병렬화는 측정된 병목이 없어 보류한다.
-- npm outdated의 patch/major 후보는 별도 dependency slice로 분리한다.
-- Vulture/nose zero-scope 오류와 adapter bootstrap 재직렬화 경고는 upstream Charness #507 소유다. 이 리포에 wrapper나 write bootstrap을 만들지 않는다.
+- state.svelte.js의 pull/push 적용 루프(F11·F12·F18·F22)는 같은 stale guard처럼 보여도 side effect가 달라 이번에 일반화하지 않았다.
+- store.js의 1~3줄 우연 중복(F30·F31), series/worker/harness의 작은 wrapper는 소유권을 흐릴 만큼 이득이 없어 보류했다.
+- UI CSS·컴포넌트 boilerplate와 테스트 scenario setup은 디자인/행동 경계가 달라 공통 스타일·fixture로 합치지 않았다.
+- `onabort`의 실제 브라우저별 오류 의미와 quota/private-mode는 별도 operator acceptance로 남긴다.
 
 ## Advisory
 
-- structural review result: planner의 `structural_review_packet`은 null; `plan_quality_run.py --detail`과 실제 source/경제성 inventory의 0 후보를 heuristic clean으로 과장하지 않고 기록했다.
-- prose review result: `inventory_entrypoint_docs_ergonomics.py --summary`가 entrypoint docs 5개에 long/top-level heuristic을 냈으나 source-of-truth 운영 문서라 삭제·분할의 저잡음 규칙이 없어 이번 수정은 보류했다.
-- `inventory_standing_test_economics.py`: node isolation unknown은 advisory; default가 단일 프로세스 병목이 아님을 실행 비교로 확인했다.
-- `inventory_nose_clones.py`·`run_dead_code_advisory.py`: Python 0개/skills 경로 부재로 error; clean으로 세지 않고 upstream deferred로 분류했다.
+- structural review result: planner의 `structural_review_packet`은 null. evidence: `plan_quality_run.py --repo-root .`; nose 35개를 다음처럼 전부 분류했다.
+  - 행동별 테스트 setup 유지: F1·F2·F3·F5·F7·F9·F13·F14·F17·F24·F29·F35. evidence: nose detail command.
+  - 컴포넌트/입력 modality 국소 스타일·호출: F4·F6·F15·F20·F23·F26. evidence: nose detail command와 해당 source locations.
+  - sync/state 및 harness의 서로 다른 실패·경계 경로: F8·F11·F12·F16·F18·F19·F21·F22·F25·F27·F28·F32·F33·F34. evidence: nose detail command와 source inspection.
+  - 실제 구조적 중복 처리: F10(`store.js` transaction wait). F30·F31은 우연히 비슷한 짧은 wrapper로 분류해 보류. evidence: nose detail command와 `src/lib/store.js`.
+- nose command: `inventory_nose_clones.py --repo-root . --path src --path worker --path scripts --detail`; lexical clone proxy라 semantic 중복을 보장하지 않는다.
+- prose review result: `inventory_nose_clones.py --detail`과 source inspection을 근거로 전체 후보를 삭제/추출하지 않고 ownership, behavior boundary, test economics로 triage했다.
 
 ## Delegated Review
 
-- executed: bounded synchronous fresh-eye review was attempted; received `store.open()` finding and counterweight, with other windows explicitly recorded as no-delivery.
-- Delegated Review: partial — unnamed synchronous bounded reviewers를 시도했고 counterweight와
-  `store.open()` finding 본문은 받았으나 여러 angle 및 repaired-surface probe는 host wait timeout으로 no-delivery였다.
-- Parent boundary fingerprint는 각 수령 직후 `clean`; no-delivery를 same-agent pass로 대체하지 않았다.
-- Slow-gate lenses (fixture-economics, parallel-critical-path, duplicated-proof): test-economics
-  inventory와 직접 timing 비교는 실행했지만 no-delivery reviewer의 보고서는 증거로 세지 않았다.
+- Delegated Review: executed — pre-change 두 angle과 별도 counterweight, post-change round-2, repair 후 round-3 본문을 받았다. round-2가 shared state/rollback proof 결함을 잡았고 round-3가 동적 import 격리와 pending rollback을 확인했다.
+- Packets: `nose-store-round-1-packet.md`(초기), round-2 markdown SHA-256 `b35f71bab52afa02e4977fb1f6e1e6d822da8e092a14d8826a31f78f0c92e730`, round-3 markdown SHA-256 `3e109338f755bef4ba8b1c8eccf2238f47eaa3be25e5b7440eafe78cbcc49ee3`.
+- boundary verify: counterweight·round-2·round-3는 모두 `clean` (각 `/tmp/nose-store-*.json`). 초기 두 angle은 병렬 spawn 중 parent가 기본 snapshot을 덮어써 window mismatch가 났으므로 boundary clean을 주장하지 않는다. 이 절차 낭비는 기록한다.
+- Slow-gate lenses (fixture-economics, parallel-critical-path, duplicated-proof): test setup을 더 복제하지 않고 helper seam 1개와 caller 고유 동작 2개만 추가했다.
 
 ## Commands Run
 
-- quality planner/resolver, adapter dry-run, impl survey, risk interrupt, delegation resolver.
-- `npm run gate` pre-change, `npm test`, focused store test, `npm run lint`, `npm run reach --write`.
-- runtime/test-economics/structural/source/doc/security inventories, `npm audit`, `npm outdated`.
-- synchronous bounded spawn/wait/close, boundary snapshot/verify, `git diff` inspection, deploy probe readback.
+- `inventory_nose_clones.py` default-path error 확인 후 explicit `--path src --path worker --path scripts`로 detail/summary 실행.
+- `npm run gate`, `npm audit --omit=optional --audit-level=high`, `git diff --check`.
+- `npm run lint`, `npm run check`, `node --test src/lib/store.test.js`.
+- critique adapter/packet/delegation resolver, three bounded reviewers, boundary snapshot/verify.
 
 ## Recommended Next Quality Moves
 
-- active capability_needed=authenticated browser; next_center=IndexedDB recovery와 UI-1~3; transformation=operator acceptance 실행; proof_boundary=deployed authenticated browser; enforcement_posture=manual because 브라우저·사람 판단이다.
-- passive capability_needed=upstream Charness inventory/bootstrap fix; next_center=#507 후속; transformation=zero-scope와 adapter preservation 재현 여부 확인; proof_boundary=upstream issue와 fresh dry-run; enforcement_posture=advisory because local owner가 없다.
+- active capability_needed=authenticated browser; next_center=배포된 IndexedDB abort/retry; transformation=operator acceptance 실행; proof_boundary=인증 브라우저; enforcement_posture=manual because 사람 판단과 인증 세션이 필요하다.
+- passive capability_needed=upstream Charness adapter preservation; next_center=#507; transformation=다음 upstream 재현 때 dry-run 비교; proof_boundary=upstream issue; enforcement_posture=advisory because local wrapper는 만들지 않는다.
 
 ## History
 
-- [6차 품질 점검](./2026-08-05-quality-review-round-6.md)
+- [7차 품질 점검](./2026-08-05-quality-review-round-7.md)
 - [기준선 품질 점검](./history/2026-07-26-quality-review.md)

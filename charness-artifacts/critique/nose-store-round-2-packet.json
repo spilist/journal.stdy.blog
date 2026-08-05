@@ -1,0 +1,52 @@
+{
+  "kind": "charness.critique_prepare_packet",
+  "version": 1,
+  "repo": "journal.stdy.blog",
+  "generated_at": "2026-08-05T02:42:25Z",
+  "prepared_for": "post-change store transaction seam review",
+  "changed_ref": null,
+  "adapter_path": ".agents/critique-adapter.yaml",
+  "sections": [],
+  "section_count": 0,
+  "ok": true,
+  "reviewer_tier_evidence": {
+    "requested_tier": "high-leverage",
+    "requested_spawn_fields": {
+      "model": "opus",
+      "reasoning_effort": "medium",
+      "fork_turns": "none"
+    },
+    "host_exposure_state": "pending-parent-spawn",
+    "application_state": "unverified-by-packet",
+    "instruction": "Review artifacts must record requested_fields_sent, metadata-hidden, host-defaulted, unsupported, or applied only when host-confirmed."
+  },
+  "reviewed_input_identity": {
+    "algorithm": "sha256-v2",
+    "status": "captured",
+    "mode": "working-tree",
+    "changed_ref": null,
+    "resolved_changed_ref": [],
+    "base_head": "65239d511691f60c2ad31cee2095d5d49f88a0c9",
+    "base_head_role": "provenance-only",
+    "reviewed_paths": [
+      "src/lib/store.js",
+      "src/lib/store.test.js"
+    ],
+    "reviewed_content": [
+      {
+        "path": "src/lib/store.js",
+        "content_sha256": "eafc2e03c59e31a03dac6c58d68c1a9f628eb4757cf5cb30a11871fb7fd9ccc5"
+      },
+      {
+        "path": "src/lib/store.test.js",
+        "content_sha256": "081439f517a22e23f8b3169d3efbbce542b38ae7f6917869b8f20a54e4dae56f"
+      }
+    ],
+    "reviewed_patch_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "staged_patch_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "unstaged_patch_sha256": "ca4a80ebb7d3bfe6d975ba3053265a61ad5b513f41eb84926b1f320a5ea425a5",
+    "declared_untracked": [],
+    "auto_excluded_paths": [],
+    "identity_sha256": "3d5a144c30dcc75628b671380ba72c95291fca5440d5591315d7b118df3fa47a"
+  }
+}
