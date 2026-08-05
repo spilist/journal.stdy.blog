@@ -226,6 +226,35 @@ Vulture/nose의 zero-scope 오류와 Charness adapter bootstrap 재직렬화 경
 않고 upstream 소유의 advisory/deferred로 기록했다. quality 위임 기록의 critique-only 범위는
 `AGENTS.md`의 quality 계약과 맞췄다.
 
+**2026-08-05 마지막 전체 품질 검사와 비용·중복 재분류를 마쳤다.** 품질 기록은
+[최종 quality](../charness-artifacts/quality/2026-08-05-quality-review-final.md)와 현재 포인터에
+있다. nose를 실제 범위(`src`, `worker`, `scripts`)로 다시 돌려 35 family를 전부 분류했고,
+총 duplicate lines를 목표로 삼지 않았다. 이번 라운드에는 새 코드 결함이 없었고, 이전
+`store.js` transaction 경계 수정은 188개 테스트와 전체 gate에서 유지됐다. Vulture는 추적된
+Python 파일이 없어 exit 2, JS mutation은 Stryker 미설치로 실행하지 못했으며 둘 다 clean으로
+포장하지 않았다. runtime timing/budget/startup probe와 새 test runner·fixture bootstrap·런타임
+의존성도 현재 2초 안팎의 게이트에 근거가 없어 추가하지 않았다.
+
+품질 기록 커밋 `818a47c`를 `origin/main`에 push했고, 최종 gate는 테스트 188/188·reach 22/12·
+lint/docs·Svelte/Worker check·build를 통과했다. 같은 상태를 배포해 Worker Version ID
+`43d41000-cdcd-4eee-8456-75ceacfbff5f`를 확인했다. `/`, `/api/pull?since=0`, `/sw.js`는
+비인증 header-only readback에서 모두 Access 302/no-store였다. 이는 인증 브라우저·UI-1~3·
+warm-cache·두 탭/두 기기 수용을 대신하지 않는다.
+
+### 이번 마지막 라운드의 운영 교훈
+
+- Promise.all로 여러 결과를 한 출력에 합치면 큰 출력이 잘려 다시 읽는 비용이 생긴다. 명령별
+  로그 파일과 짧은 tail을 사용한다.
+- zsh의 예약 변수 `status`, glob으로 해석되는 쿼리 URL을 결과 변수·미인용 인자로 쓰지 않는다.
+  이번에는 `rc`, `route`, URL 따옴표로 고쳤다.
+- plugin 스크립트 위치와 실제 CLI 인자를 추측하지 않는다. `rg --files`와 `--help`를 먼저
+  읽고, validator·mutation·dead-code 도구의 zero-scope/미설치를 각각 분류한다.
+- fresh-eye spawn 수락은 결과 수령이 아니다. bounded wait 뒤 no-delivery를 기록하고 종료하며,
+  boundary snapshot은 reviewer별 고유 `/tmp` 경로로 반환 직후 verify한다.
+- scaffold가 내보낸 contract를 먼저 만들고 dated artifact를 기록한 뒤 current pointer,
+  validator, gate, push, deploy, readback 순서로 닫는다. 인증되지 않은 readback은 사람 수용으로
+  승격하지 않는다.
+
 ### 이번 5차 라운드의 운영 교훈
 
 - adapter/primer 뒤에 `npm run check`와 최소 결정론 gate를 reviewer보다 먼저 부른다. 이번에는
