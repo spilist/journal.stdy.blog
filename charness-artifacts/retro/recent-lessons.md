@@ -8,9 +8,9 @@
 ## Repeat Traps
 
 - **artifact validator 왕복**: quality 기록이 advisory evidence·executed status·slow-gate 렌즈를 한 번씩 보강한 뒤 통과했다. 검증 비용은 정직한 기록에 필요했지만, scaffold의 canonical field와 validator coupling을 먼저 체크했으면 재작성은 줄었다. (source: `charness-artifacts/retro/2026-08-05-session-retro-round-6.md`; sources: 2)
+- **reviewer delivery timeout:** 첫 네 angle과 후속 repaired-surface probe를 동기 대기 후 전달받지 못했다. 결과가 없는 상태에서 wait를 반복하지 않고 close했어야 하며, 다음에는 one-shot probe를 먼저 보내 capability와 delivery를 조기에 판정한다. 이 비용의 정확한 token/tool 수치는 unavailable이다. (source: `charness-artifacts/retro/2026-08-05-session-retro-round-7.md`; sources: 2)
+- **artifact-before-gate는 이번에 개선:** dated artifact를 먼저 만들고 validator·tracking을 끝낸 뒤 최종 gate를 부르는 순서를 유지한다. 넓은 inventory 자체는 사용자 의도였으므로 waste로 분류하지 않는다. (source: `charness-artifacts/retro/2026-08-05-session-retro-round-7.md`)
 - **bootstrap 경고는 waste로 승격하지 않음**: `bootstrap_adapter.py --dry-run`이 재직렬화와 주석 손실을 경고했지만, upstream #507과 연결된 재현 가능한 위험이라 같은 명령을 반복하는 대신 실제 bootstrap을 하지 않았다. (source: `charness-artifacts/retro/2026-08-05-session-retro-round-6.md`)
-- **broad exploration은 waste로 분류하지 않음:** 사용자가 전체 품질과 unknown-unknown을 직접 요청했으므로 exploration은 의도됐다. triage lock에서 fix-now는 타입 오류와 conflict persistence였고, service-worker old tab·tombstone·dependency major·새 runner는 deferred, false positive는 없었다. (source: `charness-artifacts/retro/2026-08-05-session-retro-round-5.md`)
-- **gate-baseline runtime:** measured `/usr/bin/time -p npm run gate` real 11.99s, Node test 1.60s, Vite build 0.89s. 현재 budget 초과나 느린 gate recurrence는 관찰되지 않아 제거·병렬 runner를 만들지 않았다. (source: `charness-artifacts/retro/2026-08-05-session-retro-round-5.md`)
 
 ## Next-Time Checklist
 
@@ -29,4 +29,5 @@
 
 - `charness-artifacts/retro/2026-08-05-session-retro-round-5.md`
 - `charness-artifacts/retro/2026-08-05-session-retro-round-6.md`
+- `charness-artifacts/retro/2026-08-05-session-retro-round-7.md`
 - `charness-artifacts/retro/2026-08-05-session-retro.md`

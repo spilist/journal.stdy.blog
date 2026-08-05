@@ -186,6 +186,19 @@ Access 302/no-store임을 [6차 관찰 기록](../charness-artifacts/probe/2026-
 [6차 critique](../charness-artifacts/critique/2026-08-05-critique-round-6.md),
 [6차 retro](../charness-artifacts/retro/2026-08-05-session-retro-round-6.md)다.
 
+**2026-08-05 7차 전체 품질 라운드의 코드 수정이 push됐다.** 구현 커밋 `8c29d77`을
+`origin/main`에 push했다. `store.open()`이 IndexedDB open 실패 Promise를 영구 cache하던
+결함을 고쳐, 실패한 연결만 cache에서 풀고 다음 명령형 접근이 새 open을 시도하게 했다.
+실제 `store.js`를 부르는 첫 실패→두 번째 성공 회귀 테스트를 추가했고, 테스트는 183개로
+늘었다. 새 도달 증거에 맞춰 [reach 기준선](../scripts/reach-baseline.txt)도 22개 중 12개
+도달·10개 미도달로 조였다.
+
+최종 gate와 배포는 이 handoff 기록을 추적한 뒤 진행한다. quality·critique·retro 기록은
+각각 [7차 quality](../charness-artifacts/quality/2026-08-05-quality-review-round-7.md),
+[7차 critique](../charness-artifacts/critique/2026-08-05-critique-round-7.md),
+[7차 retro](../charness-artifacts/retro/2026-08-05-session-retro-round-7.md)다. 이번에도
+IndexedDB 실제 브라우저 복구, UI-1~3, 두 탭·두 기기·대량 D1 push는 사람 수용으로 남는다.
+
 이번 라운드에서 새 inventory·runtime budget·browser runner·테스트 삭제는 만들지 않았다.
 Vulture/nose의 zero-scope 오류와 Charness adapter bootstrap 재직렬화 경고는 clean으로 숨기지
 않고 upstream 소유의 advisory/deferred로 기록했다. quality 위임 기록의 critique-only 범위는
@@ -216,6 +229,21 @@ Vulture/nose의 zero-scope 오류와 Charness adapter bootstrap 재직렬화 경
 - runtime budget/startup probe, zero-scope inventory wrapper, 새 test runner는 실제 병목·회귀가
   생길 때까지 보류한다. adapter는 `bootstrap_adapter.py --dry-run`만 확인하고 #507 후속 전에는
   쓰기 bootstrap을 하지 않는다.
+
+### 이번 7차 라운드의 운영 교훈
+
+- 실패한 `indexedDB.open()` Promise는 성공 cache와 다르게 다뤄야 한다. 저장소 오류를 한 번
+  겪었다는 사실과 세션 전체가 복구 불가능하다는 사실을 섞지 말고, 다음 명령형 접근의 재시도
+  경계를 테스트로 고정한다.
+- 실제 브라우저 경계를 보려는 테스트는 메모리 harness에 옵션을 더하는 것으로 대체하지 않는다.
+  이번에는 `store.js`를 직접 import하는 최소 fake-IDB만 추가했고, browser quota/private-mode는
+  운영자 수용으로 남겼다.
+- reviewer는 spawn acceptance가 결과가 아니다. one-shot probe가 본문을 전달한 경우만
+  finding으로 쓰고, timeout/no-delivery는 반복 대기나 same-agent pass로 바꾸지 않는다.
+- snapshot을 `/tmp`에 저장하면 verify에도 같은 `--before` 경로를 준다. 기본 `.charness`
+  snapshot과 섞여 window mismatch가 난 것은 boundary 절차 자체의 낭비였다.
+- scaffold script의 실제 help/payload를 먼저 읽는다. 존재하지 않는 `--intent record`·`--detail`
+  가정으로 왕복하지 않고, artifact를 추적한 뒤 gate를 부르는 순서를 유지한다.
 
 ### 이번 3차 라운드의 운영 교훈
 
