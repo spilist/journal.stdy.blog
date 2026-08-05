@@ -14,7 +14,7 @@ let opening = null
 
 function open() {
   if (opening) return opening
-  opening = new Promise((resolve, reject) => {
+  const attempt = new Promise((resolve, reject) => {
     const req = indexedDB.open(DB_NAME, DB_VERSION)
     req.onupgradeneeded = () => {
       const db = req.result
@@ -25,6 +25,12 @@ function open() {
     }
     req.onsuccess = () => resolve(req.result)
     req.onerror = () => reject(req.error)
+  })
+  // A transient open failure must not become a permanent session failure. Keep
+  // successful connections cached, but let the next access start a fresh attempt.
+  opening = attempt.catch((err) => {
+    opening = null
+    throw err
   })
   return opening
 }

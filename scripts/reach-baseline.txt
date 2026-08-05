@@ -6,6 +6,5 @@ src/lib/ImportPanel.svelte
 src/lib/LogBlock.svelte
 src/lib/Pinned.svelte
 src/lib/autogrow.js
-src/lib/store.js
 src/lib/sync.js
 src/main.js
