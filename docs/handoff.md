@@ -193,7 +193,12 @@ Access 302/no-store임을 [6차 관찰 기록](../charness-artifacts/probe/2026-
 늘었다. 새 도달 증거에 맞춰 [reach 기준선](../scripts/reach-baseline.txt)도 22개 중 12개
 도달·10개 미도달로 조였다.
 
-최종 gate와 배포는 이 handoff 기록을 추적한 뒤 진행한다. quality·critique·retro 기록은
+최종 `npm run gate`는 183개 테스트·reach 22/12·문서 47개·Svelte/Worker check·build를
+통과했다. 이 HEAD를 Worker `6d2a285c-4366-4777-b496-5abf8b19960a`로 배포했고, 비인증
+`/`·`/api/pull?since=0`·`/sw.js`가 모두 Access 302/no-store임을 [7차 관찰 기록](../charness-artifacts/probe/2026-08-05-deploy-verification-round-7.json)으로
+남겼다. 이 readback은 인증 없는 header-only 확인이다.
+
+quality·critique·retro 기록은
 각각 [7차 quality](../charness-artifacts/quality/2026-08-05-quality-review-round-7.md),
 [7차 critique](../charness-artifacts/critique/2026-08-05-critique-round-7.md),
 [7차 retro](../charness-artifacts/retro/2026-08-05-session-retro-round-7.md)다. 이번에도
@@ -244,6 +249,8 @@ Vulture/nose의 zero-scope 오류와 Charness adapter bootstrap 재직렬화 경
   snapshot과 섞여 window mismatch가 난 것은 boundary 절차 자체의 낭비였다.
 - scaffold script의 실제 help/payload를 먼저 읽는다. 존재하지 않는 `--intent record`·`--detail`
   가정으로 왕복하지 않고, artifact를 추적한 뒤 gate를 부르는 순서를 유지한다.
+- zsh에서 `path`는 `$PATH`와 연결된 special 변수이므로 readback loop 변수로 쓰지 않는다. 이번에는
+  curl·npx·git이 사라진 것처럼 보이는 낭비를 `route`로 바꿔 즉시 복구했다.
 
 ### 이번 3차 라운드의 운영 교훈
 

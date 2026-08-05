@@ -1,0 +1,38 @@
+{
+  "date": "2026-08-05",
+  "commit": "98b14d08a87d1ce03ffca76b385fa78c219ce925",
+  "code_commit": "8c29d77",
+  "worker": "journal-stdy-blog",
+  "version_id": "6d2a285c-4366-4777-b496-5abf8b19960a",
+  "previous_version_id": "249f2dea-0a2b-4744-ae65-5db845cc4aa8",
+  "deploy_command": "npm run deploy",
+  "deploy_status": "passed",
+  "readback": {
+    "method": "unauthenticated curl -D - -o /dev/null; redirects not followed",
+    "routes": [
+      {
+        "path": "/",
+        "status": 302,
+        "content_type": "text/html; charset=UTF-8",
+        "cache_control": "private, max-age=0, no-store, no-cache, must-revalidate, post-check=0, pre-check=0"
+      },
+      {
+        "path": "/api/pull?since=0",
+        "status": 302,
+        "content_type": "text/html; charset=UTF-8",
+        "cache_control": "private, max-age=0, no-store, no-cache, must-revalidate, post-check=0, pre-check=0"
+      },
+      {
+        "path": "/sw.js",
+        "status": 302,
+        "content_type": "text/html; charset=UTF-8",
+        "cache_control": "private, max-age=0, no-store, no-cache, must-revalidate, post-check=0, pre-check=0"
+      }
+    ],
+    "interpretation": "Cloudflare Access protects all three unauthenticated routes. This is header-only evidence and does not prove authenticated browser UI acceptance."
+  },
+  "limitations": [
+    "No authenticated browser session was used.",
+    "IndexedDB transient-open recovery was proven by Node boundary test, not by a real browser quota/private-mode exercise."
+  ]
+}

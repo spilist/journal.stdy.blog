@@ -13,7 +13,7 @@
   },
   "as_of_source_date": "2026-08-05",
   "source_artifact_count": 4,
-  "candidate_count": 35,
+  "candidate_count": 36,
   "top_candidates": [
     {
       "candidate_id": "class:6976f39a179b",
@@ -700,10 +700,10 @@
       ]
     },
     {
-      "candidate_id": "next_improvement:3408e3a419ba",
+      "candidate_id": "next_improvement:be43d95de9c2",
       "kind": "next_improvement",
-      "lesson": "handoff에 `store.open()` recovery, reach 22/12, no-delivery와 snapshot path lesson, browser acceptance residual을 남긴다.",
-      "normalized_key": "handoff에 store open recovery reach 22 12 no delivery와 snapshot path lesson browser acceptance",
+      "lesson": "handoff에 `store.open()` recovery, reach 22/12, no-delivery와 snapshot path lesson, shell special-variable lesson, browser acceptance residual을 남긴다.",
+      "normalized_key": "handoff에 store open recovery reach 22 12 no delivery와 snapshot path lesson shell special",
       "recurrence_class": null,
       "source_count": 1,
       "independent_source_count": 1,
@@ -721,7 +721,7 @@
           "section": "Next Improvements",
           "generator": null,
           "kind": "next_improvement",
-          "lesson": "handoff에 `store.open()` recovery, reach 22/12, no-delivery와 snapshot path lesson, browser acceptance residual을 남긴다."
+          "lesson": "handoff에 `store.open()` recovery, reach 22/12, no-delivery와 snapshot path lesson, shell special-variable lesson, browser acceptance residual을 남긴다."
         }
       ]
     },
@@ -1112,6 +1112,32 @@
           "generator": null,
           "kind": "repeat_trap",
           "lesson": "**scaffold 인자 오독:** quality scaffold의 `--intent record`, retro plan의 `--detail`을 존재한다고 가정해 두 번 실패했다. broad work 전 script help/canonical payload를 먼저 읽으면 줄일 수 있는 작은 운영 낭비다."
+        }
+      ]
+    },
+    {
+      "candidate_id": "class:5c2851ae425d",
+      "kind": "repeat_trap",
+      "lesson": "**zsh 변수명 충돌:** readback loop에서 `for path in ...`를 써 zsh의 special `$path`가 `PATH`를 덮었고, curl·npx·git까지 없는 것처럼 보였다. `route`로 바꿔 즉시 복구했다. 다음 shell 명령에서는 `path`·`PATH` 계열 변수를 피한다.",
+      "normalized_key": "zsh 변수명 충돌 readback loop에서 for path in 를 써 zsh의 special path 가",
+      "recurrence_class": "shell-special-variable-shadowing",
+      "source_count": 1,
+      "independent_source_count": 1,
+      "generator_authored": 0,
+      "latest_source_path": "charness-artifacts/retro/2026-08-05-session-retro-round-7.md",
+      "latest_source_date": "2026-08-05",
+      "age_days": 0,
+      "recency_weight": 1.0,
+      "alpha": 0.12,
+      "selection_weight": 1.0,
+      "sources": [
+        {
+          "artifact_path": "charness-artifacts/retro/2026-08-05-session-retro-round-7.md",
+          "date": "2026-08-05",
+          "section": "Waste",
+          "generator": null,
+          "kind": "repeat_trap",
+          "lesson": "**zsh 변수명 충돌:** readback loop에서 `for path in ...`를 써 zsh의 special `$path`가 `PATH`를 덮었고, curl·npx·git까지 없는 것처럼 보였다. `route`로 바꿔 즉시 복구했다. 다음 shell 명령에서는 `path`·`PATH` 계열 변수를 피한다."
         }
       ]
     },

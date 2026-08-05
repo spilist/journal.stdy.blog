@@ -15,7 +15,8 @@ Ambient repo findings: Charness adapter/inventory 오류와 사람 브라우저 
 - 구현 후 `npm test`: 183/183 pass.
 - `npm run reach`: 기준선 갱신 후 production 22개 중 12개 도달, 미도달 10개.
 - focused `node --test src/lib/store.test.js`와 `npm run lint`: pass.
-- 최종 `npm run gate`, `npm run check`, `npm run build`, 배포 readback은 closeout에서 실행한다.
+- 최종 `npm run gate`: 183/183, reach 22/12, lint/docs 47개, Svelte 0/0, Worker tsc, build 130 modules pass.
+- `npm run deploy`: pass — Worker `6d2a285c-4366-4777-b496-5abf8b19960a`; 비인증 `/`·`/api/pull?since=0`·`/sw.js`는 302/no-store.
 - `npm audit --omit=optional --audit-level=high`: 0 vulnerabilities.
 
 ## Runtime Signals
@@ -73,7 +74,7 @@ Ambient repo findings: Charness adapter/inventory 오류와 사람 브라우저 
 - quality planner/resolver, adapter dry-run, impl survey, risk interrupt, delegation resolver.
 - `npm run gate` pre-change, `npm test`, focused store test, `npm run lint`, `npm run reach --write`.
 - runtime/test-economics/structural/source/doc/security inventories, `npm audit`, `npm outdated`.
-- synchronous bounded spawn/wait/close, boundary snapshot/verify, `git diff` inspection.
+- synchronous bounded spawn/wait/close, boundary snapshot/verify, `git diff` inspection, deploy probe readback.
 
 ## Recommended Next Quality Moves
 

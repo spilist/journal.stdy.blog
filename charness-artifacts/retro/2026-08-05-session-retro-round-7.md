@@ -25,6 +25,7 @@ reach baseline을 고친 구간이다.
 - **reviewer delivery timeout (recurrence-class: delegated-review-delivery):** 첫 네 angle과 후속 repaired-surface probe를 동기 대기 후 전달받지 못했다. 결과가 없는 상태에서 wait를 반복하지 않고 close했어야 하며, 다음에는 one-shot probe를 먼저 보내 capability와 delivery를 조기에 판정한다. 이 비용의 정확한 token/tool 수치는 unavailable이다.
 - **boundary snapshot 경로 혼동 (recurrence-class: reviewer-boundary-snapshot-routing):** snapshot을 `/tmp`에 썼는데 verify 기본 경로는 stale `.charness`를 읽어 첫 verify가 window mismatch였다. `--before`로 즉시 올바른 snapshot을 지정해 clean을 확인했지만, 다음에는 snapshot path와 verify path를 preflight 출력으로 함께 고정한다.
 - **scaffold 인자 오독 (recurrence-class: scaffold-contract-preflight):** quality scaffold의 `--intent record`, retro plan의 `--detail`을 존재한다고 가정해 두 번 실패했다. broad work 전 script help/canonical payload를 먼저 읽으면 줄일 수 있는 작은 운영 낭비다.
+- **zsh 변수명 충돌 (recurrence-class: shell-special-variable-shadowing):** readback loop에서 `for path in ...`를 써 zsh의 special `$path`가 `PATH`를 덮었고, curl·npx·git까지 없는 것처럼 보였다. `route`로 바꿔 즉시 복구했다. 다음 shell 명령에서는 `path`·`PATH` 계열 변수를 피한다.
 - **artifact-before-gate는 이번에 개선:** dated artifact를 먼저 만들고 validator·tracking을 끝낸 뒤 최종 gate를 부르는 순서를 유지한다. 넓은 inventory 자체는 사용자 의도였으므로 waste로 분류하지 않는다.
 
 ## Critical Decisions
@@ -67,7 +68,7 @@ IndexedDB abstraction보다 적다(9). 잘못 적용한 지점은 quality가 “
 
 - workflow: reviewer one-shot delivery probe를 full angle spawn보다 먼저 실행하고 snapshot/verify 경로를 같은 출력에서 확인한다.
 - capability: Charness #507 전에는 bootstrap write를 하지 않으며, scaffold script help와 emitted validator command를 quality preflight checklist에 둔다.
-- memory: handoff에 `store.open()` recovery, reach 22/12, no-delivery와 snapshot path lesson, browser acceptance residual을 남긴다.
+- memory: handoff에 `store.open()` recovery, reach 22/12, no-delivery와 snapshot path lesson, shell special-variable lesson, browser acceptance residual을 남긴다.
 
 ## Persisted
 
