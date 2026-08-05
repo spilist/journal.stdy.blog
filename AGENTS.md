@@ -136,7 +136,7 @@ journal.stdy.blog에서 에이전트가 지켜야 할 운영 계약.
 | 언어 | **TypeScript로 옮기지 않는다.** `.js` + JSDoc + `jsconfig.json`의 `checkJs` |
 | 포맷터 | **Prettier 안 씀.** 린터가 취향을 다투면 신호가 잡음에 묻힌다 |
 | 린트 | eslint + eslint-plugin-svelte 권장 설정만. **`npm run lint`는 [마크다운 링크 검사](./scripts/check-docs.mjs)도 함께 돈다** |
-| 테스트 | `node --test src/lib/*.test.js scripts/*.test.js`. 순수 함수(파서·조립·동기화 병합·그래프)에 집중 |
+| 테스트 | `npm test`. 순수 함수(파서·조립·동기화 병합·그래프)와 워커 경계를 Node 테스트로 검증한다 |
 | 배포 | Cloudflare Workers + `wrangler deploy`, 정적 자산은 `assets` |
 | 도메인 | **`journal.stdy.blog`** 커스텀 도메인. `workers_dev: false` |
 | DB | D1. `~/stdy.blog`에 같은 계정 선례(`stdy-blog-db`)가 있다 |

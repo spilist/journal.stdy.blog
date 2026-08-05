@@ -434,7 +434,7 @@ CREATE TABLE revision (                  -- D11: 하루 1개. 키가 곧 제약�
 - Svelte 5(룬) + Vite, SvelteKit 아님 / `.js` + JSDoc + `checkJs`, TypeScript 아님
 - Prettier 없음. eslint + eslint-plugin-svelte 권장 설정만
 - **런타임 의존성 0개다.** 그 상태를 유지한다 — 그래프도 SVG로 직접 그렸다
-- 테스트는 `node --test src/lib/*.test.js scripts/*.test.js` — 순수 함수에 집중
+- 테스트는 `npm test` — 순수 함수와 워커 경계를 포함한 모든 Node 테스트를 실행한다
 - Cloudflare Workers + D1, 커스텀 도메인 `journal.stdy.blog`, `workers_dev: false`
 - **테스트 픽스처는 지어낸 문장을 쓴다.** `references/sample.md`의 본문을 복사하지
   않는다 (AGENTS.md `사용자 데이터를 다룰 때`)

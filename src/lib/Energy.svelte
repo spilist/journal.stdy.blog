@@ -237,7 +237,8 @@
   }
   .graph {
     margin-left: auto;
-    min-height: 32px;
+    /* 전역 44px 조작면을 덮어쓰지 않는다. 그래프도 기존 에너지 인출 경로다. */
+    min-height: 44px;
     padding: 0 0.5rem;
     font-size: 0.85rem;
   }

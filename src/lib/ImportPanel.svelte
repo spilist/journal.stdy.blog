@@ -21,7 +21,10 @@
 
   // 여는 버튼 바로 아래에 뜨지만, 긴 화면에서는 접힌 부분에 열릴 수 있다.
   $effect(() => {
-    root?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    root?.scrollIntoView({
+      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+      block: 'nearest',
+    })
   })
 
   /** @param {Event} e */

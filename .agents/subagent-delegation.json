@@ -2,8 +2,9 @@
   "version": 1,
   "bounded_review_delegation": "granted",
   "scopes": [
-    "critique"
+    "critique",
+    "quality"
   ],
   "recorded_by": "user",
-  "note": "\uc0ac\uc6a9\uc790\uac00 \uc81c\uacf5\ud55c AGENTS.md\uc758 Subagent Delegation \uacc4\uc57d\uc774 bounded critique review\ub97c standing-approved\ub85c \uc704\uc784\ud568"
+  "note": "AGENTS.md Subagent Delegation\uc740 task-completing quality\uc640 critique review\ub97c \uc774\ubbf8 standing-approved\ub85c \uc704\uc784\ud55c\ub2e4; \uae30\ub85d \ubc94\uc704\ub97c \uacc4\uc57d\uacfc \ub9de\ucd98\ub2e4."
 }

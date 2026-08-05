@@ -451,9 +451,9 @@
   }
   .row .reason {
     color: var(--dim);
-    /* 이유가 길어도 그래프가 밀려나지 않게 한 줄로 자른다. 전문은 그날로 가면 있다. */
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    /* 그래프 요약에서도 이유 전문을 읽게 한다. 폭은 점수·이름을 빼고 나머지를
+       쓰며, URL처럼 공백 없는 글자도 줄바꿈해 좁은 화면을 밀어내지 않는다. */
+    min-width: 0;
+    overflow-wrap: anywhere;
   }
 </style>
