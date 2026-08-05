@@ -17,14 +17,17 @@ Ambient repo findings: 이번 수정은 제품의 오프라인·수동 동기화
 - `npm run lint`: eslint와 문서 검사 통과, 문서 25개·링크/수용 기준 ID clean.
 - `npm run check`: Svelte와 Worker 타입 검사 통과. `git diff --check` 통과.
 - `npm audit --omit=optional --audit-level=high`: 취약점 0개.
-- 최종 `npm run gate`와 배포 readback은 이 아티팩트의 closeout에서 갱신한다.
+- `npm run gate`: `test` 179, `reach` 22개 중 11개 도달, lint 29개 문서, check/build 통과.
+- `npm run deploy`: Worker version `b3cdc37b-e12b-4b7b-adfa-091fdeb2920c`; 비인증 `/`,
+  `/api/pull?since=0`, `/sw.js`가 모두 302/no-store ([readback](../probe/2026-08-05-deploy-verification-round-4.json)).
 
 ## Runtime Signals
 
 - runtime source: 구조화 timing source와 startup probe는 없다 (`command: render_runtime_summary.py`). <!-- reproduction-source -->
 - runtime hot spots: unavailable. 이번 로컬 전체 테스트는 약 1.8초였고 새 runner/cache를 정당화할 정도의 비용 신호는 없다.
 - coverage gate: line coverage가 아니라 `reach` ratchet을 사용한다. 최종 gate에서 22개 중 도달 파일 수를 확인한다.
-- evaluator depth: 결정론적 gate + bounded fresh-eye critique; Cautilus와 인증 브라우저 수용은 미실행.
+- evaluator depth: 결정론적 gate + bounded fresh-eye critique와 header-only deploy readback;
+  Cautilus와 인증 브라우저 수용은 미실행.
 
 ## Healthy
 
@@ -86,6 +89,7 @@ Ambient repo findings: 이번 수정은 제품의 오프라인·수동 동기화
 - `npm test`, `npm run lint`, `npm run check`, `npm audit`, focused state test.
 - `plan_retro_run.py`, closeout telemetry/auto-trigger probes, critique scaffold/validator.
 - `git diff --check`, boundary fingerprint snapshot/verify, `git status`.
+- `npm run deploy`, `npx wrangler deployments list`, header-only curl readback.
 
 ## Recommended Next Quality Moves
 

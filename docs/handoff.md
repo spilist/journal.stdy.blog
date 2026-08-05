@@ -123,6 +123,25 @@ Access 302임을 [관찰 기록](../charness-artifacts/probe/2026-08-05-deploy-v
 `e5ba9779-dad7-42a9-9ac8-6d5fc5f14799`이고 이전 version은
 `fa1eee2d-781f-486c-8247-650462b8e4d6`이다.
 
+**2026-08-05 4차 전체 품질 라운드와 온라인 복귀 수정의 배포가 끝났다.** 코드 변경은
+`3d0ae50`, 품질·critique·retro 기록은 `456ec5a`에 있고, 배포 Version ID는
+`b3cdc37b-e12b-4b7b-adfa-091fdeb2920c` (이전 `e5ba9779-dad7-42a9-9ac8-6d5fc5f14799`)다.
+179개 테스트와 `test`·`reach`·`lint`·`check`·`build`가 통과했다. `online`과
+`visibilitychange`는 이제 `Journal.lifecyclePull()`을 통해 로컬 reload 성공 확인 뒤
+pull하며, 초기 load와 두 이벤트의 중첩도 한 큐에서 처리한다. 비인증 `/`·`/api/pull`·
+`/sw.js`는 모두 Access 302와 no-store였다 ([관찰 기록](../charness-artifacts/probe/2026-08-05-deploy-verification-round-4.json)).
+인증 브라우저와 사람 수용 확인은 여전히 미확인이다.
+
+### 이번 4차 라운드의 운영 교훈
+
+- `packet_sections: []`이면 critique packet을 만들지 않는다. customized adapter는
+  `bootstrap_adapter.py --dry-run`으로만 먼저 본다.
+- reviewer boundary는 snapshot → spawn → wait → verify 순서로 처리하고, spawn 성공·수령
+  보고서·timeout을 따로 기록한다. 이번에는 3건 모두 completed report를 받았고 verify가 clean이었다.
+- 새 artifact를 문서가 링크하면 파일·validator·추적 상태를 먼저 닫고 gate를 부른다.
+- 라운드의 낭비와 미측정 비용은 [4차 quality](../charness-artifacts/quality/2026-08-05-quality-review-round-4.md)와
+  [session retro](../charness-artifacts/retro/2026-08-05-session-retro.md)에 남겼다.
+
 ### 이번 3차 라운드의 운영 교훈
 
 - 품질 어댑터는 먼저 `bootstrap_adapter.py --dry-run`으로 재직렬화·주석 손실을 확인하고,
@@ -212,7 +231,7 @@ Access 302임을 [관찰 기록](../charness-artifacts/probe/2026-08-05-deploy-v
 **아래는 사용자가 자기 속도로 하는 것이다 — 에이전트가 재촉하지 않는다** (위
 `Workflow Trigger`의 사용자 결정). 불편이 리포트로 오면 그때 해당 항목을 연다.
 
-1. ~~배포~~ **완료 (2026-08-04).** 위 `Current State` 참조.
+1. ~~배포~~ **완료 (2026-08-05).** 위 `Current State` 참조.
 2. **수용 확인 — 사람만 할 수 있다.** 절차는
    [operator-acceptance.md](./operator-acceptance.md) `## 수용 확인`.
    `AC-9`·`AC-10`·`AC-11`은 닫혔고 **`AC-12`(`sample.md` 왕복) · `AC-19`(폰에서

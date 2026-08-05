@@ -1,0 +1,24 @@
+{
+  "date": "2026-08-05",
+  "kind": "deploy-verification",
+  "app": "journal.stdy.blog",
+  "deployed_code_commit": "3d0ae50",
+  "deployment_input_head": "456ec5a",
+  "worker_version": "b3cdc37b-e12b-4b7b-adfa-091fdeb2920c",
+  "previous_worker_version": "e5ba9779-dad7-42a9-9ac8-6d5fc5f14799",
+  "readback": {
+    "/": {
+      "status": 302,
+      "cache_control": "private, max-age=0, no-store, no-cache, must-revalidate, post-check=0, pre-check=0"
+    },
+    "/api/pull?since=0": {
+      "status": 302,
+      "cache_control": "private, max-age=0, no-store, no-cache, must-revalidate, post-check=0, pre-check=0"
+    },
+    "/sw.js": {
+      "status": 302,
+      "cache_control": "private, max-age=0, no-store, no-cache, must-revalidate, post-check=0, pre-check=0"
+    }
+  },
+  "scope": "unauthenticated header-only readback; no journal response body was read"
+}

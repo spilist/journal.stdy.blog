@@ -43,7 +43,8 @@
 
 **품질 개선 슬라이스도 배포됨 (2026-08-05).** 월치 복사·날짜 URL·변경 내역 diff와
 접근성·동시성·오프라인 복구, Access/Worker 입력 경계, 서비스워커 캐시 경계 방어가
-배포본에 반영됐다. 배포 Version ID는 `e5ba9779-dad7-42a9-9ac8-6d5fc5f14799`다.
+배포본에 반영됐다. 온라인 복귀 때 다른 탭의 로컬 판본을 먼저 읽는 동기화 경계도
+반영됐다. 배포 Version ID는 `b3cdc37b-e12b-4b7b-adfa-091fdeb2920c`다.
 
 허용 이메일 하나만 Cloudflare Access를 통과한다. 남은 일은 **사람만 할 수 있는 수용
 확인**([운영자 인수](./docs/operator-acceptance.md))이다 — 순서는
