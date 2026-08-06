@@ -1,0 +1,37 @@
+{
+  "date": "2026-08-06",
+  "commit": "b8d5a34b18080a4403256d7d9123254469e7ed3d",
+  "worker": "journal-stdy-blog",
+  "version_id": "4f5196ff-630e-4161-b558-be9f8a1df7d7",
+  "deploy_command": "npm run deploy",
+  "deploy_status": "passed",
+  "change": "multiline energy reasons beginning with bullets are exported as nested Markdown and parsed back",
+  "readback": {
+    "method": "unauthenticated curl -D - -o /dev/null; redirects not followed",
+    "routes": [
+      {
+        "path": "/",
+        "status": 302,
+        "content_type": "text/html; charset=UTF-8",
+        "cache_control": "private, max-age=0, no-store, no-cache, must-revalidate, post-check=0, pre-check=0"
+      },
+      {
+        "path": "/api/pull?since=0",
+        "status": 302,
+        "content_type": "text/html; charset=UTF-8",
+        "cache_control": "private, max-age=0, no-store, no-cache, must-revalidate, post-check=0, pre-check=0"
+      },
+      {
+        "path": "/sw.js",
+        "status": 302,
+        "content_type": "text/html; charset=UTF-8",
+        "cache_control": "private, max-age=0, no-store, no-cache, must-revalidate, post-check=0, pre-check=0"
+      }
+    ],
+    "interpretation": "Cloudflare Access protects all three unauthenticated routes. This is header-only evidence and does not prove authenticated browser UI acceptance."
+  },
+  "limitations": [
+    "No authenticated browser session was used.",
+    "The new clipboard output was proven by Node serializer/parser tests, not by a real browser clipboard readback."
+  ]
+}

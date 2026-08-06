@@ -241,6 +241,15 @@ lint/docs·Svelte/Worker check·build를 통과했다. 같은 상태를 배포�
 비인증 header-only readback에서 모두 Access 302/no-store였다. 이는 인증 브라우저·UI-1~3·
 warm-cache·두 탭/두 기기 수용을 대신하지 않는다.
 
+**2026-08-06 에너지 멀티라인 불렛 복사 수정이 배포됐다.** 구현 커밋
+`b8d5a34`를 `origin/main`에 push했고, 에너지 이유가 불렛으로 시작하면 복사 시 nested
+Markdown 목록으로 조립되며 다시 가져와도 보존되게 했다. `npm run gate`는 190/190 테스트,
+reach 22/12, lint/docs, Svelte/Worker check, build를 통과했다. `npm run deploy`의 Worker
+Version ID는 `4f5196ff-630e-4161-b558-be9f8a1df7d7`이다. 배포 후 비인증 `/`·
+`/api/pull?since=0`·`/sw.js`는 모두 Access 302/no-store였고, [관찰 기록](../charness-artifacts/probe/2026-08-06-energy-nested-bullet-deploy.json)에
+남겼다. 이 readback은 인증 브라우저 수용이나 실제 clipboard readback을 대신하지 않는다.
+Fresh-eye critique는 호스트의 세 차례 no-delivery timeout으로 blocked 처리했다.
+
 ### 이번 마지막 라운드의 운영 교훈
 
 - Promise.all로 여러 결과를 한 출력에 합치면 큰 출력이 잘려 다시 읽는 비용이 생긴다. 명령별
