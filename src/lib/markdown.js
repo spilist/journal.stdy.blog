@@ -26,6 +26,7 @@ const ENERGY = '에너지'
 /** 점수는 1~10만 점수로 본다. `- 인지: 12. 어쩌고`의 12는 이유의 일부다. */
 const ENERGY_LINE = /^-[ \t]*([^:]+):[ \t]?([\s\S]*)$/
 const SCORE_PREFIX = /^(10|[1-9])\.[ \t]?([\s\S]*)$/
+const ENERGY_CONTINUATION = /^( {2}|\t)(.*)$/
 
 /**
  * @param {string} body
@@ -122,11 +123,22 @@ export function parse(raw) {
       // 본문(`block.body`)과 모르는 섹션의 원문은 그대로 둔다.
       const name = block.heading.trim().normalize('NFC')
       if (name === ENERGY) {
+        let previous = null
         for (const line of trimSectionBody(block.body).split('\n')) {
           if (!line.trim()) continue
+          const continuation = ENERGY_CONTINUATION.exec(line)
+          if (continuation && previous) {
+            previous.reason += previous.reason ? `\n${continuation[2]}` : continuation[2]
+            continue
+          }
           const entry = parseEnergyLine(line)
-          if (entry) energy.push(entry)
-          else unparsed.push({ line, where: `${section.heading} / ${ENERGY}` })
+          if (entry) {
+            energy.push(entry)
+            previous = entry
+          } else {
+            unparsed.push({ line, where: `${section.heading} / ${ENERGY}` })
+            previous = null
+          }
         }
       } else if (LOG_KINDS.includes(/** @type {any} */ (name))) {
         logs.push({ kind: name, text: trimSectionBody(block.body) })
@@ -181,7 +193,12 @@ export function parseEnergyLine(line) {
 export function assembleEnergyLine({ dim, score, reason }) {
   let line = `- ${dim}:`
   if (score !== null && score !== undefined) line += ` ${score}.`
-  if (reason) line += ` ${reason}`
+  if (!reason) return line
+
+  const lines = reason.split('\n')
+  if (/^-[ \t]+/.test(lines[0])) return `${line}\n${lines.map((part) => `  ${part}`).join('\n')}`
+  line += ` ${lines.shift()}`
+  if (lines.length) line += `\n${lines.map((part) => `  ${part}`).join('\n')}`
   return line
 }
 
@@ -215,4 +232,3 @@ export function assemble({ pinned = '', days }) {
   for (const day of sorted) parts.push(assembleDay(day))
   return parts.join('\n\n') + '\n'
 }
-

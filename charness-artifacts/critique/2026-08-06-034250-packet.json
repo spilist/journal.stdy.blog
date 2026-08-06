@@ -1,0 +1,77 @@
+{
+  "kind": "charness.critique_prepare_packet",
+  "version": 1,
+  "repo": "journal.stdy.blog",
+  "generated_at": "2026-08-06T03:42:50Z",
+  "prepared_for": "energy nested bullet export code critique",
+  "changed_ref": null,
+  "adapter_path": ".agents/critique-adapter.yaml",
+  "sections": [],
+  "section_count": 0,
+  "ok": true,
+  "reviewer_tier_evidence": {
+    "requested_tier": "high-leverage",
+    "requested_spawn_fields": {
+      "model": "opus",
+      "reasoning_effort": "medium",
+      "fork_turns": "none"
+    },
+    "host_exposure_state": "pending-parent-spawn",
+    "application_state": "unverified-by-packet",
+    "instruction": "Review artifacts must record requested_fields_sent, metadata-hidden, host-defaulted, unsupported, or applied only when host-confirmed."
+  },
+  "reviewed_input_identity": {
+    "algorithm": "sha256-v2",
+    "status": "captured",
+    "mode": "working-tree",
+    "changed_ref": null,
+    "resolved_changed_ref": [],
+    "base_head": "757a21430f25d5634df7250cb067e568e56bdd81",
+    "base_head_role": "provenance-only",
+    "reviewed_paths": [
+      "charness-artifacts/debug/2026-08-06-debug-review.md",
+      "charness-artifacts/debug/latest.md",
+      "docs/spec-first-slice.md",
+      "references/sample.md",
+      "src/lib/markdown.js",
+      "src/lib/markdown.test.js"
+    ],
+    "reviewed_content": [
+      {
+        "path": "charness-artifacts/debug/2026-08-06-debug-review.md",
+        "content_sha256": "461009cd625fc1f0f530ddb05a2da4ab92199854ff3eb7e1617d35f395d95450"
+      },
+      {
+        "path": "charness-artifacts/debug/latest.md",
+        "content_sha256": "461009cd625fc1f0f530ddb05a2da4ab92199854ff3eb7e1617d35f395d95450"
+      },
+      {
+        "path": "docs/spec-first-slice.md",
+        "content_sha256": "dde3af8bfb4035c67742530e8e3b707c8e503b5a767890064ab3aad455fd702a"
+      },
+      {
+        "path": "references/sample.md",
+        "content_sha256": "823f4ffd050ca419cfda6a1a6bb31fc952f381c5d5ddc6f6cfeb644499727a2c"
+      },
+      {
+        "path": "src/lib/markdown.js",
+        "content_sha256": "bc44dced9d9001018a213213ec2ff8caf1363dc984447a647d942c0e99859761"
+      },
+      {
+        "path": "src/lib/markdown.test.js",
+        "content_sha256": "d51d7603d913ddaaf0119a6d63170dfafb3d3eba4c727648d4a1ce2633376c74"
+      }
+    ],
+    "reviewed_patch_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "staged_patch_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "unstaged_patch_sha256": "9b8fcf70b51168958b4cfb0f8738b18badba2ebbfd00763be186aaee81aa3dad",
+    "declared_untracked": [
+      {
+        "path": "charness-artifacts/debug/2026-08-06-debug-review.md",
+        "content_sha256": "461009cd625fc1f0f530ddb05a2da4ab92199854ff3eb7e1617d35f395d95450"
+      }
+    ],
+    "auto_excluded_paths": [],
+    "identity_sha256": "67321acb9b0b6adc4ee889520bc672a57b5d64949cc9847f97e2561fa5c6e3eb"
+  }
+}

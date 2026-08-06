@@ -85,6 +85,32 @@ test('이유 없이 점수만, 그리고 두 자리 점수 (AC-3)', () => {
   }
 })
 
+test('에너지 이유의 불렛은 nested 목록으로 복사하고 다시 읽는다', () => {
+  const src = `# 26-03-01
+
+## 에너지
+- 인지: 10.
+  - 지어낸 첫 항목
+  - 지어낸 둘째 항목
+- 정서: 6. 지어낸 한 줄
+`
+  const journal = parse(src)
+  assert.equal(journal.unparsed.length, 0)
+  assert.deepEqual(journal.days[0].energy[0], {
+    dim: '인지',
+    score: 10,
+    reason: '- 지어낸 첫 항목\n- 지어낸 둘째 항목',
+  })
+  assert.equal(assemble(journal), src)
+})
+
+test('입력 이유가 불렛으로 시작하면 점수 다음 줄에 nested 된다', () => {
+  assert.equal(
+    assembleEnergyLine({ dim: '인지', score: 10, reason: '- 지어낸 첫 항목\n- 지어낸 둘째 항목' }),
+    '- 인지: 10.\n  - 지어낸 첫 항목\n  - 지어낸 둘째 항목',
+  )
+})
+
 test('11 이상은 점수가 아니라 이유의 일부다', () => {
   assert.deepEqual(parseEnergyLine('- 인지: 12. 층에서 만났다'), {
     dim: '인지',
