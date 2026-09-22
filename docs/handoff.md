@@ -250,6 +250,16 @@ Version ID는 `4f5196ff-630e-4161-b558-be9f8a1df7d7`이다. 배포 후 비인증
 남겼다. 이 readback은 인증 브라우저 수용이나 실제 clipboard readback을 대신하지 않는다.
 Fresh-eye critique는 호스트의 세 차례 no-delivery timeout으로 blocked 처리했다.
 
+**2026-09-23 날짜 단위 이벤트(D24) 슬라이스가 배포됐다.** 구현 커밋 `023cbe8`을
+`origin/main`에 push했고, Worker Version ID는
+`137b9526-3a59-40c5-8d4d-c8c4e00b602c`다. 에너지 위 한 줄 입력, 그래프 세로 마커와
+툴팁, `## 이벤트` 형식(H1 바로 아래)이 들어갔다. 저장소는 `log` 봉투를 빌려
+스키마·워커 변경이 없다. `npm run gate`는 200/200 테스트·reach·lint/docs·check·
+build를 통과했다. 배포 후 비인증 `/`·`/api/pull?since=0`·`/sw.js`는 모두 Access
+302/no-store였고, [관찰 기록](../charness-artifacts/probe/2026-09-23-event-deploy-verification.json)에
+남겼다. 이 readback은 인증 브라우저 수용을 대신하지 않는다 — 그래프 마커·툴팁의
+실제 렌더링과 폰 확인은 사람 몫으로 남는다.
+
 ### 이번 마지막 라운드의 운영 교훈
 
 - Promise.all로 여러 결과를 한 출력에 합치면 큰 출력이 잘려 다시 읽는 비용이 생긴다. 명령별
