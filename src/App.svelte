@@ -2,6 +2,7 @@
   // 화면 하나. 날짜 이동 · 고정 블록 · 에너지 · 어제 · 오늘.
   // 그래프는 에너지 블록 안에 접혀 있다 (`P-7`).
 
+  import Conflicts from './lib/Conflicts.svelte'
   import Energy from './lib/Energy.svelte'
   import ImportPanel from './lib/ImportPanel.svelte'
   import LogBlock from './lib/LogBlock.svelte'
@@ -266,6 +267,35 @@
   <Pinned {journal} />
 
   {#if journal.loaded}
+    {@const ev = journal.event()}
+    <!-- 날짜 단위 한 줄 기록 (`D24`). 길어지면 로그와 겹치므로 `textarea`가 아니라
+         한 줄 입력으로 짧게 강제한다 — 짧게 가는 걸 입력 칸이 인지적으로 지원한다. -->
+    <section class="block event">
+      <div class="head">
+        <h2>이벤트</h2>
+        {#if ev.updatedAt}
+          <span
+            class="at"
+            aria-label={`마지막 수정 시각: ${kstTimestamp(ev.updatedAt)}`}
+            title={`마지막 수정 시각: ${kstTimestamp(ev.updatedAt)}`}
+          >
+            {kstDate(ev.updatedAt) === journal.date ? '' : `${kstDate(ev.updatedAt)} `}{kstTime(
+              ev.updatedAt,
+            )}
+          </span>
+        {/if}
+      </div>
+      <input
+        type="text"
+        aria-label="이벤트 기록"
+        placeholder="산책 · 배포 · 아픔 · 여행"
+        autocomplete="off"
+        value={ev.data.text}
+        oninput={(/** @type {Event & {currentTarget: HTMLInputElement}} */ e) => journal.setEvent(e.currentTarget.value)}
+        onblur={() => journal.flush()}
+      />
+      <Conflicts {journal} target={ev.key} />
+    </section>
     <Energy {journal} dims={DIMS} ondate={goTo} />
     {#each LOG_KINDS as kind (kind)}
       <LogBlock {journal} {kind} />
@@ -399,6 +429,36 @@
     margin: 0 auto;
   }
   .relogin,
+  /* 날짜 단위 한 줄 기록. 입력 칸은 `textarea` 전역 스타일과 같은 결이라
+     새 생김새가 아니라 같은 집 글자다. */
+  .event .head {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+  }
+  .event .head h2 {
+    margin-bottom: 0.5rem;
+  }
+  .event .at {
+    margin-left: auto;
+    font-size: 0.75rem;
+    color: var(--dim);
+  }
+  .event input {
+    width: 100%;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--bg);
+    color: var(--fg);
+    padding: 0.6rem;
+    font: inherit;
+    /* `textarea`와 같은 값. 16px 아래면 iOS가 초점을 잡을 때 화면을 확대한다. */
+    font-size: 16px;
+  }
+  .event input:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
   .banner {
     display: block;
     width: 100%;

@@ -15,11 +15,15 @@ export const DIMS = /** @type {const} */ (['인지', '정서', '육체'])
 /** 하루의 자유 텍스트 블록. */
 export const LOG_KINDS = /** @type {const} */ (['어제', '오늘'])
 
+/** 날짜 단위 한 줄 기록. 저장소는 `log`를 빌리되(`log:{date}:이벤트`), 화면·형식에서는
+    어제·오늘과 다른 자리다 (`D24`) — 그날 있었던 사실 하나를 짧게 적는다. */
+export const EVENT_KIND = '이벤트'
+
 const ENERGY = '에너지'
 
 /** @typedef {{dim: string, score: number | null, reason: string}} EnergyEntry */
 /** @typedef {{kind: string, text: string}} LogEntry */
-/** @typedef {{date: string, energy: EnergyEntry[], logs: LogEntry[]}} DayEntry */
+/** @typedef {{date: string, energy: EnergyEntry[], logs: LogEntry[], event: string}} DayEntry */
 /** @typedef {{line: string, where: string}} Unparsed */
 /** @typedef {{pinned: string, days: DayEntry[], unparsed: Unparsed[]}} Journal */
 
@@ -112,6 +116,9 @@ export function parse(raw) {
     const energy = []
     /** @type {LogEntry[]} */
     const logs = []
+    // 날짜 단위 기록. 위치와 무관하게 이 날짜의 것으로 읽는다 — 조립은 H1 바로
+    // 아래로 정규화하므로, 아래쪽에 쓴 섹션도 왕복에서 위로 올라간다.
+    let event = ''
 
     for (const block of splitSections(section.body, '## ')) {
       if (block.heading === null) {
@@ -142,6 +149,11 @@ export function parse(raw) {
         }
       } else if (LOG_KINDS.includes(/** @type {any} */ (name))) {
         logs.push({ kind: name, text: trimSectionBody(block.body) })
+      } else if (name === EVENT_KIND) {
+        // 두 번 나오면(손으로 이어붙인 파일) 두 번째를 버리지 않고 잇는다 —
+        // 한 줄 입력이 덮어쓰는 건 화면의 일이지 가져오기의 일이 아니다 (불변식 3).
+        const body = trimSectionBody(block.body)
+        event = event && body ? `${event}\n${body}` : event || body
       } else if (logs.length) {
         // 사용자가 로그 본문에 소제목을 달았다. 새 블록이 아니라 **그 로그의 일부**다 —
         // 잘라내면 앱에서 쓴 글을 자기 export로 다시 읽을 때 그 아래가 통째로 사라진다.
@@ -158,7 +170,7 @@ export function parse(raw) {
       }
     }
 
-    days.push({ date, energy, logs })
+    days.push({ date, energy, logs, event })
   }
 
   return { pinned: pinnedParts.join('\n\n'), days, unparsed }
@@ -210,6 +222,9 @@ export function assembleEnergyLine({ dim, score, reason }) {
  */
 export function assembleDay(day) {
   const blocks = [`# ${toH1(day.date)}`]
+  // 이벤트는 H1 바로 아래다 — 화면(에너지 위)과 같은 순서라 다시 읽히기 쉽다.
+  // 비어 있으면 만들지 않는다 — 없던 줄을 더하면 왕복이 깨진다.
+  if (day.event) blocks.push([`## ${EVENT_KIND}`, day.event].join('\n'))
   // 원본에 에너지 섹션이 없었으면 만들어내지 않는다 — 없던 줄을 더하면 왕복이 깨진다.
   if (day.energy.length) {
     blocks.push([`## ${ENERGY}`, ...day.energy.map(assembleEnergyLine)].join('\n'))

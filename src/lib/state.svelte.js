@@ -2,7 +2,7 @@
 // 그것들을 IndexedDB와 화면에 잇는다.
 
 import { addDays, isCalendarDate, kstDate } from './date.js'
-import { DIMS, LOG_KINDS, assemble, assembleDay, parse } from './markdown.js'
+import { DIMS, EVENT_KIND, LOG_KINDS, assemble, assembleDay, parse } from './markdown.js'
 import {
   countDirty,
   describe,
@@ -402,6 +402,14 @@ export class Journal {
     return this.#view(recordKey('log', this.date, kind), 'log', { text: '' })
   }
 
+  /**
+   * 날짜 단위 한 줄 기록 (`D24`). 저장 봉투는 `log`와 같고(`log:{date}:이벤트`)
+   * 키만 다르다 — 동기화·충돌·미동기화 경로를 새로 만들지 않는다.
+   */
+  event() {
+    return this.#view(recordKey('log', this.date, EVENT_KIND), 'log', { text: '' })
+  }
+
   pinned() {
     return this.#view('pinned', 'pinned', { text: '' })
   }
@@ -685,6 +693,13 @@ export class Journal {
     this.#saveTextSoon(key, 'log', text)
   }
 
+  /** @param {string} text */
+  setEvent(text) {
+    const key = recordKey('log', this.date, EVENT_KIND)
+    this.#pending[key] = text
+    this.#saveTextSoon(key, 'log', text)
+  }
+
   /**
    * 고정 블록. 편집 직전에 그날의 개정 스냅샷을 밀봉한다 (`D11`).
    *
@@ -824,7 +839,12 @@ export class Journal {
   /** @param {string} date @param {boolean} [templateEnergy] */
   dayFor(date, templateEnergy = true) {
     /** @type {import('./markdown.js').DayEntry} */
-    const day = { date, energy: [], logs: [] }
+    const day = {
+      date,
+      energy: [],
+      logs: [],
+      event: this.records[recordKey('log', date, EVENT_KIND)]?.data.text ?? '',
+    }
     const energyRecords = DIMS.map((dim) => this.records[recordKey('energy', date, dim)])
     if (templateEnergy || energyRecords.some((rec) => rec && hasContent(rec))) {
       for (const [i, dim] of DIMS.entries()) {
@@ -971,6 +991,8 @@ export class Journal {
       for (const l of day.logs) {
         stage(recordKey('log', day.date, l.kind), 'log', { text: l.text }, `${day.date} ${l.kind}`)
       }
+      // 빈 값이면 `stage`가 조용히 건너뛴다 — `- 인지:` 빈 줄과 같은 규칙이다.
+      stage(recordKey('log', day.date, EVENT_KIND), 'log', { text: day.event }, `${day.date} ${EVENT_KIND}`)
     }
 
     return { days: journal.days.length, unparsed: journal.unparsed, writes, skipped }

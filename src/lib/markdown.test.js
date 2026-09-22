@@ -6,6 +6,7 @@ import assert from 'node:assert/strict'
 
 import {
   DIMS,
+  EVENT_KIND,
   assemble,
   assembleDay,
   assembleEnergyLine,
@@ -232,4 +233,39 @@ test('NFD 섹션 이름도 키라 정규화된다', () => {
   assert.equal(out.unparsed.length, 0, '통째로 해석 못 한 줄이 되면 안 된다')
   assert.equal(out.days[0].energy[0].score, 8)
   assert.deepEqual(out.days[0].logs, [{ kind: '오늘', text: '지어낸 문단' }])
+})
+
+test('이벤트 섹션은 H1 바로 아래로 왕복한다 (D24)', () => {
+  const src = '# 26-03-01\n\n## 이벤트\n지어낸 산책 기록\n\n## 에너지\n- 인지: 8. 지어낸 이유.\n\n## 오늘\n- 지어낸 문단.\n'
+  const journal = parse(src)
+  assert.equal(journal.unparsed.length, 0)
+  assert.equal(journal.days[0].event, '지어낸 산책 기록')
+  assert.equal(assemble(journal), src)
+})
+
+test('빈 이벤트는 섹션을 만들어내지 않는다 — 없던 줄을 더하면 왕복이 깨진다 (D24)', () => {
+  const src = '# 26-03-01\n\n## 오늘\n지어낸 문단.\n'
+  const journal = parse(src)
+  assert.equal(journal.days[0].event, '')
+  assert.equal(assemble(journal), src)
+})
+
+test('아래쪽에 쓴 이벤트도 날짜의 것으로 읽고 위로 정규화한다 (D24)', () => {
+  const src = '# 26-03-01\n\n## 오늘\n지어낸 문단.\n\n## 이벤트\n지어낸 기록\n'
+  const journal = parse(src)
+  assert.equal(journal.unparsed.length, 0)
+  assert.equal(journal.days[0].event, '지어낸 기록')
+  assert.equal(assemble(journal), '# 26-03-01\n\n## 이벤트\n지어낸 기록\n\n## 오늘\n지어낸 문단.\n')
+})
+
+test('이벤트 섹션이 두 번 나오면 잇는다 — 가져오기가 버리면 안 된다 (불변식 3, D24)', () => {
+  const journal = parse('# 26-03-01\n\n## 이벤트\n지어낸 첫 기록\n\n## 이벤트\n지어낸 둘째 기록\n')
+  assert.equal(journal.days[0].event, '지어낸 첫 기록\n지어낸 둘째 기록')
+})
+
+test('이벤트 섹션 이름도 키라 NFD면 NFC로 읽힌다 (D24)', () => {
+  const raw = `# 26-08-03\n\n## ${EVENT_KIND.normalize('NFD')}\n지어낸 기록\n`
+  const out = parse(raw)
+  assert.equal(out.unparsed.length, 0)
+  assert.equal(out.days[0].event, '지어낸 기록')
 })

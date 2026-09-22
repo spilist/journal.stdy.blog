@@ -6,6 +6,7 @@ import {
   MIN_SCORE,
   datesInRange,
   dayEnergy,
+  eventDates,
   lines,
   plot,
   recordBounds,
@@ -374,4 +375,33 @@ test('양 끝 눈금은 안쪽으로 붙인다 — 가운데 정렬하면 잘린
   const view = plot(windowDates(NONE, '2026-07-26', 5), [], BOX)
   assert.equal(view.ticks[0].anchor, 'start')
   assert.equal(view.ticks.at(-1)?.anchor, 'end')
+})
+
+/**
+ * 본문은 **지어낸 문장**이다 (AGENTS.md `사용자 데이터를 다룰 때`).
+ *
+ * @param {string} date
+ * @param {string} [text]
+ */
+function event(date, text = '지어낸 사건 한 줄') {
+  return {
+    key: `log:${date}:이벤트`,
+    kind: 'log',
+    data: { text },
+    updatedAt: 1,
+    syncedAt: 1,
+  }
+}
+
+test('이벤트는 점수 없이도 창 안에서 마커가 된다 (D24)', () => {
+  // 사건은 점수와 무관한 날짜의 속성이라, 선도 안 선 날도 마커가 선다.
+  const records = [event('2026-07-20'), energy('2026-07-21', '인지', 8)]
+  assert.deepEqual(eventDates(records, ['2026-07-20', '2026-07-21', '2026-07-22']), [
+    { date: '2026-07-20', text: '지어낸 사건 한 줄' },
+  ])
+})
+
+test('빈 이벤트·창 밖 날짜·다른 kind는 마커가 안 된다 (D24)', () => {
+  const records = [event('2026-07-20', ''), log('2026-07-21'), event('2026-07-25')]
+  assert.deepEqual(eventDates(records, ['2026-07-20', '2026-07-21']), [])
 })

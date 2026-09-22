@@ -647,3 +647,39 @@ test('메타 저장소를 못 읽으면 오프라인이 아니라 로컬 오류�
   assert.match(journal.storageError, /로컬 동기화 위치/)
   assert.equal(sync.calls.length, 0, '메타를 못 읽었으면 네트워크를 부르지 않는다')
 })
+
+test('이벤트는 날짜 단위 한 줄 기록으로 저장되고 하루치에 같이 나간다 (D24)', async () => {
+  const { journal } = await freshJournal()
+  journal.setEvent('지어낸 사건 한 줄')
+  // 디바운스 대기값도 화면에 보인다 — 저장 전에도 입력이 읽힌다.
+  assert.equal(journal.event().data.text, '지어낸 사건 한 줄')
+  journal.flush()
+
+  const key = `log:${journal.date}:이벤트`
+  assert.equal(journal.records[key].data.text, '지어낸 사건 한 줄')
+  assert.equal(journal.records[key].kind, 'log', '동기화 봉투는 log를 빌린다 — 새 경로가 없다')
+  assert.equal(journal.dirtyCount(), 1)
+  assert.ok(journal.exportDay().includes('## 이벤트\n지어낸 사건 한 줄'))
+})
+
+test('가져오기의 이벤트 섹션이 같은 키로 들어간다 (D24)', async () => {
+  const { journal, store } = await freshJournal()
+  const preview = journal.previewImport('# 26-08-03\n\n## 이벤트\n지어낸 가져온 사건\n')
+  assert.equal(preview.days, 1)
+  const write = preview.writes.find(
+    (/** @type {{key: string, data: {text: string}}} */ w) => w.key === 'log:2026-08-03:이벤트',
+  )
+  assert.equal(write?.data.text, '지어낸 가져온 사건')
+
+  const result = await journal.applyImport(preview.writes)
+  assert.deepEqual(result, { written: 1, skipped: 0 })
+  assert.equal(store.records.get('log:2026-08-03:이벤트')?.data.text, '지어낸 가져온 사건')
+})
+
+test('빈 이벤트는 가져오기 항목을 만들지 않는다 (D24)', async () => {
+  const { journal } = await freshJournal()
+  const preview = journal.previewImport('# 26-08-03\n\n## 오늘\n지어낸 문단\n')
+  assert.ok(
+    !preview.writes.some((/** @type {{key: string}} */ w) => w.key === 'log:2026-08-03:이벤트'),
+  )
+})

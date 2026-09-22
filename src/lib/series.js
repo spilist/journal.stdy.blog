@@ -8,6 +8,7 @@
 // 상태가 푸터 버튼의 결과를 바꾸는 강결합이라 철회됐다 — 내려받기는 늘 전체다.
 
 import { addDays } from './date.js'
+import { EVENT_KIND } from './markdown.js'
 
 /** @typedef {import('./merge.js').Rec} Rec */
 /** @typedef {{date: string, score: number, reason: string}} Point */
@@ -178,6 +179,31 @@ export function dayEnergy(records, dims, date) {
     score: found.get(dim)?.data.score ?? null,
     reason: found.get(dim)?.data.reason ?? '',
   }))
+}
+
+/**
+ * 창 안에서 이벤트가 있는 날짜 (`D24`). 점수가 없어 선도 안 선 날도 마커가 선다 —
+ * 사건은 점수와 무관한 날짜의 속성이다. 종류별 구분은 없다 (태그 분류를 만들지 않는다).
+ *
+ * @param {Rec[]} records
+ * @param {string[]} dates 오름차순
+ * @returns {{date: string, text: string}[]} 오름차순. 빈 값은 없다
+ */
+export function eventDates(records, dates) {
+  const wanted = new Set(dates)
+  /** @type {{date: string, text: string}[]} */
+  const out = []
+  for (const rec of records) {
+    if (rec.kind !== 'log') continue
+    const m = DAY_KEY.exec(rec.key)
+    if (!m || m[2] !== EVENT_KIND) continue
+    if (!wanted.has(m[1])) continue
+    const text = rec.data.text ?? ''
+    if (!text) continue
+    out.push({ date: m[1], text })
+  }
+  out.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0))
+  return out
 }
 
 /**

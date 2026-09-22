@@ -10,6 +10,7 @@
   import {
     WEEK,
     dayEnergy,
+    eventDates,
     lines,
     plot,
     recordBounds,
@@ -65,6 +66,20 @@
    * 날도 이유가 보여야 한다 (`SC-11`).
    */
   let pickedRows = $derived(pickedIndex >= 0 ? dayEnergy(records, dims, picked) : [])
+
+  /** 창 안에서 이벤트가 있는 날짜 (`D24`). 점수가 없는 날도 마커가 선다. */
+  let events = $derived(eventDates(records, dates))
+  /**
+   * 세로 마커. 짚은 날은 `picked` 선이 이미 서므로 빼고 그린다 — 같은 자리에
+   * 두 선을 겹치면 색이 탁해진다.
+   */
+  let eventMarks = $derived(
+    events
+      .map((e) => ({ ...e, i: dates.indexOf(e.date) }))
+      .filter((e) => e.i >= 0 && e.date !== picked),
+  )
+  /** 짚은 날의 이벤트. 이유 3행과 같이 보인다. */
+  let pickedEvent = $derived(pickedIndex >= 0 ? (events.find((e) => e.date === picked)?.text ?? '') : '')
 
   let rangeLabel = $derived(windowLabel(days, dates.length))
 
@@ -217,6 +232,12 @@
         {#if pickedIndex >= 0}
           <line class="picked" x1={view.x(pickedIndex)} x2={view.x(pickedIndex)} y1={PAD.top} y2={HEIGHT - PAD.bottom} />
         {/if}
+        {#each eventMarks as e (e.date)}
+          <!-- 배포 마커 같은 세로선. 점수 선보다 먼저 그려 뒤에 깐다. -->
+          <line class="event" x1={view.x(e.i)} x2={view.x(e.i)} y1={PAD.top} y2={HEIGHT - PAD.bottom}>
+            <title>{e.date} {e.text}</title>
+          </line>
+        {/each}
 
         {#each view.series as s, i (s.dim)}
           {#each s.polylines as pts, j (j)}
@@ -239,6 +260,9 @@
     {#each dims as dim, i (dim)}
       <li><span class="swatch s{i}"></span>{dim}</li>
     {/each}
+    {#if events.length}
+      <li><span class="eswatch"></span>이벤트</li>
+    {/if}
   </ul>
 
   {#if pickedIndex >= 0}
@@ -248,6 +272,9 @@
         <span class="date">{picked}</span>
         <span class="hint">다시 탭하면 그날로</span>
       </div>
+      {#if pickedEvent}
+        <div class="event-text">{pickedEvent}</div>
+      {/if}
       {#each pickedRows as row, i (row.dim)}
         <div class="row">
           <span class="swatch s{i}"></span>
@@ -339,6 +366,13 @@
     stroke: var(--fg);
     stroke-width: 1;
   }
+  /* 이벤트 세로 마커. 빨강(경고)은 산책·여행 같은 중립 사건에 어울리지 않고,
+     경고색은 충돌·분기 배너의 자리다 — 중립인 `dim` 실선으로 둔다. 점선인
+     `cursor`와는 선 종류로, 실선인 `picked`와는 색으로 갈린다. */
+  .event {
+    stroke: var(--dim);
+    stroke-width: 1;
+  }
   .line {
     fill: none;
     stroke-width: 1.8;
@@ -405,6 +439,12 @@
   .swatch.s2 {
     background: var(--series-c);
   }
+  .eswatch {
+    width: 2px;
+    height: 0.7rem;
+    background: var(--dim);
+    flex: none;
+  }
 
   .tip {
     margin-top: 0.5rem;
@@ -426,6 +466,12 @@
   }
   .tip-head .hint {
     margin-left: auto;
+  }
+  /* 짚은 날의 이벤트. 이유 3행보다 먼저 보인다 — 날짜의 꼬리표가 이유보다 굵다. */
+  .event-text {
+    font-weight: 600;
+    margin-bottom: 0.3rem;
+    overflow-wrap: anywhere;
   }
   .row {
     display: flex;
